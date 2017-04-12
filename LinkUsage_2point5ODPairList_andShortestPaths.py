@@ -126,27 +126,14 @@ cur = con.cursor()
 start_time = time.time()
 cur.execute(Q_CreateODList)
 print "Calculating OD combinations :: %.2f" % (time.time() - start_time)
-# OandD = cur.fetchall()
+OandD = cur.fetchall()
 
-start_time = time.time()
 mywork = []
-OandDcnt = 0
-while True:
-    row = cur.fetchmany(pool_size)
-    if len(row) >= worker_number:
-        mywork.append(row[worker_number - 1])
-    OandDcnt += len(row)
-print "Fetching OD workload :: %.2f" % (time.time() - start_time)
-print "Workload :: %d of %d" % (len(mywork), OandDcnt)
-
-# mywork = []
-# for i in xrange(len(OandD)):
-    # if i % pool_size == (worker_number - 1):
-        # mywork.append(OandD[i])
-# print "Workload :: %d of %d" % (len(mywork), len(OandD))
-# del OandD
-
-_ = raw_input()
+for i in xrange(len(OandD)):
+    if i % pool_size == (worker_number - 1):
+        mywork.append(OandD[i])
+print "Workload :: %d of %d" % (len(mywork), len(OandD))
+del OandD
 
 CloseEnough = []
 TooFarApart = 0
@@ -181,10 +168,9 @@ splits = []
 
 start_time = time.time()
 for i, (oGID, oNode, dGID, dNode) in enumerate(CloseEnough):
-    if (i == 1000):
-        print "%s :: %.2f :: %d" % (time.ctime(), time.time() - start_time, i, i / (len(CloseEnough) / 100.0))
+    if (i % 1000):
+        print "%s :: %.2f :: %d :: %.2f" % (time.ctime(), time.time() - start_time, i, i / (len(CloseEnough) / 100.0))
         start_time = time.time()
-        break
 
     threshold = 10
 
@@ -199,8 +185,8 @@ for i, (oGID, oNode, dGID, dNode) in enumerate(CloseEnough):
     # _time1 = time.time()
     if len(results) > 0:
         if results[-1][-1] <= threshold:
-            # cur.executemany(Q_InsertShortestPath, results)
-            # con.commit()
+            cur.executemany(Q_InsertShortestPath, results)
+            con.commit()
             runTimes.append(time.time() - start_time)
         else:
             TooLong += 1
