@@ -166,14 +166,14 @@ runTimesTooLong = []
 runTimesNoPath = []
 splits = []
 
-start_time = time.time()
+_time0 = time.time()
 for i, (oGID, oNode, dGID, dNode) in enumerate(CloseEnough):
-    if (i % 1000):
-        print "%s :: %.2f :: %d :: %.2f" % (time.ctime(), time.time() - start_time, i, i / (len(CloseEnough) / 100.0))
-        start_time = time.time()
+    if (i % 1000 == 0):
+        print "%s :: %.2f :: %d :: %.2f" % (time.ctime(), time.time() - _time0, i, i / (len(CloseEnough) / 100.0))
+        _time0 = time.time()
 
     threshold = 10
-
+    start_time = time.time()
     _time1 = time.time()
     cur.execute(Q_ShortestPath % (i, oGID, dGID, oNode, dNode))
     # print "\tQuerying :: %.2f" % (time.time() - _time1)
