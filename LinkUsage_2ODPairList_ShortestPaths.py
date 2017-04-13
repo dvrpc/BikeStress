@@ -6,9 +6,9 @@ import time
 import sys
 
 TBL_CENTS = "mercer_centroids"
-TBL_LINKS = "mercer_tolerablelinks"
-TBL_NODES = "mercer_nodes"
-TBL_SPATHS = "mercer_shortestpaths"
+TBL_LINKS = "mercer_tolerablelinks_improved"
+TBL_NODES = "mercer_nodes_improved"
+TBL_SPATHS = "mercer_shortestpaths_improved"
 
 Q_CreateODList = """
     SELECT

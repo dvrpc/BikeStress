@@ -10,22 +10,21 @@ import pickle
 import sqlite3
 from collections import Counter
 
-#status checker
-SELECT (SELECT COUNT(*) AS allpairs FROM mercer_odpairs) - (SELECT COUNT(*) FROM mercer_odpairs WHERE status = 1) AS calculated;
 
 
 ####table names to modify in subsequent runs###
-#delco_ltslinks
-#delco_nodes
-#shortest_paths_delco
-#delco_blockcentroids
-#delco_edge_counts
-#delco_LinkUseNetwork
-#delco_topLinks
+TBL_ALL_LINKS = "mercer_assigned_links_improved"
+TBL_CENTS = "mercer_centroids"
+TBL_LINKS = "mercer_tolerablelinks_improved"
+TBL_NODES = "mercer_nodes"
+TBL_SPATHS = "mercer_shortestpaths_improved"
+TBL_EDGE = "mercer_edgecounts_improved"
+TBL_USE = "mercer_linkuse_improved"
+TBL_TOP = "mercer_topLinks_improved"
 
 
 #connect to SQL DB in python
-con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+con = psql.connect(dbname = "BikeStress", host = "yoshi", port = 5432, user = "postgres", password = "sergt")
 #create cursor to execute querys
 cur = con.cursor()
 
@@ -33,27 +32,30 @@ cur = con.cursor()
 #find closest node to origin and destination points (block centroids)
 Q_ClosestPoint = """
     SELECT
-        "delco_blockcentroids".gid,
+        "{0}".gid,
         (
             SELECT nodeno 
             FROM (
                 SELECT
                     nodeno,
-                    st_distance("delco_blockcentroids".geom, geom) AS distance
-                FROM "delco_nodes"
+                    st_distance("{0}".geom, geom) AS distance
+                FROM "{1}"
                 ORDER BY distance ASC
                 LIMIT 1
             ) AS tmp
         ) AS nodeno
-    FROM "delco_blockcentroids";
-"""
+    FROM "{0}";
+""".format(TBL_CENTS, TBL_NODES)
 cur.execute(Q_ClosestPoint)
 block_cent_node = cur.fetchall()
+len(block_cent_node)
 #create list of combinations of closest nodes; does not include self to self
 AllOandD = list(itertools.permutations(block_cent_node, 2))
+len(AllOandD)
 
 # Grab the feasible oGID to dGID paths from the shortest paths table
-cur.execute("""SELECT oGID, dGID FROM "shortest_paths_delco" GROUP BY oGID, dGID;""")
+Q_AvailPairs = """SELECT oGID, dGID FROM "{0}" GROUP BY oGID, dGID;""".format(TBL_SPATHS)
+cur.execute(Q_AvailPairs)
 #save as python variable
 avail_gid_pairs = cur.fetchall()
 
@@ -110,7 +112,7 @@ pair_count = sqlite_cur.fetchall()
 
 
 #edge count from original table
-Q_EdgeCount = """SELECT edge, COUNT(*) FROM "shortest_paths_delco" GROUP BY edge;"""
+Q_EdgeCount = """SELECT edge, COUNT(*) FROM "{0}" GROUP BY edge;""".format(TBL_SPATHS)
 cur.execute(Q_EdgeCount)
 edge_count = cur.fetchall()
 #convert to dictionary
@@ -118,10 +120,10 @@ edge_count_dict = dict(edge_count)
 
 #select and count the edges from the shortest path table 
 Q_SelectPath = """
-    SELECT edge, COUNT(*) FROM "shortest_paths_delco" 
+    SELECT edge, COUNT(*) FROM "{0}" 
     WHERE oGID = %d AND dGID = %d
     GROUP BY edge;
-"""
+""".format(TBL_SPATHS)
 #for each item in the pair_count list, find the edges used and increase value in dictionary by the count minus 1
 for i, (oGID, oNode, dGID, dNode, cnt) in enumerate(pair_count):
     cur.execute(Q_SelectPath % (oGID, dGID))
@@ -135,7 +137,7 @@ edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]
 
 #create table with edge and count to join to geometries and view results
 Q_CreateEdgeCountTable = """
-    CREATE TABLE IF NOT EXISTS public.delco_edge_counts
+    CREATE TABLE IF NOT EXISTS public."{0}"
     (
         edge integer,
         count integer
@@ -144,35 +146,35 @@ Q_CreateEdgeCountTable = """
         OIDS = FALSE
     )
     TABLESPACE pg_default;
-"""
+""".format(TBL_EDGE)
 cur.execute(Q_CreateEdgeCountTable)
 con.commit()
 
 #insert value into that edge count table
 Q_InsertEdgeCounts = """
-    INSERT INTO delco_edge_counts VALUES (%s, %s);
-"""
+    INSERT INTO "{0}" VALUES (%s, %s);
+""".format(TBL_EDGE)
 cur.executemany(Q_InsertEdgeCounts, edge_count_list)
 con.commit()
 
 #join back to link table to get geometry for display purposes and linklts for filtering purposes
 Q_GeomJoin = """
-    CREATE TABLE delco_LinkUseNetwork AS
-        SELECT edges.*, "delco_ltslinks".linklts, "delco_ltslinks".geom 
+    CREATE TABLE "{0}" AS
+        SELECT edges.*, "{1}".linklts, "{1}".geom 
         FROM (
-        SELECT * FROM "delco_edge_counts"
+        SELECT * FROM "{2}"
         ) AS edges 
-        INNER JOIN "delco_ltslinks"
-        ON "delco_ltslinks".gid = edges.edge;
+        INNER JOIN "{1}"
+        ON "{1}".gid = edges.edge;
     COMMIT;
-"""
+""".format(TBL_USE, TBL_ALL_LINKS, TBL_EDGE)
 cur.execute(Q_GeomJoin)
 
 #how many OD pairs are connected using this network?
 #can help detemine value to network overall
 Q_ConnectedPairs = """
-    SELECT COUNT(*) FROM (SELECT DISTINCT sequence FROM shortest_paths_delco) AS temp;
-"""
+    SELECT COUNT(*) FROM (SELECT DISTINCT sequence FROM "{0}") AS temp;
+""".format(TBL_SPATHS)
 cur.execute(Q_ConnectedPairs)
 ConnectedPairs = cur.fetchall()
 ConnectedPairs
@@ -190,18 +192,18 @@ TotalConnected
 #select the LTS 3 road segments with that would be most commonly used when included in tolerable links
 #can run in qgis db manager
 Q_TopLinks = """
-    CREATE TABLE delco_topLinks AS
-        SELECT edges.*, "delco_ltslinks".linklts, "delco_ltslinks".geom  
+    CREATE TABLE "{0}" AS
+        SELECT edges.*, "{1}".linklts, "{1}".geom  
         FROM (
-        SELECT * FROM "delco_edge_counts"
+        SELECT * FROM "{2}"
         ) AS edges 
-        INNER JOIN "delco_ltslinks"
-        ON "delco_ltslinks".gid = edges.edge
+        INNER JOIN "{1}"
+        ON "{1}".gid = edges.edge
         WHERE linklts > 0.3 AND linklts <= 0.6
         ORDER BY count DESC
         LIMIT 20;
     COMMIT;
-"""
+""".format(TBL_TOP, TBL_ALL_LINKS, TBL_EDGE)
 cur.execute(Q_TopLinks)
 
 
