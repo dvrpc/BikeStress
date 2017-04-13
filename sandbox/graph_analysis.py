@@ -59,3 +59,16 @@ with open(resultfile, "wb") as io:
     w = csv.writer(io)
     w.writerow(["FromNodeNo","ToNodeNo","Group"])
     w.writerows(result)
+
+#### Debug
+link_id = zip(h.GetMulti(Visum.Net.Links, "FromNodeNo"), h.GetMulti(Visum.Net.Links, "ToNodeNo"))
+_link_id = dict((k, v) for v, k in enumerate(link_id))
+with open(r"C:\Users\wtsay\Documents\connected_components.csv", "rb") as io:
+    r = csv.DictReader(io)
+    data = [d for d in r]
+av = [0 for _ in xrange(len(link_id))]
+for d in data:
+    key = tuple(map(int, (d["FromNodeNo"], d["ToNodeNo"])))
+    if key in _link_id:
+        av[_link_id[key]] = int(d["Group"]) + 1
+h.SetMulti(Visum.Net.Links, "AddVal3", av)
