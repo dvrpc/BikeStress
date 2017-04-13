@@ -40,12 +40,22 @@ data = map(lambda row:dict(zip(h, row)), cur.fetchall())
 G = nx.MultiDiGraph()
 for l in data:
     G.add_edge(l['fnn'], l['tnn'], weight = l['lts'])
-gs = nx.attracting_component_subgraphs(G)
+
+if nx.is_semiconnected(G):
+    gs = nx.attracting_component_subgraphs(G)
+    resultfile = "attracting_components.csv"
+else:
+    G = nx.MultiGraph()
+    for l in data:
+        G.add_edge(l['fnn'], l['tnn'], weight = l['lts'])
+    gs = nx.connected_component_subgraphs(G)
+    resultfile = "connected_components.csv"
+
 result = []
 for i, g in enumerate(gs):
     for (fnn, tnn) in g.edges():
         result.append((fnn, tnn, i))
-with open("attracting_components.csv", "wb") as io:
+with open(resultfile, "wb") as io:
     w = csv.writer(io)
     w.writerow(["FromNodeNo","ToNodeNo","Group"])
     w.writerows(result)
