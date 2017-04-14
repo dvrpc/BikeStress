@@ -1,3 +1,8 @@
+# NetworkX/Graph Terminology
+# strongly connected components: (i -> j) && (j -> i)
+# weakly connected components: (i -> j) || (j -> i)
+# attracting components ??
+
 import csv
 import numpy
 import psycopg2 as psql
@@ -40,6 +45,12 @@ data = map(lambda row:dict(zip(h, row)), cur.fetchall())
 G = nx.MultiDiGraph()
 for l in data:
     G.add_edge(l['fnn'], l['tnn'], weight = l['lts'])
+
+print nx.is_strongly_connected(G), nx.number_strongly_connected_components(G)
+print nx.is_weakly_connected(G), nx.number_weakly_connected_components(G)
+print nx.is_attracting_component(G), nx.number_attracting_components(G)
+print nx.is_semiconnected(G)
+#...wut
 
 if nx.is_semiconnected(G):
     gs = nx.attracting_component_subgraphs(G)
