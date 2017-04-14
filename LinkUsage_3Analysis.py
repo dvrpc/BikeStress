@@ -13,11 +13,11 @@ from collections import Counter
 
 
 ####table names to modify in subsequent runs###
-TBL_ALL_LINKS = "mercer_assigned_links_improved"
+TBL_ALL_LINKS = "mercer_improved_lts"
 TBL_CENTS = "mercer_centroids"
-TBL_LINKS = "mercer_tolerablelinks_improved"
-TBL_NODES = "mercer_nodes"
-TBL_SPATHS = "mercer_shortestpaths_improved"
+TBL_LINKS = "mercer_tolerablelinks_improved_edit"
+TBL_NODES = "mercer_nodes_improved_improved_edit"
+TBL_SPATHS = "mercer_shortestpaths_improved_edit"
 TBL_EDGE = "mercer_edgecounts_improved"
 TBL_USE = "mercer_linkuse_improved"
 TBL_TOP = "mercer_topLinks_improved"
@@ -27,6 +27,26 @@ TBL_TOP = "mercer_topLinks_improved"
 con = psql.connect(dbname = "BikeStress", host = "yoshi", port = 5432, user = "postgres", password = "sergt")
 #create cursor to execute querys
 cur = con.cursor()
+
+#quick way to view islands in QGIS
+SELECT
+    tl.gid,
+    tl.no,
+    tl.fromnodeno,
+    tl.tonodeno,
+    tl.linklts,
+    tl.geom,
+    tbl0.cnt AS cnt
+FROM (
+    SELECT
+        edge,
+        COUNT(*) AS cnt
+    FROM "mercer_shortestpaths"
+    GROUP BY edge
+) AS tbl0
+INNER JOIN "mercer_tolerablelinks" AS tl
+ON tl.gid = tbl0.edge
+
 
 #need to recreate OandD list
 #find closest node to origin and destination points (block centroids)
@@ -109,7 +129,7 @@ sqlite_cur.execute("""SELECT
                     AND paths.dGID = tblc.dGID
                     ORDER BY oNode, dNode""")
 pair_count = sqlite_cur.fetchall()
-
+len(pair_count)
 
 #edge count from original table
 Q_EdgeCount = """SELECT edge, COUNT(*) FROM "{0}" GROUP BY edge;""".format(TBL_SPATHS)

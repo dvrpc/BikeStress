@@ -13,11 +13,11 @@ import pickle
 #block centroids with weights if desired (points)
 
 #table names
-TBL_ALL_LINKS = "mercer_assigned_improved"
+TBL_ALL_LINKS = "mercer_improved_lts"
 TBL_CENTS = "mercer_centroids"
-TBL_LINKS = "mercer_tolerablelinks_improved"
-TBL_NODES = "mercer_nodes_improved"
-TBL_SPATHS = "mercer_shortestpaths_improved"
+TBL_LINKS = "mercer_tolerablelinks_improved_edit"
+TBL_NODES = "mercer_nodes_improved_edit"
+TBL_SPATHS = "mercer_shortestpaths_improved_edit"
 #index names
 IDX_ALL_LINKS_geom = "mercer_links_geom_idx_improved"
 IDX_ALL_LINKS_value = "mercer_links_value_idx_improved"

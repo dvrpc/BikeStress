@@ -52,7 +52,8 @@ residential_index = [
 
 
 #create lookup for bike facility column in stress table
-bikeFac_index = [0, 1, 2, 3, 4, 5, 9]
+#numbers re-ordered to act as crosswalk between model bike fac codes and those in the reduction factor table from the paper
+bikeFac_index = [0, 5, 1, 2, 3, 4, 9]
 
 #from figure 1 in paper
 #row 0 is filler for roads with no lanes

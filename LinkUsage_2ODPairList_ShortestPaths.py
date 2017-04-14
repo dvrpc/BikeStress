@@ -6,9 +6,9 @@ import time
 import sys
 
 TBL_CENTS = "mercer_centroids"
-TBL_LINKS = "mercer_tolerablelinks_improved"
-TBL_NODES = "mercer_nodes_improved"
-TBL_SPATHS = "mercer_shortestpaths_improved"
+TBL_LINKS = "mercer_tolerablelinks_improved_edit"
+TBL_NODES = "mercer_nodes_improved_edit"
+TBL_SPATHS = "mercer_shortestpaths_improved_edit"
 
 Q_CreateODList = """
     SELECT
@@ -202,3 +202,9 @@ print(NoPath)
 
 avg = lambda iterable:sum(iterable)/float(len(iterable))
 print min(runTimes), max(runTimes), avg(runTimes), sum(runTimes)
+
+#change file location and slash direction
+endtime = time.time()
+file = open("C:/Users/smoran/Desktop/playground/complete.txt","w")
+file.write(endtime)
+file.close()
