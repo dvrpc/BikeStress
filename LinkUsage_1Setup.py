@@ -11,23 +11,24 @@ import pickle
 ###ITEMS NEEDED IN DB###
 #links with LTS assigned (polyline)
 #block centroids with weights if desired (points)
+#nodes from model(points)
 
 #table names
-TBL_ALL_LINKS = "mercer_improved_lts"
-TBL_CENTS = "mercer_centroids"
-TBL_LINKS = "mercer_tolerablelinks_improved_edit"
-TBL_NODES = "mercer_nodes_improved_edit"
-TBL_SPATHS = "mercer_shortestpaths_improved_edit"
+TBL_ALL_LINKS = "eg_lts_links"
+TBL_CENTS = "eg_blockcent"
+TBL_LINKS = "eg_tolerablelinks"
+TBL_NODES = "eg_nodes"
+TBL_SPATHS = "eg_shortestpaths"
 #index names
-IDX_ALL_LINKS_geom = "mercer_links_geom_idx_improved"
-IDX_ALL_LINKS_value = "mercer_links_value_idx_improved"
-IDX_CENTS_geom = "mercer_centroids_geom_idx"
-IDX_CENTS_value = "mercer_centroids_value_idx"
-IDX_LINKS_geom = "mercer_tol_links_geom_idx_improved"
-IDX_LINKS_value = "mercer_tol_links_value_idx_improved"
-IDX_SPATHS_value = "mercer_spaths_value_idx_improved"
-IDX_NODES_geom = "mercer_nodes_geom_idx"
-IDX_NODES_value = "mercer_nodes_value_idx"
+IDX_ALL_LINKS_geom = "eg_links_geom_idx"
+IDX_ALL_LINKS_value = "eg_links_value_idx"
+IDX_CENTS_geom = "eg_centroids_geom_idx"
+IDX_CENTS_value = "eg_centroids_value_idx"
+IDX_LINKS_geom = "eg_tol_links_geom_idx"
+IDX_LINKS_value = "eg_tol_links_value_idx"
+IDX_SPATHS_value = "eg_spaths_value_idx"
+IDX_NODES_geom = "eg_nodes_geom_idx"
+IDX_NODES_value = "eg_nodes_value_idx"
 
 #connect to SQL DB in python
 con = psql.connect(dbname = "BikeStress", host = "yoshi", port = 5432, user = "postgres", password = "sergt")
@@ -97,42 +98,43 @@ Q_LinkSubset = """
 """.format(TBL_LINKS, TBL_ALL_LINKS, IDX_LINKS_geom, IDX_LINKS_value)
 cur.execute(Q_LinkSubset)
 
+#USING NODES FROM MODEL NOW INSTEAD OF CREATING NODES WITHIN THE DB; this eliminates duplicates and makes sure they all have geometrys
 #create start end end point nodes for all links
 #need to convert from multilinestring to linesting with collection homogenize
 #union the start points and end points together into one table of points
-Q_StartEndPoints = """
-CREATE TABLE "{0}" AS
-
-SELECT type, nodeno, geom FROM (
-
-SELECT 1 AS type, fromnodeno AS nodeno, geom FROM (
-    SELECT
-        fromnodeno,
-        ST_StartPoint(ST_CollectionHomogenize(geom)) AS geom
-    FROM public."{1}"
-) AS tblA
-
-UNION ALL
-
-SELECT 2 AS type, tonodeno AS nodeno, geom FROM (
-    SELECT
-        tonodeno,
-        ST_EndPoint(ST_CollectionHomogenize(geom)) AS geom
-    FROM public."{1}"
-) AS tblB
-
-) AS "{0}";
-CREATE INDEX IF NOT EXISTS "{2}"
-    ON public."{0}" USING gist
-    (geom)
-    TABLESPACE pg_default;
-CREATE INDEX IF NOT EXISTS "{3}"
-    ON public."{0}" USING btree
-    (nodeno)
-    TABLESPACE pg_default;    
-""".format(TBL_NODES, TBL_LINKS, IDX_NODES_geom, IDX_NODES_value)
-cur.execute(Q_StartEndPoints)
-cur.execute("COMMIT;")
+#Q_StartEndPoints = """
+#CREATE TABLE "{0}" AS
+#
+#SELECT type, nodeno, geom FROM (
+#
+#SELECT 1 AS type, fromnodeno AS nodeno, geom FROM (
+#    SELECT
+#        fromnodeno,
+#        ST_StartPoint(ST_CollectionHomogenize(geom)) AS geom
+#    FROM public."{1}"
+#) AS tblA
+#
+#UNION ALL
+#
+#SELECT 2 AS type, tonodeno AS nodeno, geom FROM (
+#    SELECT
+#        tonodeno,
+#        ST_EndPoint(ST_CollectionHomogenize(geom)) AS geom
+#    FROM public."{1}"
+#) AS tblB
+#
+#) AS "{0}";
+#CREATE INDEX IF NOT EXISTS "{2}"
+#    ON public."{0}" USING gist
+#    (geom)
+#    TABLESPACE pg_default;
+#CREATE INDEX IF NOT EXISTS "{3}"
+#    ON public."{0}" USING btree
+#    (nodeno)
+#    TABLESPACE pg_default;    
+#""".format(TBL_NODES, TBL_LINKS, IDX_NODES_geom, IDX_NODES_value)
+#cur.execute(Q_StartEndPoints)
+#cur.execute("COMMIT;")
 
 #query to create table to hold shortest paths
 Q_CreatePathTable = """

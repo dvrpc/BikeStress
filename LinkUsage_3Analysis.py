@@ -41,10 +41,10 @@ FROM (
     SELECT
         edge,
         COUNT(*) AS cnt
-    FROM "mercer_shortestpaths"
+    FROM "eg_shortestpaths"
     GROUP BY edge
 ) AS tbl0
-INNER JOIN "mercer_tolerablelinks" AS tl
+INNER JOIN "eg_geoffs" AS tl
 ON tl.gid = tbl0.edge
 
 

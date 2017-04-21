@@ -69,7 +69,7 @@ residential_index = [
 ]
 
 #create lookup for bike facility column in stress table
-bikeFac_index = [0, 1, 2, 3, 4, 5, 9]
+bikeFac_index = [0, 5, 1, 2, 3, 4, 9]
 
 #from figure 1 in paper
 #row 0 is filler for roads with no lanes
@@ -130,22 +130,22 @@ for i in xrange(0, len(FromNode)):
         TurnStress[i] = 99
     #print([FromNode[i], ViaNode[i], ToNode[i], TurnDirection[i], TurnStress[i]])
         
-    #set turn attribute in Visum
-    h.SetMulti(Visum.Net.Turns, "TurnLTS", TurnStress)
+#set turn attribute in Visum
+h.SetMulti(Visum.Net.Turns, "TurnLTS", TurnStress)
 
-#to write out to CSV
-with open(r'\\SMORAN\dvrpc_shared\PythonReference\BikeStressMap\output_data\TurnLTS_output.csv','wb') as IO:
-    w = csv.writer(IO)
-    #write the header row
-    w.writerow(['FromNode', 'ViaNode', 'ToNode', 'TurnDirection', 'TurnLTS'])        
-    for i in xrange(0, len(FromNode)):
-        w.writerow([FromNode[i], ViaNode[i], ToNode[i], TurnDirection[i], TurnStress[i]])
+##to write out to CSV
+#with open(r'\\SMORAN\dvrpc_shared\PythonReference\BikeStressMap\output_data\TurnLTS_output.csv','wb') as IO:
+#    w = csv.writer(IO)
+#    #write the header row
+#    w.writerow(['FromNode', 'ViaNode', 'ToNode', 'TurnDirection', 'TurnLTS'])        
+#    for i in xrange(0, len(FromNode)):
+#        w.writerow([FromNode[i], ViaNode[i], ToNode[i], TurnDirection[i], TurnStress[i]])
        
 #to write to csv after TurnLTS is already assigned
-with open(r'\\SMORAN\dvrpc_shared\PythonReference\BikeStressMap\output_data\TurnLTS_output.csv','wb') as IO:
+with open(r'C:\Users\model-ws\Documents\Modeling\Projects\BikeStress\TurnLTS_output.csv','wb') as IO:
     w = csv.writer(IO)
     #write the header row
     w.writerow(['FromNode', 'ViaNode', 'ToNode', 'MaxApproachLTS', 'TurnDirection', 'TurnLTS'])        
     for i in xrange(0, len(FromNode)):
-        w.writerow([FromNode[i], ViaNode[i], ToNode[i], MaxApproachLTS[i], TurnDirection[i], TurnLTS[i]])
+        w.writerow([FromNode[i], ViaNode[i], ToNode[i], MaxApproachLTS[i], TurnDirection[i], TurnStress[i]])
 

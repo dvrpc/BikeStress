@@ -5,10 +5,11 @@ import numpy
 import time
 import sys
 
-TBL_CENTS = "mercer_centroids"
-TBL_LINKS = "mercer_tolerablelinks_improved_edit"
-TBL_NODES = "mercer_nodes_improved_edit"
-TBL_SPATHS = "mercer_shortestpaths_improved_edit"
+TBL_CENTS = "eg_blockcent"
+TBL_LINKS = "eg_tolerablelinks"
+TBL_NODES = "eg_nodes"
+TBL_SPATHS = "eg_shortestpaths"
+TBL_GEOFFS = "eg_geoffs"
 
 Q_CreateODList = """
     SELECT
@@ -29,7 +30,7 @@ Q_CreateODList = """
                 )
                 SELECT 
                     tbl0.gid as gid,
-                    "{1}".nodeno AS nodeno,
+                    "{1}".no AS nodeno,
                     ST_Distance(tbl0.geom, "{1}".geom) AS dist
                 FROM 
                     "{1}",
@@ -102,7 +103,7 @@ Q_CreateODList = """
 Q_StraigtLineDist = """
     SELECT ST_Distance(a.geom, b.geom)
     FROM {0} a, {0} b
-    WHERE a.nodeno = %d AND b.nodeno = %d
+    WHERE a.no = %d AND b.no = %d
     GROUP BY a.geom, b.geom;
 """.format(TBL_NODES)
 
@@ -112,6 +113,13 @@ Q_ShortestPath = """
         %d, %d
     );
 """.format(TBL_LINKS)
+
+Q_ShortestPathwTurns = """
+    SELECT %d AS sequence, %d AS oGID, %d AS dGID, * FROM pgr_dijkstra(
+        'SELECT mixid AS id, fromgeoff AS source, togeoff AS target, cost AS cost FROM "{0}"', 
+        %d, %d
+    );
+""".format(TBL_GEOFFS)
 
 Q_InsertShortestPath = """
     INSERT INTO {0} VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
@@ -171,11 +179,11 @@ for i, (oGID, oNode, dGID, dNode) in enumerate(CloseEnough):
     if (i % 1000 == 0):
         print "%s :: %.2f :: %d :: %.2f" % (time.ctime(), time.time() - _time0, i, i / (len(CloseEnough) / 100.0))
         _time0 = time.time()
-
-    threshold = 10
+    #raised threshold to ensure shortest paths with lots of turns are not eliminated
+    threshold = 100
     start_time = time.time()
     _time1 = time.time()
-    cur.execute(Q_ShortestPath % (i, oGID, dGID, oNode, dNode))
+    cur.execute(Q_ShortestPathwTurns % (i, oGID, dGID, oNode, dNode))
     # print "\tQuerying :: %.2f" % (time.time() - _time1)
 
     # _time1 = time.time()
