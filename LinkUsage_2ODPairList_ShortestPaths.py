@@ -5,11 +5,16 @@ import numpy
 import time
 import sys
 
-TBL_CENTS = "eg_blockcent"
-TBL_LINKS = "eg_tolerablelinks"
-TBL_NODES = "eg_nodes"
-TBL_SPATHS = "eg_shortestpaths"
-TBL_GEOFFS = "eg_geoffs"
+TBL_ALL_LINKS = "montco_lts_links"
+TBL_CENTS = "montco_blockcent"
+TBL_LINKS = "montco_tolerablelinks"
+TBL_NODES = "montco_nodes"
+TBL_SPATHS = "montco_shortestpaths"
+TBL_TOLNODES = "montco_tol_nodes"
+TBL_GEOFF_LOOKUP = "montco_geoffs"
+TBL_GEOFF_GEOM = "montco_geoffs_viageom"
+TBL_MASTERLINKS = "montco_master_links"
+TBL_MASTERLINKS_GEO = "montco_master_links_geo"
 
 Q_CreateODList = """
     SELECT
@@ -18,7 +23,7 @@ Q_CreateODList = """
         min(t50.dgid) AS dGID,
         t50.dNode
     FROM (
-        -- Temporary table saving GID, Node correspondence
+        -- Temporary table saving GID, Geoff correspondence
         WITH blockNode AS (
             WITH tbl1 AS (
                 WITH tbl0 AS (
@@ -30,17 +35,17 @@ Q_CreateODList = """
                 )
                 SELECT 
                     tbl0.gid as gid,
-                    "{1}".no AS nodeno,
+                    "{1}".mixid AS geoffid,
                     ST_Distance(tbl0.geom, "{1}".geom) AS dist
                 FROM 
                     "{1}",
                     tbl0
                 WHERE 
-                    tbl0.buffer && "{1}".geom
+                    tbl0.buffer && "{1}".geom AND "{1}".mixid > 0
             )
             SELECT
                 tbl20.gid,
-                tbl1.nodeno
+                MIN(tbl1.geoffid) AS geoffid
             FROM (
                 SELECT
                     gid,
@@ -50,7 +55,7 @@ Q_CreateODList = """
             ) AS tbl20, tbl1
             WHERE tbl20.gid = tbl1.gid
             AND tbl20.dist = tbl1.dist
-            GROUP BY tbl20.gid, tbl1.nodeno
+            GROUP BY tbl20.gid
         )
         SELECT
             t40.oNode AS oNode,
@@ -71,9 +76,9 @@ Q_CreateODList = """
                     -- SQL OandD
                     SELECT
                         t10.gid1 AS oGID,
-                        t11.nodeno AS oNode,
+                        t11.geoffid AS oNode,
                         t10.gid2 AS dGID,
-                        t12.nodeno AS dNode
+                        t12.geoffid AS dNode
                     FROM (
                         -- SQL combinations
                         SELECT DISTINCT
@@ -92,20 +97,20 @@ Q_CreateODList = """
             ) AS t30
         ) AS t40
         INNER JOIN blockNode AS t41
-        ON t41.nodeno = t40.oNode
+        ON t41.geoffid = t40.oNode
         INNER JOIN blockNode AS t42
-        ON t42.nodeno = t40.dNode
+        ON t42.geoffid = t40.dNode
         ORDER BY oNode, dNode
     ) AS t50
     GROUP BY t50.onode, t50.dnode;
-""".format(TBL_CENTS, TBL_NODES)
+""".format(TBL_CENTS, TBL_MASTERLINKS_GEO)
 
 Q_StraigtLineDist = """
     SELECT ST_Distance(a.geom, b.geom)
     FROM {0} a, {0} b
-    WHERE a.no = %d AND b.no = %d
+    WHERE a.mixid = %d AND b.mixid = %d
     GROUP BY a.geom, b.geom;
-""".format(TBL_NODES)
+""".format(TBL_MASTERLINKS_GEO)
 
 Q_ShortestPath = """
     SELECT %d AS sequence, %d AS oGID, %d AS dGID, * FROM pgr_dijkstra(
@@ -119,7 +124,7 @@ Q_ShortestPathwTurns = """
         'SELECT mixid AS id, fromgeoff AS source, togeoff AS target, cost AS cost FROM "{0}"', 
         %d, %d
     );
-""".format(TBL_GEOFFS)
+""".format(TBL_MASTERLINKS_GEO)
 
 Q_InsertShortestPath = """
     INSERT INTO {0} VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
@@ -135,6 +140,7 @@ start_time = time.time()
 cur.execute(Q_CreateODList)
 print "Calculating OD combinations :: %.2f" % (time.time() - start_time)
 OandD = cur.fetchall()
+len(OandD)
 
 mywork = []
 for i in xrange(len(OandD)):
@@ -165,6 +171,7 @@ for i, (oGID, oNode, dGID, dNode) in enumerate(mywork):
             TooFarApart += 1
     splits.append(time.time() - _time1)
 print "Filtering OD line distance :: %.2f" % (time.time() - start_time)
+print "Paths Close Enough to Calculate :: %d" % (len(CloseEnough))
 del mywork
 
 TooLong = 0
@@ -212,7 +219,7 @@ avg = lambda iterable:sum(iterable)/float(len(iterable))
 print min(runTimes), max(runTimes), avg(runTimes), sum(runTimes)
 
 #change file location and slash direction
-endtime = time.time()
-file = open("C:/Users/smoran/Desktop/playground/complete.txt","w")
-file.write(endtime)
-file.close()
+#endtime = time.time()
+#file = open("C:/Users/smoran/Desktop/playground/complete.txt","w")
+#file.write(endtime)
+#file.close()

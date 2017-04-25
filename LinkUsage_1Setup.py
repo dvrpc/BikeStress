@@ -14,21 +14,24 @@ import pickle
 #nodes from model(points)
 
 #table names
-TBL_ALL_LINKS = "eg_lts_links"
-TBL_CENTS = "eg_blockcent"
-TBL_LINKS = "eg_tolerablelinks"
-TBL_NODES = "eg_nodes"
-TBL_SPATHS = "eg_shortestpaths"
+TBL_ALL_LINKS = "montco_lts_links"
+TBL_CENTS = "montco_blockcent"
+TBL_LINKS = "montco_tolerablelinks"
+TBL_NODES = "montco_nodes"
+TBL_SPATHS = "montco_shortestpaths"
+TBL_TOLNODES = "montco_tol_nodes"
 #index names
-IDX_ALL_LINKS_geom = "eg_links_geom_idx"
-IDX_ALL_LINKS_value = "eg_links_value_idx"
-IDX_CENTS_geom = "eg_centroids_geom_idx"
-IDX_CENTS_value = "eg_centroids_value_idx"
-IDX_LINKS_geom = "eg_tol_links_geom_idx"
-IDX_LINKS_value = "eg_tol_links_value_idx"
-IDX_SPATHS_value = "eg_spaths_value_idx"
-IDX_NODES_geom = "eg_nodes_geom_idx"
-IDX_NODES_value = "eg_nodes_value_idx"
+IDX_ALL_LINKS_geom = "montco_links_geom_idx"
+IDX_ALL_LINKS_value = "montco_links_value_idx"
+IDX_CENTS_geom = "montco_centroids_geom_idx"
+IDX_CENTS_value = "montco_centroids_value_idx"
+IDX_LINKS_geom = "montco_tol_links_geom_idx"
+IDX_LINKS_value = "montco_tol_links_value_idx"
+IDX_SPATHS_value = "montco_spaths_value_idx"
+IDX_NODES_geom = "montco_nodes_geom_idx"
+IDX_NODES_value = "montco_nodes_value_idx"
+IDX_TOL_NODES_geom = "montco_nodes_geom_idx"
+IDX_TOL_NODES_value = "montco_nodes_value_idx"
 
 #connect to SQL DB in python
 con = psql.connect(dbname = "BikeStress", host = "yoshi", port = 5432, user = "postgres", password = "sergt")
@@ -97,6 +100,30 @@ Q_LinkSubset = """
         TABLESPACE pg_default;    
 """.format(TBL_LINKS, TBL_ALL_LINKS, IDX_LINKS_geom, IDX_LINKS_value)
 cur.execute(Q_LinkSubset)
+
+#query to select nodes that correspond with the tolerable link subset
+Q_NodeSubset = """
+    CREATE TABLE "{2}" AS
+        SELECT DISTINCT N.* FROM "{0}" N
+        INNER JOIN "{1}" TL
+        ON N.no = TL.fromnodeno
+        
+        UNION
+        
+        SELECT DISTINCT N.* FROM "{0}" N
+        INNER JOIN "{1}" TL
+        ON N.no = TL.tonodeno;
+    COMMIT;
+    CREATE INDEX IF NOT EXISTS "{3}"
+        ON public."{2}" USING gist
+        (geom)
+        TABLESPACE pg_default; 
+    CREATE INDEX IF NOT EXISTS "{4}"
+        ON public."{2}" USING btree
+        (gid, no)
+        TABLESPACE pg_default; 
+""".format(TBL_NODES, TBL_LINKS, TBL_TOLNODES, IDX_TOL_NODES_geom, IDX_TOL_NODES_value)
+cur.execute(Q_NodeSubset)
 
 #USING NODES FROM MODEL NOW INSTEAD OF CREATING NODES WITHIN THE DB; this eliminates duplicates and makes sure they all have geometrys
 #create start end end point nodes for all links

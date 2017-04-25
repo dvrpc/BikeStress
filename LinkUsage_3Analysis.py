@@ -13,14 +13,19 @@ from collections import Counter
 
 
 ####table names to modify in subsequent runs###
-TBL_ALL_LINKS = "mercer_improved_lts"
-TBL_CENTS = "mercer_centroids"
-TBL_LINKS = "mercer_tolerablelinks_improved_edit"
-TBL_NODES = "mercer_nodes_improved_improved_edit"
-TBL_SPATHS = "mercer_shortestpaths_improved_edit"
-TBL_EDGE = "mercer_edgecounts_improved"
-TBL_USE = "mercer_linkuse_improved"
-TBL_TOP = "mercer_topLinks_improved"
+TBL_ALL_LINKS = "montco_lts_links"
+TBL_CENTS = "montco_blockcent"
+TBL_LINKS = "montco_tolerablelinks"
+TBL_NODES = "montco_nodes"
+TBL_SPATHS = "montco_shortestpaths"
+TBL_TOLNODES = "montco_tol_nodes"
+TBL_GEOFF_LOOKUP = "montco_geoffs"
+TBL_GEOFF_GEOM = "montco_geoffs_viageom"
+TBL_MASTERLINKS = "montco_master_links"
+TBL_MASTERLINKS_GEO = "montco_master_links_geo"
+TBL_EDGE = "montco_edgecounts4"
+TBL_USE = "montco_linkuse4"
+TBL_TOP = "montco_topLinks"
 
 
 #connect to SQL DB in python
@@ -30,11 +35,10 @@ cur = con.cursor()
 
 #quick way to view islands in QGIS
 SELECT
-    tl.gid,
-    tl.no,
-    tl.fromnodeno,
-    tl.tonodeno,
-    tl.linklts,
+    tl.mixid,
+    tl.fromgeoff,
+    tl.togeoff,
+    tl.cost,
     tl.geom,
     tbl0.cnt AS cnt
 FROM (
@@ -44,7 +48,7 @@ FROM (
     FROM "eg_shortestpaths"
     GROUP BY edge
 ) AS tbl0
-INNER JOIN "eg_geoffs" AS tl
+INNER JOIN "eg_geo_geoffs" AS tl
 ON tl.gid = tbl0.edge
 
 
@@ -54,18 +58,19 @@ Q_ClosestPoint = """
     SELECT
         "{0}".gid,
         (
-            SELECT nodeno 
+            SELECT mixid 
             FROM (
                 SELECT
-                    nodeno,
+                    mixid,
                     st_distance("{0}".geom, geom) AS distance
                 FROM "{1}"
-                ORDER BY distance ASC
+                WHERE mixid > 0
+                ORDER BY distance ASC, mixid ASC
                 LIMIT 1
             ) AS tmp
-        ) AS nodeno
+        ) AS mixid
     FROM "{0}";
-""".format(TBL_CENTS, TBL_NODES)
+""".format(TBL_CENTS, TBL_MASTERLINKS_GEO)
 cur.execute(Q_ClosestPoint)
 block_cent_node = cur.fetchall()
 len(block_cent_node)
@@ -180,14 +185,14 @@ con.commit()
 #join back to link table to get geometry for display purposes and linklts for filtering purposes
 Q_GeomJoin = """
     CREATE TABLE "{0}" AS
-        SELECT edges.*, "{1}".linklts, "{1}".geom 
+        SELECT edges.*, "{1}".cost, "{1}".geom 
         FROM (
         SELECT * FROM "{2}"
         ) AS edges 
         INNER JOIN "{1}"
-        ON "{1}".gid = edges.edge;
+        ON "{1}".mixid = edges.edge;
     COMMIT;
-""".format(TBL_USE, TBL_ALL_LINKS, TBL_EDGE)
+""".format(TBL_USE, TBL_MASTERLINKS_GEO, TBL_EDGE)
 cur.execute(Q_GeomJoin)
 
 #how many OD pairs are connected using this network?
