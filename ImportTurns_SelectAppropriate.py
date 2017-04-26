@@ -209,25 +209,48 @@ cur.execute(Q_CreateMasterLinks)
 
 
 #add geom colum from nodes and links to geoffs table
+#must format geom columns so they are the same geometry type (linestring vs multilinestring) and both have the correct SRID
 Q_Master_Geom = """
-    CREATE TABLE "{0}" AS(
-        SELECT * FROM(
-                SELECT "{1}".*, tblC.geom FROM(
-                    SELECT tblB.*, tblA.st_makeline AS geom FROM (
-                        SELECT no, ST_MakeLine(geom, geom) FROM "{3}" WHERE geom IS NOT NULL GROUP BY no, geom
-                    ) AS tblA
-                    INNER JOIN eg_turns AS tblB
-                    ON tblA.no = tblB.vianode
-                ) AS tblC
-                INNER JOIN "{1}"
-                ON "{1}".mixid = tblC.turnID
+DROP TABLE IF EXISTS "{0}";
+COMMIT;
 
-                UNION ALL
+CREATE TABLE "{0}" AS(
+    SELECT
+        tabelle0.*
+    FROM (
 
-                SELECT "{1}".*, "{2}".geom FROM "{1}"
-                INNER JOIN "{2}"
-                ON "{1}".mixid = "{2}".gid) AS tblD);
-    COMMIT;
+        SELECT
+            all_links.*,
+            tblC.geom
+        FROM (
+            SELECT
+                tblB.*,
+                tblA.geom
+            FROM (
+                SELECT
+                    no,
+                    ST_SetSRID(ST_Multi(ST_MakeLine(geom, geom)), 26918) AS geom
+                FROM "{3}"
+                WHERE geom IS NOT NULL
+                GROUP BY no, geom
+            ) AS tblA
+            INNER JOIN eg_turns AS tblB
+            ON tblA.no = tblB.vianode
+        ) AS tblC
+        INNER JOIN "{1}" AS all_links
+        ON all_links.mixid = tblC.turnID
+
+        UNION ALL
+
+        SELECT all_links.*, ST_SetSRID(ST_Multi(fil_links.geom), 26918) AS geom
+        FROM "{1}" AS all_links
+        INNER JOIN "{2}" AS fil_links
+        ON all_links.mixid = fil_links.gid
+
+    ) AS tabelle0
+);
+SELECT UpdateGeometrySRID('{0}', 'geom', 26918);
+COMMIT;
 """.format(TBL_MASTERLINKS_GEO, TBL_MASTERLINKS, TBL_ALL_LINKS, TBL_TOLNODES)
 cur.execute(Q_Master_Geom)
     
