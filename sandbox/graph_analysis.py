@@ -7,6 +7,31 @@ import numpy
 import psycopg2 as psql
 import networkx as nx
 
+class Sponge:
+    def __init__(self, *args, **kwds):
+        self._args = args
+        self._kwds = kwds
+        for k, v in kwds.iteritems():
+            setattr(self, k, v)
+        self.code = 0
+        self.groups = {}
+
+def Group(groupNo, subgraphs):
+    condition = {groupNo: 0}
+    for i, g in enumerate(subgraphs):
+        for (id, fg, tg) in g.edges(keys = True):
+            if (fg, tg) in links:
+                l = links[(fg, tg)]
+                j = 1
+            elif (tg, fg) in links:
+                l = links[(fg, tg)]
+                j = -1
+            else:
+                condition[groupNo] += 1
+                continue
+            l.groups[groupNo] = i * j
+    return condition
+
 con = psql.connect(
     dbname = "BikeStress",
     host = "yoshi",
@@ -24,41 +49,25 @@ SELECT
 FROM "montco_master_links_geo";
 """)
 h = ['id','tg','fg','cost']
-# links = map(lambda row:dict(zip(h, row)), cur.fetchall())
-links = cur.fetchall()
+links = {}
+for row in cur.fetchall():
+    l = Sponge(**dict(zip(h, row)))
+    links[(l.fg, l.tg)] = l
 
-fgtg_id = {}
-fgtg_code = {}
 G = nx.MultiDiGraph()
-for id, fg, tg, cost in links:
-    fgtg_id[(fg, tg)] = id
-    fgtg_code[(fg, tg)] = 0
-    G.add_edge(fg, tg, key = id, weight = cost)
+for l in links.itervalues():
+    G.add_edge(l.fg, l.tg, key = l.id, weight = l.cost)
+    l.code = 1
 
 print nx.is_strongly_connected(G), nx.number_strongly_connected_components(G)
 print nx.is_weakly_connected(G), nx.number_weakly_connected_components(G)
 print nx.is_attracting_component(G), nx.number_attracting_components(G)
 print nx.is_semiconnected(G)
-#...wut
 
-if nx.is_semiconnected(G):
-    gs = nx.attracting_component_subgraphs(G)
-else:
-    G = nx.MultiGraph()
-    for id, fg, tg, cost in links:
-        G.add_edge(fg, tg, key = id, weight = cost)
-    gs = nx.connected_component_subgraphs(G)
-
-fgtg_magic = {}
-result = []
-for i, g in enumerate(gs):
-    for (fg, tg) in g.edges():
-        if (fg, tg) in fgtg_id:
-            id = fgtg_id[(fg, tg)]
-            fgtg_code[(fg, tg)] = 1
-            result.append((id, fg, tg, i))
-        else:
-            fgtg_magic[(fg, tg)] = None
+condition = {}
+condition.update(Group(0, nx.weakly_connected_component_subgraphs(G)))
+condition.update(Group(1, nx.strongly_connected_component_subgraphs(G)))
+condition.update(Group(2, nx.attracting_component_subgraphs(G)))
 
 cur.execute("""
 CREATE TABLE 
