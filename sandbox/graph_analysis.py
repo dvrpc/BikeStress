@@ -3,32 +3,9 @@
 # weakly connected components: (i -> j) || (j -> i)
 # attracting components ??
 
-import csv
 import numpy
 import psycopg2 as psql
 import networkx as nx
-
-TBL_LINKS = "mercer_tolerablelinks"
-TBL_SPATHS = "mercer_shortestpaths"
-
-SQL_SPLINKS = """
-SELECT
-    tl.gid,
-    tl.no,
-    tl.fromnodeno,
-    tl.tonodeno,
-    tl.linklts,
-    tbl0.cnt AS cnt
-FROM (
-    SELECT
-        edge,
-        COUNT(*) AS cnt
-    FROM "{0}"
-    GROUP BY edge
-) AS tbl0
-INNER JOIN "{1}" AS tl
-ON tl.gid = tbl0.edge
-""".format(TBL_SPATHS, TBL_LINKS)
 
 con = psql.connect(
     dbname = "BikeStress",
@@ -38,13 +15,25 @@ con = psql.connect(
     password = "sergt"
 )
 cur = con.cursor()
-cur.execute(SQL_SPLINKS)
-h = ['gid','no','fnn','tnn','lts','cnt']
-data = map(lambda row:dict(zip(h, row)), cur.fetchall())
+cur.execute("""
+SELECT
+    mixid,
+    fromgeoff,
+    togeoff,
+    cost
+FROM "montco_master_links_geo";
+""")
+h = ['id','tg','fg','cost']
+# links = map(lambda row:dict(zip(h, row)), cur.fetchall())
+links = cur.fetchall()
 
+fgtg_id = {}
+fgtg_code = {}
 G = nx.MultiDiGraph()
-for l in data:
-    G.add_edge(l['fnn'], l['tnn'], weight = l['lts'])
+for id, fg, tg, cost in links:
+    fgtg_id[(fg, tg)] = id
+    fgtg_code[(fg, tg)] = 0
+    G.add_edge(fg, tg, key = id, weight = cost)
 
 print nx.is_strongly_connected(G), nx.number_strongly_connected_components(G)
 print nx.is_weakly_connected(G), nx.number_weakly_connected_components(G)
@@ -54,32 +43,37 @@ print nx.is_semiconnected(G)
 
 if nx.is_semiconnected(G):
     gs = nx.attracting_component_subgraphs(G)
-    resultfile = "attracting_components.csv"
 else:
     G = nx.MultiGraph()
-    for l in data:
-        G.add_edge(l['fnn'], l['tnn'], weight = l['lts'])
+    for id, fg, tg, cost in links:
+        G.add_edge(fg, tg, key = id, weight = cost)
     gs = nx.connected_component_subgraphs(G)
-    resultfile = "connected_components.csv"
 
+fgtg_magic = {}
 result = []
 for i, g in enumerate(gs):
-    for (fnn, tnn) in g.edges():
-        result.append((fnn, tnn, i))
-with open(resultfile, "wb") as io:
-    w = csv.writer(io)
-    w.writerow(["FromNodeNo","ToNodeNo","Group"])
-    w.writerows(result)
+    for (fg, tg) in g.edges():
+        if (fg, tg) in fgtg_id:
+            id = fgtg_id[(fg, tg)]
+            fgtg_code[(fg, tg)] = 1
+            result.append((id, fg, tg, i))
+        else:
+            fgtg_magic[(fg, tg)] = None
 
-#### Debug
-link_id = zip(h.GetMulti(Visum.Net.Links, "FromNodeNo"), h.GetMulti(Visum.Net.Links, "ToNodeNo"))
-_link_id = dict((k, v) for v, k in enumerate(link_id))
-with open(r"C:\Users\wtsay\Documents\connected_components.csv", "rb") as io:
-    r = csv.DictReader(io)
-    data = [d for d in r]
-av = [0 for _ in xrange(len(link_id))]
-for d in data:
-    key = tuple(map(int, (d["FromNodeNo"], d["ToNodeNo"])))
-    if key in _link_id:
-        av[_link_id[key]] = int(d["Group"]) + 1
-h.SetMulti(Visum.Net.Links, "AddVal3", av)
+cur.execute("""
+CREATE TABLE 
+    public.montco_links_wtsay
+(
+    mixid integer,
+    fromgeoff integer,
+    togeoff integer,
+    group intger
+);
+""")
+
+str_rpl = ",".join("%s" for _ in xrange(len(result[0])))
+arg_str = ','.join(cur.mogrify(str_rpl, x) for x in results)
+cur.execute("""
+INSERT INTO
+    public.montco_links_wtsay
+VALUES """ + args_str)
