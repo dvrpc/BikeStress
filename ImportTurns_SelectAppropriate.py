@@ -20,7 +20,7 @@ TBL_GEOFF_LOOKUP = "montco_geoffs"
 TBL_GEOFF_LOOKUP_GEOM = "montco_geoffs_viageom"
 TBL_MASTERLINKS = "montco_master_links"
 TBL_MASTERLINKS_GEO = "montco_master_links_geo"
-TBL_TURNS = "All_Turns"
+TBL_TURNS = "all_turns"
 TBL_SUBTURNS = "montco_turns"
 
 IDX_ALL_TURNS_values = "All_Turns_values_idx"
@@ -31,7 +31,7 @@ con = psql.connect(dbname = "BikeStress", host = "yoshi", port = 5432, user = "p
 cur = con.cursor()
 
 #ONCE ALL TURNS ARE IMPORTED, DO NOT NEED TO REPEAT THIS UNLESS REPLACING TURNS
-'''
+
 #query to create blank turn table
 Q_CreateTurnTable = """
 CREATE TABLE IF NOT EXISTS public."{0}"
@@ -85,7 +85,7 @@ data = zip(*data)
 
 cur.executemany(Q_INSERT, data)
 con.commit()
-'''
+
 
 #query to select turns that share a node with the links in the subset of links being used
 Q_SubsetTurns = """
@@ -234,7 +234,7 @@ CREATE TABLE "{0}" AS(
                 WHERE geom IS NOT NULL
                 GROUP BY no, geom
             ) AS tblA
-            INNER JOIN eg_turns AS tblB
+            INNER JOIN "{4}" AS tblB
             ON tblA.no = tblB.vianode
         ) AS tblC
         INNER JOIN "{1}" AS all_links
@@ -251,7 +251,7 @@ CREATE TABLE "{0}" AS(
 );
 SELECT UpdateGeometrySRID('{0}', 'geom', 26918);
 COMMIT;
-""".format(TBL_MASTERLINKS_GEO, TBL_MASTERLINKS, TBL_ALL_LINKS, TBL_TOLNODES)
+""".format(TBL_MASTERLINKS_GEO, TBL_MASTERLINKS, TBL_ALL_LINKS, TBL_TOLNODES, TBL_SUBTURNS)
 cur.execute(Q_Master_Geom)
     
 

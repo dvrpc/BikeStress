@@ -6,6 +6,7 @@ import time
 import sys
 import json
 import scipy.spatial
+import networkx as nx
 
 TBL_ALL_LINKS = "montco_lts_links"
 TBL_CENTS = "montco_blockcent"
@@ -39,6 +40,15 @@ def ExecFetchSQL(SQL_Stmt):
     cur = con.cursor()
     cur.execute(SQL_Stmt)
     return map(GetCoords, cur.fetchall())
+    
+class Sponge:
+    def __init__(self, *args, **kwds):
+        self._args = args
+        self._kwds = kwds
+        for k, v in kwds.iteritems():
+            setattr(self, k, v)
+        self.code = 0
+        self.groups = {}
 
 worker_number = int(sys.argv[1])
 pool_size = int(sys.argv[2])
@@ -76,21 +86,137 @@ sdm = nodetree.sparse_distance_matrix(nodetree, 8046.72)
 print time.ctime(), "Section 4"
 OandD = sorted(sdm.keys())
 
+#grab master links to make graph with networkx
+cur.execute("""
+SELECT
+    mixid,
+    fromgeoff,
+    togeoff,
+    cost
+FROM "montco_master_links_geo";
+""")
+#format master links so networkx can read them
+h = ['id','fg','tg','cost']
+links = {}
+for row in cur.fetchall():
+    l = Sponge(**dict(zip(h, row)))
+    links[(l.fg, l.tg)] = l
+
+#create graph
+G = nx.MultiDiGraph()
+for l in links.itervalues():
+    G.add_edge(l.fg, l.tg, key = l.id, weight = l.cost)
+    l.code = 1
+_G = G.to_undirected()
+gs = nx.connected_component_subgraphs(_G)
+#create dictionary to serve as lookup betweek geoffs and connected groups
+geoff_grp = {}
+for i, g in enumerate(gs):
+    for geoff in g.nodes():
+        geoff_grp[geoff] = i
+
+#get groups back into postgis
+cur.execute("""CREATE TABLE public.montco_links_grps (mixid integer, fromgeoff integer, togeoff integer, grp integer);""")
+
+str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(results[0]))))
+arg_str = ','.join(cur.mogrify(str_rpl, x) for x in results)
+cur.execute("""
+INSERT INTO
+    public.montco_links_grps
+VALUES """ + arg_str)
+con.commit()
+#join to master links geo
+cur.execute("""
+    CREATE TABLE public."montco_master_links_grp" AS(
+        SELECT * FROM(
+            SELECT 
+                t0.*,
+                t1.cost,
+                t1.geom
+            FROM "montco_links_grps" AS t0
+            LEFT JOIN "montco_master_links_geo" AS t1
+            ON t0.mixid = t1.mixid
+        ) AS montco_master_links_grp
+    );""")
+con.commit()
+
+#create a view
+#calculate shortest paths on a view
+#iterate over views to calcualte all shortest paths
+
+"links_grp_01"  
+"links_grp_02"
+...
+
+
+for grpNo in xrange(10):
+    tblname = "links_grp_%d" % grpNo
+    cur.execute("DROP IF EXISTS VIEW %s" % tblname)
+
+SELECT WHERE grp = 1
+
+CREATE OR REPLACE VIEW public.geography_columns AS 
+ SELECT current_database() AS f_table_catalog,
+    n.nspname AS f_table_schema,
+    c.relname AS f_table_name,
+    a.attname AS f_geography_column,
+    postgis_typmod_dims(a.atttypmod) AS coord_dimension,
+    postgis_typmod_srid(a.atttypmod) AS srid,
+    postgis_typmod_type(a.atttypmod) AS type
+   FROM pg_class c,
+    pg_attribute a,
+    pg_type t,
+    pg_namespace n
+  WHERE t.typname = 'geography'::name AND a.attisdropped = false AND a.atttypid = t.oid AND a.attrelid = c.oid AND c.relnamespace = n.oid AND NOT pg_is_other_temp_schema(c.relnamespace) AND has_table_privilege(c.oid, 'SELECT'::text);
+
+ALTER TABLE public.geography_columns
+  OWNER TO postgres;
+GRANT ALL ON TABLE public.geography_columns TO postgres;
+GRANT SELECT ON TABLE public.geography_columns TO public;
+
+
+'''        
+#identify which connected group each link is in
+for i, g in enumerate(gs):
+    for fg, tg in g.edges():
+        if (fg, tg) in links:
+            links[(fg,tg)].groups[10] = i
+        elif (tg, fg) in links:
+            links[(tg,fg)].groups[10] = i
+#look at the groups in qgis
+SELECT 
+	t0.*,
+	t1.geom
+FROM "montco_links_wtsay" AS t0
+LEFT JOIN "montco_master_links_geo" AS t1
+ON t0.mixid = t1.mixid;
+'''
+
 CloseEnough = []
+DiffGroup = 0
 for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
-    if i % pool_size == (worker_number - 1):
-        fromnodeno = nodenos[fromnodeindex]
-        tonodeno = nodenos[tonodeindex]
+    # if i % pool_size == (worker_number - 1):
+    fromnodeno = nodenos[fromnodeindex]
+    tonodeno = nodenos[tonodeindex]
+    if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
         CloseEnough.append([
             nodes_gids[fromnodeno],  # FromGID
             nodes_geoff[fromnodeno], # FromGeoff
             nodes_gids[tonodeno],    # ToGID
             nodes_geoff[tonodeno]    # ToGeoff
         ])
+        # else: 
+            # DiffGroup += 1
+                       
 print time.ctime(), "Workload :: %d of %d" % (len(CloseEnough), len(OandD))
 print time.ctime(), time.time() - start_time
 
 del data, geoff_nodes, gids, node_coords, nodenos, nodes_gids, nodetree, OandD, results, sdm, world_coords, world_ids, world_vias
+
+# Read in master link information
+# Create NetworkX Graph
+# Find the connected components
+# 
 
 TooLong = 0
 NoPath = 0
