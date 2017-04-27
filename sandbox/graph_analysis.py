@@ -24,7 +24,7 @@ def Group(groupNo, subgraphs):
                 l = links[(fg, tg)]
                 j = 1
             elif (tg, fg) in links:
-                l = links[(fg, tg)]
+                l = links[(tg, fg)]
                 j = -1
             else:
                 condition[groupNo] += 1
@@ -48,7 +48,7 @@ SELECT
     cost
 FROM "montco_master_links_geo";
 """)
-h = ['id','tg','fg','cost']
+h = ['id','fg','tg','cost']
 links = {}
 for row in cur.fetchall():
     l = Sponge(**dict(zip(h, row)))
@@ -68,6 +68,7 @@ condition = {}
 condition.update(Group(0, nx.weakly_connected_component_subgraphs(G)))
 condition.update(Group(1, nx.strongly_connected_component_subgraphs(G)))
 condition.update(Group(2, nx.attracting_component_subgraphs(G)))
+# condition.update(Group(3, nx.biconnected_component_subgraphs(G)))
 
 cur.execute("""
 CREATE TABLE 
