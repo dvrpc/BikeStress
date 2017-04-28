@@ -62,6 +62,7 @@ for (fg, tg) in links:
 # condition.update(Group(2, nx.attracting_component_subgraphs(G)))
 # condition.update(Group(3, nx.biconnected_component_subgraphs(G)))
 
+condition = {0:0, 1:0, 10:0, 11:0, 20:0, 21:0, 30:0, 31:0, 32:0}
 gs = list(nx.strongly_connected_component_subgraphs(G))
 for i, g in enumerate(gs):
     for (fg, tg) in g.edges():
@@ -93,8 +94,10 @@ gs = list(nx.connected_component_subgraphs(G.to_undirected()))
 for i, g in enumerate(gs):
     for (fg, tg) in g.edges():
         if (fg, tg) in links:
+            links[(fg, tg)].groups[103] = i
             condition[30] += 1
         if (tg, fg) in links:
+            links[(tg, fg)].groups[103] = i
             condition[31] += 1
         else:
             condition[32] += 1
