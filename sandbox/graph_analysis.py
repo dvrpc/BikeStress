@@ -16,20 +16,16 @@ class Sponge:
         self.code = 0
         self.groups = {}
 
-def Group(groupNo, subgraphs):
+def Group(groupNo, subgraphs, reverse = False):
     condition = {groupNo: 0}
     for i, g in enumerate(subgraphs):
-        for (id, fg, tg) in g.edges(keys = True):
+        for (fg, tg) in g.edges():
             if (fg, tg) in links:
-                l = links[(fg, tg)]
-                j = 1
-            elif (tg, fg) in links:
-                l = links[(tg, fg)]
-                j = -1
+                links[(fg, tg)].groups[groupNo] = i
+            if reverse and (tg, fg) in links:
+                links[(tg, fg)].groups[groupNo] = i
             else:
                 condition[groupNo] += 1
-                continue
-            l.groups[groupNo] = i * j
     return condition
 
 con = psql.connect(
@@ -48,6 +44,7 @@ SELECT
     cost
 FROM "montco_master_links_geo";
 """)
+
 h = ['id','fg','tg','cost']
 links = {}
 for row in cur.fetchall():
@@ -59,18 +56,12 @@ for (fg, tg) in links:
     G.add_edge(fg, tg)
     links[(fg,tg)].code = 1
 
-# print nx.is_strongly_connected(G), nx.number_strongly_connected_components(G)
-# print nx.is_weakly_connected(G), nx.number_weakly_connected_components(G)
-# print nx.is_attracting_component(G), nx.number_attracting_components(G)
-# print nx.is_semiconnected(G)
-
 # condition = {}
 # condition.update(Group(0, nx.weakly_connected_component_subgraphs(G)))
 # condition.update(Group(1, nx.strongly_connected_component_subgraphs(G)))
 # condition.update(Group(2, nx.attracting_component_subgraphs(G)))
 # condition.update(Group(3, nx.biconnected_component_subgraphs(G)))
 
-condition = {0:0, 1:0, 10:0, 11:0, 20:0, 21:0}
 gs = list(nx.strongly_connected_component_subgraphs(G))
 for i, g in enumerate(gs):
     for (fg, tg) in g.edges():
@@ -102,10 +93,8 @@ gs = list(nx.connected_component_subgraphs(G.to_undirected()))
 for i, g in enumerate(gs):
     for (fg, tg) in g.edges():
         if (fg, tg) in links:
-            links[(fg, tg)].groups[104] = i
             condition[30] += 1
         if (tg, fg) in links:
-            links[(tg, fg)].groups[104] = i
             condition[31] += 1
         else:
             condition[32] += 1
