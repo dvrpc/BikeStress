@@ -1,0 +1,150 @@
+import psycopg2 as psql
+import csv
+import itertools
+import numpy
+import time
+import sys
+import json
+import scipy.spatial
+import networkx as nx
+
+TBL_ALL_LINKS = "montco_lts_links"
+TBL_CENTS = "montco_blockcent"
+TBL_LINKS = "montco_tolerablelinks"
+TBL_NODES = "montco_nodes"
+TBL_SPATHS = "montco_shortestpaths"
+TBL_TOLNODES = "montco_tol_nodes"
+TBL_GEOFF_LOOKUP = "montco_geoffs"
+TBL_GEOFF_GEOM = "montco_geoffs_viageom"
+TBL_MASTERLINKS = "montco_master_links"
+TBL_MASTERLINKS_GEO = "montco_master_links_geo"
+TBL_MASTERLINKS_GROUPS = "montco_master_links_grp"
+TBL_GROUPS = "montco_groups"
+
+class Sponge:
+    def __init__(self, *args, **kwds):
+        self._args = args
+        self._kwds = kwds
+        for k, v in kwds.iteritems():
+            setattr(self, k, v)
+        self.code = 0
+        self.groups = {}
+        
+def Group(groupNo, subgraphs, counter):
+    for i, g in enumerate(subgraphs):
+        for (fg, tg) in g.edges():
+            if (fg, tg) in links:
+                links[(fg, tg)].groups[groupNo] = counter
+            if (tg, fg) in links:
+                links[(tg, fg)].groups[groupNo] = counter
+        counter += 1
+    return counter
+
+#grab master links to make graph with networkx
+Q_SelectMasterLinks = """
+    SELECT
+        mixid,
+        fromgeoff,
+        togeoff,
+        cost
+    FROM "{0}";
+    """.format(TBL_MASTERLINKS_GEO)
+cur.execute(Q_SelectMasterLinks)
+#format master links so networkx can read them
+h = ['id','fg','tg','cost']
+links = {}
+for row in cur.fetchall():
+    l = Sponge(**dict(zip(h, row)))
+    links[(l.fg, l.tg)] = l
+
+print time.ctime(), "Creating Graph"
+#create graph
+G = nx.MultiDiGraph()
+for l in links.itervalues():
+    G.add_edge(l.fg, l.tg)
+
+print time.ctime(), "Find Islands"
+counter = 0
+counter = Group(0, list(nx.strongly_connected_component_subgraphs(G)), counter)
+counter = Group(1, list(nx.weakly_connected_component_subgraphs(G)), counter)
+counter = Group(2, list(nx.attracting_component_subgraphs(G)), counter)
+counter = Group(3, list(nx.connected_component_subgraphs(G.to_undirected())), counter)
+
+results = []
+for l in links.itervalues():
+    row = [l.id, l.fg, l.tg]
+    for i in xrange(4):
+        if i in l.groups:
+            row.append(l.groups[i])
+        else:
+            row.append(None)
+    results.append(row)
+
+#get groups back into postgis
+Q_CreateLinkGrpTable = """
+    CREATE TABLE public."{0}"(
+        mixid integer, 
+        fromgeoff integer, 
+        togeoff integer, 
+        strong integer,
+        weak integer,
+        attracting integer,
+        undirected integer
+    );""".format(TBL_GROUPS)
+cur.execute(Q_CreateLinkGrpTable)
+
+str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(results[0]))))
+arg_str = ','.join(cur.mogrify(str_rpl, x) for x in results)
+
+Q_InsertGrps = """
+INSERT INTO
+    public."{0}"
+VALUES {1}
+""".format(TBL_GROUPS, arg_str)
+
+cur.execute(Q_InsertGrps)
+con.commit()
+del results
+
+#join strong group number to master links geo
+Q_JoinGroupGeo = """
+    CREATE TABLE public."{1}" AS(
+        SELECT * FROM(
+            SELECT 
+                t1.*,
+                t0.strong
+            FROM "{0}" AS t0
+            LEFT JOIN "{2}" AS t1
+            ON t0.mixid = t1.mixid
+        ) AS "{1}"
+    );""".format(TBL_GROUPS, TBL_MASTERLINKS_GROUPS, TBL_MASTERLINKS_GEO)
+cur.execute(Q_JoinGroupGeo)
+con.commit()
+
+# Q_CREATEINDEX = """
+# CREATE INDEX montco_master_links_grp_idx
+   # ON public.montco_master_links_grp (strong ASC NULLS LAST);
+# """
+
+#create a view
+#calculate shortest paths on a view
+#iterate over views to calcualte all shortest paths
+
+#query to find min and max number of strong
+Q_StrongSelect = """
+    SELECT strong FROM "{0}"
+    WHERE strong > 1
+    ;""".format(TBL_MASTERLINKS_GROUPS)
+cur.execute(Q_StrongSelect)
+strong_grps = cur.fetchall()
+
+print time.ctime(), "Create Group Views"
+#iterate over groups
+Q_CreateView = """CREATE VIEW %s AS(
+                    SELECT * FROM "{0}"
+                    WHERE strong = %d)""".format(TBL_MASTERLINKS_GROUPS)
+for grpNo in xrange(0, max(strong_grps)[0]):
+    tblname = "links_grp_%d" % grpNo
+    cur.execute("""DROP VIEW IF EXISTS %s;""" % tblname)
+    #create view for each group
+    cur.execute(Q_CreateView % (tblname, grpNo))
