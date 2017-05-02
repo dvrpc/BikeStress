@@ -10,16 +10,21 @@ import networkx as nx
 
 TBL_ALL_LINKS = "montco_lts_links"
 TBL_CENTS = "montco_blockcent"
-TBL_LINKS = "montco_tolerablelinks"
+TBL_LINKS = "montco__L3_tolerablelinks"
 TBL_NODES = "montco_nodes"
-TBL_SPATHS = "montco_shortestpaths"
-TBL_TOLNODES = "montco_tol_nodes"
-TBL_GEOFF_LOOKUP = "montco_geoffs"
-TBL_GEOFF_GEOM = "montco_geoffs_viageom"
-TBL_MASTERLINKS = "montco_master_links"
-TBL_MASTERLINKS_GEO = "montco_master_links_geo"
-TBL_MASTERLINKS_GROUPS = "montco_master_links_grp"
-TBL_GROUPS = "montco_groups"
+TBL_SPATHS = "montco_L3_shortestpaths"
+TBL_TOLNODES = "montco__L3_tol_nodes"
+TBL_GEOFF_LOOKUP = "montco_L3_geoffs"
+TBL_GEOFF_GEOM = "montco_L3_geoffs_viageom"
+TBL_MASTERLINKS = "montco_L3_master_links"
+TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
+TBL_MASTERLINKS_GROUPS = "montco_L3_master_links_grp"
+TBL_GROUPS = "montco_L3_groups"
+
+
+con = psql.connect(dbname = "BikeStress", host = "yoshi", port = 5432, user = "postgres", password = "sergt")
+cur = con.cursor()
+
 
 class Sponge:
     def __init__(self, *args, **kwds):
@@ -126,9 +131,6 @@ con.commit()
    # ON public.montco_master_links_grp (strong ASC NULLS LAST);
 # """
 
-#create a view
-#calculate shortest paths on a view
-#iterate over views to calcualte all shortest paths
 
 #query to find min and max number of strong
 Q_StrongSelect = """
@@ -139,12 +141,23 @@ cur.execute(Q_StrongSelect)
 strong_grps = cur.fetchall()
 
 print time.ctime(), "Create Group Views"
-#iterate over groups
+##iterate over groups
+#Q_CreateView = """CREATE VIEW %s AS(
+#                    SELECT * FROM "{0}"
+#                    WHERE strong = %d)""".format(TBL_MASTERLINKS_GROUPS)
+#for grpNo in xrange(0, max(strong_grps)[0]):
+#    tblname = "links_grp_%d" % grpNo
+#    cur.execute("""DROP VIEW IF EXISTS %s;""" % tblname)
+#    #create view for each group
+#    cur.execute(Q_CreateView % (tblname, grpNo))
+
+#for level 3 analysis
 Q_CreateView = """CREATE VIEW %s AS(
-                    SELECT * FROM "{0}"
-                    WHERE strong = %d)""".format(TBL_MASTERLINKS_GROUPS)
-for grpNo in xrange(0, max(strong_grps)[0]):
-    tblname = "links_grp_%d" % grpNo
-    cur.execute("""DROP VIEW IF EXISTS %s;""" % tblname)
+    SELECT * FROM "{0}"
+    WHERE strong = %d)
+""".format(TBL_MASTERLINKS_GROUPS)
+for grpNo in xrange(min(strong_grps)[0], max(strong_grps)[0]):
+    tblname = "links_L3_grp_%d" % grpNo
+    #cur.execute("""DROP VIEW IF EXISTS %s;""" % tblname)
     #create view for each group
     cur.execute(Q_CreateView % (tblname, grpNo))

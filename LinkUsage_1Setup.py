@@ -16,10 +16,10 @@ import pickle
 #table names
 TBL_ALL_LINKS = "montco_lts_links"
 TBL_CENTS = "montco_blockcent"
-TBL_LINKS = "montco_tolerablelinks"
+TBL_LINKS = "montco__L3_tolerablelinks"
 TBL_NODES = "montco_nodes"
-TBL_SPATHS = "montco_shortestpaths"
-TBL_TOLNODES = "montco_tol_nodes"
+TBL_SPATHS = "montco_L3_shortestpaths"
+TBL_TOLNODES = "montco__L3_tol_nodes"
 #index names
 IDX_ALL_LINKS_geom = "montco_links_geom_idx"
 IDX_ALL_LINKS_value = "montco_links_value_idx"

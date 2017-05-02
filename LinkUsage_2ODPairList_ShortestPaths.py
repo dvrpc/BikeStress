@@ -10,24 +10,24 @@ import networkx as nx
 
 TBL_ALL_LINKS = "montco_lts_links"
 TBL_CENTS = "montco_blockcent"
-TBL_LINKS = "montco_tolerablelinks"
+TBL_LINKS = "montco__L3_tolerablelinks"
 TBL_NODES = "montco_nodes"
-TBL_SPATHS = "montco_shortestpaths"
-TBL_TOLNODES = "montco_tol_nodes"
-TBL_GEOFF_LOOKUP = "montco_geoffs"
-TBL_GEOFF_GEOM = "montco_geoffs_viageom"
-TBL_MASTERLINKS = "montco_master_links"
-TBL_MASTERLINKS_GEO = "montco_master_links_geo"
-TBL_MASTERLINKS_GROUPS = "montco_master_links_grp"
-TBL_GROUPS = "montco_groups"
+TBL_SPATHS = "montco_L3_shortestpaths"
+TBL_TOLNODES = "montco__L3_tol_nodes"
+TBL_GEOFF_LOOKUP = "montco_L3_geoffs"
+TBL_GEOFF_GEOM = "montco_L3_geoffs_viageom"
+TBL_MASTERLINKS = "montco_L3_master_links"
+TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
+TBL_MASTERLINKS_GROUPS = "montco_L3_master_links_grp"
+TBL_GROUPS = "montco_L3_groups"
 
 
 Q_InsertShortestPath = """
     INSERT INTO {0} VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
 """.format(TBL_SPATHS)
 
-SQL_GetGeoffs = """SELECT geoffid, vianode, ST_AsGeoJSON(geom) FROM "montco_geoffs_viageom";"""
-SQL_GetBlocks = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "montco_blockcent";"""
+SQL_GetGeoffs = """SELECT geoffid, vianode, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_GEOFF_GEOM)
+SQL_GetBlocks = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_CENTS)
 
 def GetCoords(record):
     id, vianode, geojson = record
@@ -144,7 +144,7 @@ for i, (oGID, oNode, dGID, dNode, grpNo) in enumerate(CloseEnough):
     SELECT %d AS sequence, %d AS oGID, %d AS dGID, * FROM pgr_dijkstra(
         'SELECT mixid AS id, fromgeoff AS source, togeoff AS target, cost AS cost FROM "{0}"', 
         %d, %d
-    );""".format("links_grp_%d" % grpNo)
+    );""".format("links_l3_grp_%d" % grpNo)
     if (i % 1000 == 0):
         print "%s :: %.2f :: %d :: %.2f" % (time.ctime(), time.time() - _time0, i, i / (len(CloseEnough) / 100.0))
         _time0 = time.time()
