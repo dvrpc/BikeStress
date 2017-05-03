@@ -21,6 +21,10 @@ TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
 TBL_MASTERLINKS_GROUPS = "montco_L3_master_links_grp"
 TBL_GROUPS = "montco_L3_groups"
 TBL_OD = "montco_L3_OandD"
+TBL_NODENOS = "montco_L3_nodenos"
+TBL_NODES_GEOFF = "montco_L3_nodes_geoff"
+TBL_NODES_GID = "montco_L3_nodes_gid"
+
 
 VIEW = "links_l3_grp_%s" % str(sys.argv[1])
 
@@ -114,6 +118,27 @@ output = mp.Queue()
 if __name__ == '__main__':
     logger.info('start_time: %s' % time.ctime())
     
+    #grab necessary lists and turn them into dictionaries
+    Q_GetList = """
+        SELECT * FROM "{0}";
+        """.format(TBL_NODENOS)
+    cur.execute(Q_GetList)
+    nodenos = cur.fetchall()
+    
+    Q_GetList = """
+        SELECT * FROM "{0}";
+        """.format(TBL_NODES_GEOFF)
+    cur.execute(Q_GetList)
+    nodes_geoff_list = cur.fetchall()
+    nodes_geoff = dict(nodes_geoff_list)
+    
+    Q_GetList = """
+        SELECT * FROM "{0}";
+        """.format(TBL_NODES_GID)
+    cur.execute(Q_GetList)
+    nodes_gids_list = cur.fetchall()
+    nodes_gids = dict(nodes_gids_list)
+    
     #call OD list from postgres
     Q_GetOD = """
         SELECT * FROM "{0}";
@@ -153,8 +178,8 @@ if __name__ == '__main__':
     #are the OD geoffs in the same group? if so, add pair to list to be calculated
     for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
         #if i % pool_size == (worker_number - 1):
-        fromnodeno = nodenos[fromnodeindex]
-        tonodeno = nodenos[tonodeindex]
+        fromnodeno = nodenos[fromnodeindex][0]
+        tonodeno = nodenos[tonodeindex][0]
         if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
             if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
                 if geoff_grp[nodes_geoff[fromnodeno]] == int(sys.argv[1]):

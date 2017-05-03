@@ -20,6 +20,9 @@ TBL_MASTERLINKS = "montco_L3_master_links"
 TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
 TBL_MASTERLINKS_GROUPS = "montco_L3_master_links_grp"
 TBL_GROUPS = "montco_L3_groups"
+TBL_NODENOS = "montco_L3_nodenos"
+TBL_NODES_GEOFF = "montco_L3_nodes_geoff"
+TBL_NODES_GID = "montco_L3_nodes_gid"
 
 TBL_OD = "montco_L3_OandD"
 
@@ -208,7 +211,7 @@ del gids, nodetree, results
 OandD = sorted(sdm.keys())
 del sdm
 
-
+#write OandD into a table in postgres to refer to later
 Q_CreateOutputTable = """
 CREATE TABLE IF NOT EXISTS public."{0}"
 (
@@ -236,5 +239,104 @@ for i in xrange(0, len(OandD), batch_size):
     arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in OandD[i:j])
     #print arg_str
     Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_OD, arg_str)
+    cur.execute(Q_Insert)
+cur.execute("COMMIT;")
+
+#convert nodes_geoff, and nodes_gids dictionaries to list and save to tables in postgres
+nodes_geoff_list = [(k, v) for k, v in nodes_geoff.iteritems()]
+nodes_gids_list = [(k, v) for k, v in nodes_gids.iteritems()]
+
+#write these plus nodesnos list into postgres to call later to turn back into a dictionary
+TBL_NODENOS = "montco_L3_nodenos"
+TBL_NODES_GEOFF = "montco_L3_nodes_geoff"
+TBL_NODES_GID = "montco_L3_nodes_gid"
+
+IDX_NODENOS = "montco_L3_nodeno_idx"
+IDX_NODES_GEOFF = "montco_L3_nodes_geoff_idx"
+IDX_NODES_GID = "montco_L3_nodes_gid_idx"
+
+#write nodenos into a table in postgres to refer to later
+Q_CreateOutputTable = """
+CREATE TABLE IF NOT EXISTS public."{0}"
+(
+    nodes integer
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+COMMIT;
+
+CREATE INDEX IF NOT EXISTS "{1}"
+    ON public."{0}" USING btree
+    (nodes)
+    TABLESPACE pg_default;    
+""".format(TBL_NODENOS, IDX_NODENOS)
+cur.execute(Q_CreateOutputTable)
+
+Q_Insert = """INSERT INTO public."{0}" VALUES (%s)""".format(TBL_NODENOS)
+cur.executemany(Q_Insert, map(lambda v:(v,), nodenos))
+con.commit()
+            
+
+#write node_geoffs into a table in postgres to refer to later
+Q_CreateOutputTable = """
+CREATE TABLE IF NOT EXISTS public."{0}"
+(
+    nodes integer,
+    geoffid integer
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+COMMIT;
+
+CREATE INDEX IF NOT EXISTS "{1}"
+    ON public."{0}" USING btree
+    (nodes, geoffid)
+    TABLESPACE pg_default;    
+""".format(TBL_NODES_GEOFF, IDX_NODES_GEOFF)
+cur.execute(Q_CreateOutputTable)
+
+str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(nodes_geoff_list[0]))))
+cur.execute("""BEGIN TRANSACTION;""")
+batch_size = 10000
+for i in xrange(0, len(nodes_geoff_list), batch_size):
+    j = i + batch_size
+    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in nodes_geoff_list[i:j])
+    #print arg_str
+    Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_NODES_GEOFF, arg_str)
+    cur.execute(Q_Insert)
+cur.execute("COMMIT;")
+
+#write node_gids into a table in postgres to refer to later
+Q_CreateOutputTable = """
+CREATE TABLE IF NOT EXISTS public."{0}"
+(
+    nodes integer,
+    gid integer
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+COMMIT;
+
+CREATE INDEX IF NOT EXISTS "{1}"
+    ON public."{0}" USING btree
+    (nodes)
+    TABLESPACE pg_default;    
+""".format(TBL_NODES_GID, IDX_NODES_GID)
+cur.execute(Q_CreateOutputTable)
+
+str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(nodes_gids_list[0]))))
+cur.execute("""BEGIN TRANSACTION;""")
+batch_size = 10000
+for i in xrange(0, len(nodes_gids_list), batch_size):
+    j = i + batch_size
+    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in nodes_gids_list[i:j])
+    #print arg_str
+    Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_NODES_GID, arg_str)
     cur.execute(Q_Insert)
 cur.execute("COMMIT;")

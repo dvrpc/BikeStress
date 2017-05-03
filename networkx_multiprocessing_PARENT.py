@@ -1,4 +1,4 @@
-import psycopg2
+import psycopg2 as psql
 import subprocess
 
 PYEXE = r"C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe"
