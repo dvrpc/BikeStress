@@ -21,6 +21,9 @@ TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
 TBL_MASTERLINKS_GROUPS = "montco_L3_master_links_grp"
 TBL_GROUPS = "montco_L3_groups"
 
+TBL_OD = "montco_L3_OandD"
+
+IDX_OD_value = "montco_od_value_idx"
 
 con = psql.connect(dbname = "BikeStress", host = "yoshi", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
@@ -158,6 +161,80 @@ Q_CreateView = """CREATE VIEW %s AS(
 """.format(TBL_MASTERLINKS_GROUPS)
 for grpNo in xrange(min(strong_grps)[0], max(strong_grps)[0]):
     tblname = "links_L3_grp_%d" % grpNo
-    #cur.execute("""DROP VIEW IF EXISTS %s;""" % tblname)
+    cur.execute("""DROP VIEW IF EXISTS %s;""" % tblname)
     #create view for each group
     cur.execute(Q_CreateView % (tblname, grpNo))
+    
+    
+    
+SQL_GetGeoffs = """SELECT geoffid, vianode, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_GEOFF_GEOM)
+SQL_GetBlocks = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_CENTS)
+
+def GetCoords(record):
+    id, vianode, geojson = record
+    return id, vianode, json.loads(geojson)['coordinates']
+def ExecFetchSQL(SQL_Stmt):
+    cur = con.cursor()
+    cur.execute(SQL_Stmt)
+    return map(GetCoords, cur.fetchall())
+    
+#create OD list
+data = ExecFetchSQL(SQL_GetGeoffs)
+world_ids, world_vias, world_coords = zip(*data)
+node_coords = dict(zip(world_vias, world_coords))
+geoff_nodes = dict(zip(world_ids, world_vias))
+# Node to Geoff dictionary (a 'random' geoff will be selected for each node)
+nodes_geoff = dict(zip(world_vias, world_ids))
+geofftree = scipy.spatial.cKDTree(world_coords)
+del world_coords, world_vias
+
+data = ExecFetchSQL(SQL_GetBlocks)
+results = []
+for i, (id, _, coord) in enumerate(data):
+    dist, index = geofftree.query(coord)
+    geoffid = world_ids[index]
+    nodeno = geoff_nodes[geoffid]
+    results.append((id, nodeno))
+del data, world_ids
+    
+gids, nodenos = zip(*results)
+nodenos = sorted(set(nodenos))
+# Node to GID dictionary (a 'random' GID will be selected for each node)
+nodes_gids = dict(zip(nodenos, gids))
+nodetree = scipy.spatial.cKDTree(map(lambda nodeno:node_coords[nodeno], nodenos))
+sdm = nodetree.sparse_distance_matrix(nodetree, 8046.72)
+del gids, nodetree, results
+
+OandD = sorted(sdm.keys())
+del sdm
+
+
+Q_CreateOutputTable = """
+CREATE TABLE IF NOT EXISTS public."{0}"
+(
+    origin integer,
+    destination integer
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+COMMIT;
+
+CREATE INDEX IF NOT EXISTS "{1}"
+    ON public."{0}" USING btree
+    (origin, destination)
+    TABLESPACE pg_default;    
+""".format(TBL_OD, IDX_OD_value)
+cur.execute(Q_CreateOutputTable)
+
+str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(OandD[0]))))
+cur.execute("""BEGIN TRANSACTION;""")
+batch_size = 10000
+for i in xrange(0, len(OandD), batch_size):
+    j = i + batch_size
+    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in OandD[i:j])
+    #print arg_str
+    Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_OD, arg_str)
+    cur.execute(Q_Insert)
+cur.execute("COMMIT;")

@@ -23,7 +23,7 @@ TBL_GROUPS = "montco_L3_groups"
 
 
 Q_InsertShortestPath = """
-    INSERT INTO {0} VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+    INSERT INTO "{0}" VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
 """.format(TBL_SPATHS)
 
 SQL_GetGeoffs = """SELECT geoffid, vianode, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_GEOFF_GEOM)
@@ -81,7 +81,7 @@ WITH geoff_group AS (
     SELECT
         fromgeoff AS geoff,
         strong
-    FROM {0}
+    FROM "{0}"
     WHERE strong IS NOT NULL
     GROUP BY fromgeoff, strong
     
