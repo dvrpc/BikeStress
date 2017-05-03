@@ -6,7 +6,7 @@ import scipy.spatial
 import time
 import logging
 import sys
-logger = mp.log_to_stderr(logging.DEBUG)
+logger = mp.log_to_stderr(logging.INFO)
 
 TBL_ALL_LINKS = "montco_lts_links"
 TBL_CENTS = "montco_blockcent"
@@ -24,6 +24,7 @@ TBL_OD = "montco_L3_OandD"
 TBL_NODENOS = "montco_L3_nodenos"
 TBL_NODES_GEOFF = "montco_L3_nodes_geoff"
 TBL_NODES_GID = "montco_L3_nodes_gid"
+TBL_GEOFF_NODES = "montco_L3_geoff_nodes"
 
 
 VIEW = "links_l3_grp_%s" % str(sys.argv[1])
@@ -138,6 +139,13 @@ if __name__ == '__main__':
     cur.execute(Q_GetList)
     nodes_gids_list = cur.fetchall()
     nodes_gids = dict(nodes_gids_list)
+    
+    Q_GetList = """
+        SELECT * FROM "{0}";
+        """.format(TBL_GEOFF_NODES)
+    cur.execute(Q_GetList)
+    geoff_nodes_list = cur.fetchall()
+    geoff_nodes = dict(geoff_nodes_list)
     
     #call OD list from postgres
     Q_GetOD = """

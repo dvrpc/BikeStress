@@ -245,15 +245,19 @@ cur.execute("COMMIT;")
 #convert nodes_geoff, and nodes_gids dictionaries to list and save to tables in postgres
 nodes_geoff_list = [(k, v) for k, v in nodes_geoff.iteritems()]
 nodes_gids_list = [(k, v) for k, v in nodes_gids.iteritems()]
+geoff_nodes_list = [(k, v) for k, v in geoff_nodes.iteritems()]
+
 
 #write these plus nodesnos list into postgres to call later to turn back into a dictionary
 TBL_NODENOS = "montco_L3_nodenos"
 TBL_NODES_GEOFF = "montco_L3_nodes_geoff"
 TBL_NODES_GID = "montco_L3_nodes_gid"
+TBL_GEOFF_NODES = "montco_L3_geoff_nodes"
 
 IDX_NODENOS = "montco_L3_nodeno_idx"
 IDX_NODES_GEOFF = "montco_L3_nodes_geoff_idx"
 IDX_NODES_GID = "montco_L3_nodes_gid_idx"
+IDX_GEOFF_NODES = "montco_L3_geoff_nodes_idx"
 
 #write nodenos into a table in postgres to refer to later
 Q_CreateOutputTable = """
@@ -338,5 +342,36 @@ for i in xrange(0, len(nodes_gids_list), batch_size):
     arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in nodes_gids_list[i:j])
     #print arg_str
     Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_NODES_GID, arg_str)
+    cur.execute(Q_Insert)
+cur.execute("COMMIT;")
+
+#write geoff_nodes into a table in postgres to refer to later
+Q_CreateOutputTable = """
+CREATE TABLE IF NOT EXISTS public."{0}"
+(
+    nodes integer,
+    geoffid integer
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+COMMIT;
+
+CREATE INDEX IF NOT EXISTS "{1}"
+    ON public."{0}" USING btree
+    (nodes, geoffid)
+    TABLESPACE pg_default;    
+""".format(TBL_GEOFF_NODES, IDX_GEOFF_NODES)
+cur.execute(Q_CreateOutputTable)
+
+str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(geoff_nodes_list[0]))))
+cur.execute("""BEGIN TRANSACTION;""")
+batch_size = 10000
+for i in xrange(0, len(geoff_nodes_list), batch_size):
+    j = i + batch_size
+    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in geoff_nodes_list[i:j])
+    #print arg_str
+    Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_GEOFF_NODES, arg_str)
     cur.execute(Q_Insert)
 cur.execute("COMMIT;")
