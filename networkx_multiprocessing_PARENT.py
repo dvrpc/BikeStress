@@ -1,5 +1,6 @@
 import psycopg2 as psql
 import subprocess
+import time
 
 PYEXE = r"C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe"
 script = r"C:\Users\model-ws\Documents\Modeling\Projects\BikeStress\scripts\networkx_multiprocessing_CHILD.py"
@@ -13,6 +14,8 @@ for i in xrange(2, 1474):
     cnt, = cur.fetchone()
     if cnt > 0:
         print VIEW % i
+        with open("view_processing.txt", "ab") as io:
+            io.write("{0}: {1}\r\n".format(time.ctime(), i))
         p = subprocess.Popen([PYEXE, script, '%d' % i], stdout = subprocess.PIPE)
         p.communicate()
 
