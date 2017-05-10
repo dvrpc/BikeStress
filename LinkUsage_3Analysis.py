@@ -18,23 +18,22 @@ import networkx as nx
 ####table names to modify in subsequent runs###
 TBL_ALL_LINKS = "montco_lts_links"
 TBL_CENTS = "montco_blockcent"
-TBL_LINKS = "montco_tolerablelinks"
-TBL_NODES = "montco_nodes"
-TBL_SPATHS = "montco_shortestpaths"
+TBL_LINKS = "montco_L3_tolerablelinks"
+TBL_SPATHS = "montco_L3_shortestpaths"
 TBL_TOLNODES = "montco_tol_nodes"
 TBL_GEOFF_LOOKUP = "montco_geoffs"
-TBL_GEOFF_GEOM = "montco_geoffs_viageom"
+TBL_GEOFF_GEOM = "montco_L3_geoffs_viageom"
 TBL_MASTERLINKS = "montco_master_links"
-TBL_MASTERLINKS_GEO = "montco_master_links_geo"
+TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
 TBL_MASTERLINKS_GROUPS = "montco_master_links_grp"
 TBL_GROUPS = "montco_groups"
-TBL_EDGE = "montco_edgecounts"
-TBL_USE = "montco_linkuse"
-TBL_TOP = "montco_topLinks"
+TBL_EDGE = "montco_L3_edgecounts"
+TBL_USE = "montco_L3_linkuse"
+TBL_TOP = "montco_L3_topLinks"
 
 
 #connect to SQL DB in python
-con = psql.connect(dbname = "BikeStress", host = "yoshi", port = 5432, user = "postgres", password = "sergt")
+con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 #create cursor to execute querys
 cur = con.cursor()
 
@@ -69,6 +68,10 @@ for i, (id, _, coord) in enumerate(data):
     nodeno = geoff_nodes[geoffid]
     results.append((id, nodeno))
 del data, geoff_nodes, world_ids
+
+con = psql.connect(dbname = "BikeStress", host = "toad", port = 5432, user = "postgres", password = "sergt")
+#create cursor to execute querys
+cur = con.cursor()
     
 # Grab the feasible oGID to dGID paths from the shortest paths table
 Q_AvailPairs = """SELECT oGID, dGID FROM "{0}" GROUP BY oGID, dGID;""".format(TBL_SPATHS)
@@ -92,6 +95,8 @@ for i, (oGID, dGID) in enumerate(avail_gid_pairs):
     dnode = gid_node[dGID]
     row = oGID, onode, dGID, dnode, (len(node_gid[onode]) * len(node_gid[dnode]))
     pair_count.append(row)
+    
+del avail_gid_pairs
 
 #edge count from original table
 Q_EdgeCount = """SELECT edge, COUNT(*) FROM "{0}" GROUP BY edge;""".format(TBL_SPATHS)
@@ -101,10 +106,21 @@ edge_count = cur.fetchall()
 edge_count_dict = dict(edge_count)
 
 #read shortest path table into pythom memory
-Q_SelectSP = """SELECT ogid, dgid, edge FROM public."montco_shortestpaths";"""
-cur.execute(Q_SelectSP)
-paths = cur.fetchall()
-  
+all_paths = []
+batch_size = 1000000L
+i = 0L
+while (i < 2189474044L):
+    Q_SelectSP = """SELECT ogid, dgid, edge FROM public."{0}" LIMIT {1} OFFSET {2};""".format(TBL_SPATHS, batch_size, i)
+    cur.execute(Q_SelectSP)
+    paths = cur.fetchall()
+    all_paths.append(paths)
+    i += batch_size
+
+# for i in xrange(0, 2189474044L, batch_size):
+    # Q_SelectSP = """SELECT ogid, dgid, edge FROM public."{0}" LIMIT {1} OFFSET {2};""".format(TBL_SPATHS, batch_size, i)
+    # cur.execute(Q_SelectSP)
+    # paths = cur.fetchall()
+    # all_paths.append(paths)
     
 weight_by_od = {}
 # weight_by_od[1,2] = 3

@@ -6,13 +6,15 @@ import scipy.spatial
 import time
 import logging
 import sys
+import cPickle
 logger = mp.log_to_stderr(logging.INFO)
+
 
 TBL_ALL_LINKS = "montco_lts_links"
 TBL_CENTS = "montco_blockcent"
 TBL_LINKS = "montco__L3_tolerablelinks"
 TBL_NODES = "montco_nodes"
-TBL_SPATHS = "montco_L3_shortestpaths"
+TBL_SPATHS = "montco_L3_shortestpaths_180"
 TBL_TOLNODES = "montco__L3_tol_nodes"
 TBL_GEOFF_LOOKUP = "montco_L3_geoffs"
 TBL_GEOFF_GEOM = "montco_L3_geoffs_viageom"
@@ -88,7 +90,7 @@ print
     return result
 '''
 
-num_cores = 16 # mp.cpu_count()
+num_cores = 24 # mp.cpu_count()
 
 #grab master links to make graph with networkx
 Q_SelectMasterLinks = """
@@ -100,7 +102,7 @@ Q_SelectMasterLinks = """
     FROM public."{0}";
     """.format(VIEW)
     
-con = psql.connect(database = "BikeStress", host = "yoshi", port = 5432, user = "postgres", password = "sergt")
+con = psql.connect(database = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
 
 #create graph
@@ -205,22 +207,37 @@ if __name__ == '__main__':
         else:
             NullGroup += 1
             
-    del nodenos, OandD
+    del nodenos, OandD, geoff_grp, nodes_geoff
 
     pairs = []
     for i, (fgid, fgeoff, tgid, tgeoff, grp) in enumerate(CloseEnough):
         source = fgeoff
         target = tgeoff
         pairs.append((source, target))
+        
+    del pairs
 
     paths = test_workers(pairs)
+        
+    with open(r"D:\Modeling\BikeStress\scripts\group180.cpickle", "wb") as io:
+        cPickle.dump(paths, io)
     
+    del pairs
+    
+    with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done.txt", "wb") as io:
+        cPickle.dump("180 calculated", io)
+    
+    con = psql.connect(database = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+    cur = con.cursor()
+
     cur.execute(Q_SelectMasterLinks)
     MasterLinks = cur.fetchall()
     
     node_pairs = {}       
     for i, (mixid, fromgeoff, togeoff, cost) in enumerate(MasterLinks):
         node_pairs[(fromgeoff, togeoff)] = mixid
+        
+    del MasterLinks
 
     edges = []
     for id, path in enumerate(paths):
@@ -230,6 +247,8 @@ if __name__ == '__main__':
             row = id, seq, oGID, dGID, node_pairs[(o,d)]
             edges.append(row)
     logger.info('number of records: %d' % len(edges))
+    
+    del paths, nodes_gids, geoff_nodes, node_pairs
     
     if (len(edges) > 0):
         Q_CreateOutputTable = """
@@ -245,12 +264,13 @@ if __name__ == '__main__':
                 OIDS = FALSE
             )
             TABLESPACE pg_default;
-            COMMIT;
+
             
             CREATE INDEX IF NOT EXISTS "{1}"
                 ON public."{0}" USING btree
                 (id, seq, ogid, dgid, edge)
-                TABLESPACE pg_default;    
+                TABLESPACE pg_default;
+            COMMIT;                
         """.format(TBL_SPATHS, IDX_nx_SPATHS_value)
         cur.execute(Q_CreateOutputTable)
 
@@ -266,13 +286,9 @@ if __name__ == '__main__':
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
         logger.info('end_time: %s' % time.ctime())
+        
+    del edges
+        
+    with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done2.txt", "wb") as io:
+        cPickle.dump("180 written to DB", io)
 
-
-#        Q_INSERT = """
-#        INSERT INTO public."{0}" VALUES (%s, %s, %s, %s, %s)
-#        """.format(TBL_SPATHS)
-#        cur.executemany(Q_INSERT, edges)
-#        con.commit()
-    
-    # test_single_worker()
-    # assert set(map(tuple, test_workers())) == set(map(tuple, test_single_worker()))
