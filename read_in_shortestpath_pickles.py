@@ -144,4 +144,12 @@ print "done 20"
 -- SELECT * FROM public."montco_L3_shortestpaths_180");
 """
 
+CREATE TABLE public."montco_L3_shortestpaths" AS 
+(SELECT * FROM public."montco_L3_shortestpaths_mario"
+UNION ALL
+SELECT * FROM public."montco_L3_shortestpaths_180");
 
+CREATE INDEX montco_spaths_nx_value_idx
+  ON public."montco_L3_shortestpaths"
+  USING btree
+  (id, seq, ogid, dgid, edge);

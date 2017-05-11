@@ -69,16 +69,6 @@ for i, (id, _, coord) in enumerate(data):
     results.append((id, nodeno))
 del data, geoff_nodes, world_ids
 
-con = psql.connect(dbname = "BikeStress", host = "toad", port = 5432, user = "postgres", password = "sergt")
-#create cursor to execute querys
-cur = con.cursor()
-    
-# Grab the feasible oGID to dGID paths from the shortest paths table
-Q_AvailPairs = """SELECT oGID, dGID FROM "{0}" GROUP BY oGID, dGID;""".format(TBL_SPATHS)
-cur.execute(Q_AvailPairs)
-#save as python variable
-avail_gid_pairs = cur.fetchall()
-
 node_gid = {}
 gid_node = {}
 for GID, nodeno in results:
@@ -89,21 +79,78 @@ for GID, nodeno in results:
     node_gid[nodeno].append(GID)
     gid_node[GID] = nodeno
 
-pair_count = []
-for i, (oGID, dGID) in enumerate(avail_gid_pairs):
+
+
+
+con = psql.connect(dbname = "BikeStress", host = "toad", port = 5432, user = "postgres", password = "sergt")
+#create cursor to execute querys
+cur = con.cursor()
+
+dict_all_paths = {}
+
+
+
+check = []
+batch_size = 1000000L
+i = 255000000L
+j = 255
+print time.ctime(), "dict_all_paths"
+while (i < 2189474044L):
+    if j % 10 == 0:
+        print '\t\t',time.ctime(), "Query + Fetching"
+
+    Q_SelectSP = """SELECT ogid, dgid, edge FROM public."{0}" LIMIT {1} OFFSET {2};""".format(TBL_SPATHS, batch_size, i)
+    cur.execute(Q_SelectSP)
+    results = cur.fetchall()
+
+    if j % 10 == 0:
+        print '\t\t',time.ctime(), "Sorting"
+
+    for ogid, dgid, edge in results:
+        if edge > 0:
+            key = (ogid, dgid)
+            if not key in dict_all_paths:
+                dict_all_paths[key] = []
+            dict_all_paths[key].append(edge)
+    i += batch_size
+
+    if j % 10 == 0:
+        print '\t\t',time.ctime(), "Done-ish"
+
+    if j == 255:
+        check.append(key)
+
+    if j % 10 == 0:
+        print '\t',time.ctime(),'Batch no. %d' % j
+    j += 1
+
+#### CUT HERE
+
+print time.ctime(), "weight_by_od"
+weight_by_od = {}
+for oGID, dGID in dict_all_paths.iterkeys():
     onode = gid_node[oGID]
     dnode = gid_node[dGID]
-    row = oGID, onode, dGID, dnode, (len(node_gid[onode]) * len(node_gid[dnode]))
-    pair_count.append(row)
-    
-del avail_gid_pairs
+    weight_by_od[(oGID, dGID)] = len(node_gid[onode]) * len(node_gid[dnode])
+
+print time.ctime(), "edge_count_dict"
+edge_count_dict = {}
+for key, paths in dict_all_paths.iteritems():
+    path_weight = weight_by_od[key]
+    for edge in paths:
+        if not edge in edge_count_dict:
+            edge_count_dict[edge] = 0
+        edge_count_dict[edge] += path_weight
+
+print time.ctime(), "done"
+
 
 #edge count from original table
-Q_EdgeCount = """SELECT edge, COUNT(*) FROM "{0}" GROUP BY edge;""".format(TBL_SPATHS)
-cur.execute(Q_EdgeCount)
-edge_count = cur.fetchall()
+# Q_EdgeCount = """SELECT edge, COUNT(*) FROM "{0}" GROUP BY edge;""".format(TBL_SPATHS)
+# cur.execute(Q_EdgeCount)
+# edge_count = cur.fetchall()
 #convert to dictionary
-edge_count_dict = dict(edge_count)
+# edge_count_dict = dict(edge_count)
 
 #read shortest path table into pythom memory
 all_paths = []
@@ -121,14 +168,7 @@ while (i < 2189474044L):
     # cur.execute(Q_SelectSP)
     # paths = cur.fetchall()
     # all_paths.append(paths)
-    
-weight_by_od = {}
-# weight_by_od[1,2] = 3
-for i, (oGID, oNode, dGID, dNode, cnt) in enumerate(pair_count):
-    o = oGID
-    d = dGID
-    weight_by_od[(o, d)] = cnt
-    
+
 for i, (ogid, dgid, edge) in enumerate(paths):
     path_weight = weight_by_od[ogid, dgid]
     if path_weight > 1:
