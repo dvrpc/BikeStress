@@ -209,7 +209,7 @@ Q_GeomJoin = """
         INNER JOIN "{1}"
         ON "{1}".mixid = edges.edge;
     COMMIT;
-""".format(TBL_USE, TBL_MASTERLINKS_GEO, TBL_EDGE)
+""".format(TBL_USE, TBL_MASTERLINKS_GROUPS, TBL_EDGE)
 cur.execute(Q_GeomJoin)
 
 #how many OD pairs are connected using this network?
@@ -243,7 +243,7 @@ Q_TopLinks = """
         ON "{1}".gid = edges.edge
         WHERE linklts > 0.3 AND linklts <= 0.6
         ORDER BY count DESC
-        LIMIT 20;
+        LIMIT 6000;
     COMMIT;
 """.format(TBL_TOP, TBL_ALL_LINKS, TBL_EDGE)
 cur.execute(Q_TopLinks)

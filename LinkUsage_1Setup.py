@@ -167,15 +167,13 @@ cur.execute(Q_NodeSubset)
 Q_CreatePathTable = """
     CREATE TABLE IF NOT EXISTS public."{0}"
     (
-        sequence integer,
-        ogid integer,
-        dgid integer,
-        seq integer,
-        path_seq integer,
-        node bigint,
-        edge bigint,
-        cost double precision,
-        agg_cost double precision
+      id integer,
+      seq integer,
+      ogid integer,
+      dgid integer,
+      edge bigint,
+      rowno bigint NOT NULL DEFAULT nextval('"montco_L3_shortestpaths_rowno_seq"'::regclass),
+      CONSTRAINT "montco_L3_shortestpaths_pkey" PRIMARY KEY (rowno)
     )
     WITH (
         OIDS = FALSE

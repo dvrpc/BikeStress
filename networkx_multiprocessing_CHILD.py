@@ -254,11 +254,13 @@ if __name__ == '__main__':
         Q_CreateOutputTable = """
             CREATE TABLE IF NOT EXISTS public."{0}"
             (
-                id integer,
-                seq integer,
-                ogid integer,
-                dgid integer,
-                edge bigint
+              id integer,
+              seq integer,
+              ogid integer,
+              dgid integer,
+              edge bigint,
+              rowno bigint NOT NULL DEFAULT nextval('"montco_L3_shortestpaths_rowno_seq"'::regclass),
+              CONSTRAINT "montco_L3_shortestpaths_pkey" PRIMARY KEY (rowno)
             )
             WITH (
                 OIDS = FALSE
@@ -282,7 +284,7 @@ if __name__ == '__main__':
             j = i + batch_size
             arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edges[i:j])
             #print arg_str
-            Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_SPATHS, arg_str)
+            Q_Insert = """INSERT INTO public."{0}" (id, seq, ogid, dgid, edge) VALUES {1}""".format(TBL_SPATHS, arg_str)
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
         logger.info('end_time: %s' % time.ctime())

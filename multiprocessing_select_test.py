@@ -62,22 +62,56 @@ def worker(args):
     con = psql.connect(dbname = "BikeStress", host = "toad", port = 5432, user = "postgres", password = "sergt")
     cur = con.cursor()
     # cur.execute("""SELECT ogid, dgid, edge FROM public."montco_L3_shortestpaths" ORDER BY id, seq LIMIT {1} OFFSET {0};""".format(offset, batch_size))
-    cur.execute("""SELECT ogid, dgid, edge FROM (SELECT * FROM "montco_L3_shortestpaths" ORDER BY id, seq) AS t0 LIMIT {1} OFFSET {0};""".format(offset, batch_size))
+    # cur.execute("""DISCARD TEMP;""")
+    
+        # BEGIN;
+        # SET LOCAL work_mem = '1000MB';
+    # cur.execute("""
+        # SELECT
+            # ogid,
+            # dgid,
+            # edge
+        # FROM "montco_L3_shortestpaths"
+        # WHERE rowno >= {0}
+        # LIMIT {1} 
+        # OFFSET {0};
+    # """.format(offset, batch_size))
+
+    cur.execute("""
+        SELECT
+            ogid,
+            dgid,
+            edge
+        FROM "montco_L3_shortestpaths"
+        WHERE rowno >= {0}
+        ORDER BY rowno ASC
+        LIMIT {1}
+    """.format(offset, batch_size))
+    
+    results = cur.fetchall()
+    # con.rollback()
+    con.close()
+    del con, cur
+    # time.sleep(5)
 
     temp_path_dict = {}
-    for ogid, dgid, edge in cur.fetchall():
+    for ogid, dgid, edge in results:
         if edge > 0:
             key = (ogid, dgid)
             if not key in temp_path_dict:
                 temp_path_dict[key] = []
             temp_path_dict[key].append(edge)
     # queue.put(temp_path_dict)
+    # con.rollback()
+    # con.close()
     return temp_path_dict
 
 if __name__ == "__main__":
     print time.ctime()
-    pool = multiprocessing.Pool(36)
+    nworkers = 64
+    pool = multiprocessing.Pool(nworkers)
     batch_size = 1000000L
+    i = 0L
     i = 0L
     j = 0L
 
@@ -87,17 +121,34 @@ if __name__ == "__main__":
         work_units.append((i, batch_size))
         i += batch_size
         j += 1
-        # if j > 20:
+        # if j > 128:
             # break
-    results = pool.map(worker, work_units)
+
+    # Willnote: This is bizarre
+    # Edit: OK - using OFFSET will force Postgres to manually read through the
+    # entire table until the offset is reached. If the table size exceeds the
+    # allocated memory, the table will be cached to disk.
+    # Normally this isn't too much of a problem since table sizes are not
+    # massive, unlike this 2.18 billion row monster table.
+    # 
+    # The implemented solution was to create a BIGSERIAL (since the number of
+    # rows exceeds the 32-bit signed integer [2^(32-1)] limit. Then replace
+    # OFFSET with a combination of 'WHERE rowno > [n] ORDER BY rowno ASC'.
 
     dict_all_paths = {}
+    # for i in xrange(0, len(work_units), nworkers):
+        # logger.info("%s: Offset = %s" % (time.ctime(), str(work_units[i][0])))
+        # j = i + nworkers
+
+    results = pool.map(worker, work_units)
     for _result in results:
         for k, v in _result.iteritems():
             if k in dict_all_paths:
                 dict_all_paths[k].extend(v)
             else:
                 dict_all_paths[k] = v
+        # cur.execute("CHECKPOINT")
+        # time.sleep(5)
 
     print len(dict_all_paths)
     print sum([len(v) for v in dict_all_paths.itervalues()])
@@ -169,20 +220,15 @@ if __name__ == "__main__":
         cPickle.dump(edge_count_dict, io)
             
     con = psql.connect(dbname = "BikeStress", host = "toad", port = 5432, user = "postgres", password = "sergt")
-    # create cursor to execute querys
     cur = con.cursor()
-    
     edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]
-
     str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edge_count_list[0]))))
     cur.execute("""BEGIN TRANSACTION;""")
     batch_size = 10000
     for i in xrange(0, len(edge_count_list), batch_size):
         j = i + batch_size
         arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edge_count_list[i:j])
-        # print arg_str
         Q_Insert = """INSERT INTO "{0}" VALUES {1};""".format(TBL_EDGE, arg_str)
         cur.execute(Q_Insert)
     cur.execute("COMMIT;")
     con.commit()
-    
