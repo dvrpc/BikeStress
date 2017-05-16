@@ -39,6 +39,7 @@ MaxApproachLTS   = h.GetMulti(Visum.Net.Turns, r"ViaNode\Max:OutLinks\LinkLTS")
 #        From_TotLanes[i] = From_Lanes[i] * 2
 
 To_TotLanes = [0] * len(FromNode)
+
 for i in xrange(0, len(ToNode)):
     if To_OneWay[i] == True:
         To_TotLanes[i]   = To_Lanes[i]
@@ -54,7 +55,7 @@ road_index = [
     [(1, 3),   (0,  25 )],
     [(4, 5),   (0,  25 )],
     [(1, 3),   (26, 34 )],
-    [(6, 999), (0,  25 )],
+    [(6, 999), (0,  25 )],)
     [(4, 5),   (26, 34 )],
     [(6, 999), (26, 34 )],
     [(1, 3),   (35, 999)],
@@ -65,7 +66,7 @@ road_index = [
 residential_index = [
     [(0, 0),   (0,  999)],
     [(1, 2),   (0,  25 )], 
-    [(1, 2),   (26, 36 )], 
+    [(1, 2),   (26, 65 )], 
 ]
 
 #create lookup for bike facility column in stress table
@@ -111,6 +112,7 @@ def bikeFacLookup(fac_code):
 #conditional to split how different types of turns are processed
 #can indent back in to write out later
 TurnStress = [0] * len(FromNode)
+
 for i in xrange(0, len(FromNode)):
     #right turn - To Link Stress
     if TurnDirection[i] == 1:
@@ -142,7 +144,7 @@ h.SetMulti(Visum.Net.Turns, "TurnLTS", TurnStress)
 #        w.writerow([FromNode[i], ViaNode[i], ToNode[i], TurnDirection[i], TurnStress[i]])
        
 #to write to csv after TurnLTS is already assigned
-with open(r'C:\Users\model-ws\Documents\Modeling\Projects\BikeStress\TurnLTS_output.csv','wb') as IO:
+with open(r'\\PEACH\Modeling\Projects\BikeStress\TurnLTS_output_051617.csv','wb') as IO:
     w = csv.writer(IO)
     #write the header row
     w.writerow(['FromNode', 'ViaNode', 'ToNode', 'MaxApproachLTS', 'TurnDirection', 'TurnLTS'])        

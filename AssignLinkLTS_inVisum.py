@@ -47,7 +47,7 @@ road_index = [
 residential_index = [
     [(0, 0),   (0,  999)],
     [(1, 2),   (0,  25 )], 
-    [(1, 2),   (26, 36 )], 
+    [(1, 2),   (26, 65 )], 
 ]
 
 
@@ -91,7 +91,8 @@ def bikeFacLookup(fac_code):
             return i
     
 
-LinkStress = [0]* len(FromNode)            
+LinkStress = [0]* len(FromNode)
+       
 for i in xrange(0, len(FromNode)):
 	x = bikeFacLookup(BikeFac[i])
 	y = findRowIndex(TotLanes[i], Speed[i], LinkType[i])
