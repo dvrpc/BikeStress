@@ -215,7 +215,7 @@ if __name__ == '__main__':
         target = tgeoff
         pairs.append((source, target))
         
-    del pairs
+    
 
     paths = test_workers(pairs)
         
@@ -259,8 +259,7 @@ if __name__ == '__main__':
               ogid integer,
               dgid integer,
               edge bigint,
-              rowno bigint NOT NULL DEFAULT nextval('"montco_L3_shortestpaths_rowno_seq"'::regclass),
-              CONSTRAINT "montco_L3_shortestpaths_pkey" PRIMARY KEY (rowno)
+              rowno BIGSERIAL PRIMARY KEY
             )
             WITH (
                 OIDS = FALSE
