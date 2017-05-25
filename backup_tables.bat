@@ -31,6 +31,17 @@ REM "C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/
 "C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/montco_tolerablelinks" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.montco_tolerablelinks"
 "C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/montco_turns" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.montco_turns"
 
+REM REMEMBER TO ESCAPE QUOTES AT END OF THESE LINES
+"C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/montco_L3_edgecounts" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.\"montco_L3_edgecounts\""
+"C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/montco_L3_geoff_pairs" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.\"montco_L3_geoff_pairs\""
+"C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/montco_L3_linkuse" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.\"montco_L3_linkuse\""
+"C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/montco_L3_topLinks" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.\"montco_L3_topLinks\""
+"C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/montco_L3_will_paths" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.\"montco_L3_will_paths\""
+"C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/montco_L3_links_wtsay" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.\"montco_L3_links_wtsay\""
+
+
+
+
 
 REM RESTORE TABLES
 REM "C:\Program Files\PostgreSQL\9.6\bin\pg_restore.exe" --host "toad" --port "5432" --username "postgres" --verbose -d "BikeStress" --table "montco_L3_master_links_geo" "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/montco_L3_master_links_geo"

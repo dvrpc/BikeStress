@@ -30,10 +30,11 @@ TBL_NODES_GEOFF = "montco_L3_nodes_geoff"
 TBL_NODES_GID = "montco_L3_nodes_gid"
 TBL_GEOFF_NODES = "montco_L3_geoff_nodes"
 
+# VIEW = "links_l3_grp_%s" % str(sys.argv[1])
 
+TBL_TEMP_PAIRS = "temp_pairs_180_%s" % str(sys.argv[1])
+TBL_TEMP_NETWORK = "temp_network_180_%s" % str(sys.argv[1])
 
-
-VIEW = "links_l3_grp_%s" % str(sys.argv[1])
 
 IDX_nx_SPATHS_value = "montco_spaths_nx_value_idx"
 
@@ -55,7 +56,7 @@ def test_workers(pairs):
     logger.info('test_workers() started')
     result = []
     inqueue = mp.Queue()
-    for source, target in pairs:
+    for id, source, target, geom in pairs:
         inqueue.put((source, target))
     # Build O-D pair list
     # for source, target in IT.product(sources, targets):
@@ -97,6 +98,7 @@ print
 num_cores = 24 # mp.cpu_count()
 
 #grab master links to make graph with networkx
+
 Q_SelectMasterLinks = """
     SELECT
         mixid,
@@ -104,7 +106,7 @@ Q_SelectMasterLinks = """
         togeoff,
         cost
     FROM public."{0}";
-    """.format(VIEW)
+    """.format(TBL_TEMP_NETWORK)
     
 con = psql.connect(database = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
@@ -126,100 +128,11 @@ if __name__ == '__main__':
     logger.info('start_time: %s' % time.ctime())
     
     #grab necessary lists and turn them into dictionaries
-    Q_GetList = """
+    Q_GetPairs = """
         SELECT * FROM "{0}";
-        """.format(TBL_NODENOS)
-    cur.execute(Q_GetList)
-    nodenos = cur.fetchall()
-    
-    Q_GetList = """
-        SELECT * FROM "{0}";
-        """.format(TBL_NODES_GEOFF)
-    cur.execute(Q_GetList)
-    nodes_geoff_list = cur.fetchall()
-    nodes_geoff = dict(nodes_geoff_list)
-    
-    Q_GetList = """
-        SELECT * FROM "{0}";
-        """.format(TBL_NODES_GID)
-    cur.execute(Q_GetList)
-    nodes_gids_list = cur.fetchall()
-    nodes_gids = dict(nodes_gids_list)
-    
-    Q_GetList = """
-        SELECT * FROM "{0}";
-        """.format(TBL_GEOFF_NODES)
-    cur.execute(Q_GetList)
-    geoff_nodes_list = cur.fetchall()
-    geoff_nodes = dict(geoff_nodes_list)
-    
-    #call OD list from postgres
-    Q_GetOD = """
-        SELECT * FROM "{0}";
-        """.format(TBL_OD)
-    cur.execute(Q_GetOD)
-    OandD = cur.fetchall()
-
-    Q_GeoffGroup = """
-    WITH geoff_group AS (
-        SELECT
-            fromgeoff AS geoff,
-            strong
-        FROM "{0}"
-        WHERE strong IS NOT NULL
-        GROUP BY fromgeoff, strong
-        
-        UNION ALL
-
-        SELECT
-            togeoff AS geoff,
-            strong
-        FROM "{0}"
-        WHERE strong IS NOT NULL
-        GROUP BY togeoff, strong
-    )
-    SELECT geoff, strong FROM geoff_group
-    GROUP BY geoff, strong
-    ORDER BY geoff DESC;
-    """.format(TBL_MASTERLINKS_GROUPS)
-
-    cur.execute(Q_GeoffGroup)
-    geoff_grp = dict(cur.fetchall())
-
-    CloseEnough = []
-    DiffGroup = 0
-    NullGroup = 0
-    #are the OD geoffs in the same group? if so, add pair to list to be calculated
-    for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
-        #if i % pool_size == (worker_number - 1):
-        fromnodeno = nodenos[fromnodeindex][0]
-        tonodeno = nodenos[tonodeindex][0]
-        if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
-            if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
-                if geoff_grp[nodes_geoff[fromnodeno]] == int(sys.argv[1]):
-                    CloseEnough.append([
-                        nodes_gids[fromnodeno],    # FromGID
-                        #fromnodeno,                # FromNode
-                        nodes_geoff[fromnodeno],  # FromGeoff
-                        nodes_gids[tonodeno],      # ToGID
-                        #tonodeno,                  # ToNode
-                        nodes_geoff[tonodeno],    # ToGeoff
-                        geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
-                        ])
-            else:
-                DiffGroup += 1
-        else:
-            NullGroup += 1
-            
-    del nodenos, OandD, geoff_grp, nodes_geoff
-
-    pairs = []
-    for i, (fgid, fgeoff, tgid, tgeoff, grp) in enumerate(CloseEnough):
-        source = fgeoff
-        target = tgeoff
-        pairs.append((source, target))
-        
-    
+        """.format(TBL_TEMP_PAIRS)
+    cur.execute(Q_GetPairs)
+    pairs = cur.fetchall()
 
     paths = test_workers(pairs)
         
