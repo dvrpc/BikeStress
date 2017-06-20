@@ -275,8 +275,8 @@ Q_ClipNetwork = """
         ST_AsGeoJSON(geom),
         strong
     FROM public."{0}"
-    WHERE geom |>> ST_SetSRID(ST_MakeLine(ST_Point(%d, %d),ST_Point(%d, %d)), 26918)
-        AND geom <<| ST_SetSRID(ST_MakeLine(ST_Point(%d, %d),ST_Point(%d, %d)), 26918);
+    WHERE geom |&> ST_SetSRID(ST_MakeLine(ST_Point(%d, %d),ST_Point(%d, %d)), 26918)
+        AND geom &<| ST_SetSRID(ST_MakeLine(ST_Point(%d, %d),ST_Point(%d, %d)), 26918);
 """.format(VIEW)
 
 Q_BBoxExtent =   """SELECT st_asgeojson(st_setsrid(st_extent(geom), 26918)) FROM public."{0}";"""
@@ -383,13 +383,13 @@ for i in xrange(1,iterations):
     
     cur.execute(Q_ClipNetwork % (
         inter_xmin, 
-        (inter_ymin - 250), 
+        (inter_ymin - 1609.34), 
         inter_xmax, 
-        (inter_ymin - 250), 
+        (inter_ymin - 1609.34), 
         inter_xmin, 
-        (inter_ymax + 250), 
+        (inter_ymax + 1609.34), 
         inter_xmax, 
-        (inter_ymax + 250)
+        (inter_ymax + 1609.34)
     ))
     
     clip_network = cur.fetchall()
@@ -478,13 +478,13 @@ for i in xrange(1, iterations+1):
     #clip network with 250m buffer on top and bottom      
     cur.execute(Q_ClipNetwork % (
         xmin, 
-        (y_value_bottom - 250),
+        (y_value_bottom - 1609.34),
         xmax,
-        (y_value_bottom - 250),
+        (y_value_bottom - 1609.34),
         xmin,
-        (y_value_top + 250),
+        (y_value_top + 1609.34),
         xmax,
-        (y_value_top + 250)
+        (y_value_top + 1609.34)
     ))
     
     clip_network = cur.fetchall()

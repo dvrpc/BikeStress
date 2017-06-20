@@ -40,21 +40,32 @@ IDX_nx_SPATHS_value = "montco_spaths_nx_value_idx"
 
 def worker(inqueue, output):
     result = []
+    nopath = []
     count = 0
     start_time = time.time()
     for pair in iter(inqueue.get, sentinel):
         source, target = pair
-        length, paths = nx.bidirectional_dijkstra(G, source = source, target = target, weight = 'weight')
-        result.append(paths)
+        try:
+            length, paths = nx.bidirectional_dijkstra(G, source = source, target = target, weight = 'weight')
+        except nx.NetworkXNoPath:
+            # logger.info('{t}: {m}'.format(t = time.ctime(), m = "No path for {0}, {1}".format(source, target)))
+            nopath.append(pair)
+        except nx.NetworkXError as nxe:
+            logger.info('{t}: {m}'.format(t = time.ctime(), m = "NetworkX Error: %s" % str(nxe)))
+        except Exception as e:
+            logger.info('{t}: {m}'.format(t = time.ctime(), m = "GENERAL ERROR: %s" % str(e)))
+        else:
+            result.append(paths)
         count += 1
         if (count % 100) == 0:
             logger.info('{t}: {s}'.format(t = time.ctime(), s = time.time() - start_time))
             start_time = time.time()
-    output.put(result)
+    output.put({'result': result, 'nopath': nopath})
 
 def test_workers(pairs):
     logger.info('test_workers() started')
     result = []
+    nopath = []
     inqueue = mp.Queue()
     for id, source, target, geom in pairs:
         inqueue.put((source, target))
@@ -73,12 +84,14 @@ def test_workers(pairs):
     for proc in procs:    
         inqueue.put(sentinel)
     for proc in procs:
-        result.extend(output.get())
+        retval = output.get()
+        result.extend(retval['result'])
+        nopath.extend(retval['nopath'])
     for proc in procs:
         proc.join()
 
     logger.info('test_workers() finished')
-    return result
+    return result, nopath
 
 '''
 def test_single_worker():
@@ -128,21 +141,37 @@ if __name__ == '__main__':
     logger.info('start_time: %s' % time.ctime())
     
     #grab necessary lists and turn them into dictionaries
+    Q_GetList = """
+        SELECT * FROM "{0}";
+        """.format(TBL_NODES_GID)
+    cur.execute(Q_GetList)
+    nodes_gids_list = cur.fetchall()
+    nodes_gids = dict(nodes_gids_list)
+    
+    Q_GetList = """
+        SELECT * FROM "{0}";
+        """.format(TBL_GEOFF_NODES)
+    cur.execute(Q_GetList)
+    geoff_nodes_list = cur.fetchall()
+    geoff_nodes = dict(geoff_nodes_list)
+    
     Q_GetPairs = """
         SELECT * FROM "{0}";
         """.format(TBL_TEMP_PAIRS)
     cur.execute(Q_GetPairs)
     pairs = cur.fetchall()
 
-    paths = test_workers(pairs)
+    paths, nopaths = test_workers(pairs)
         
-    with open(r"D:\Modeling\BikeStress\scripts\group180.cpickle", "wb") as io:
+    with open(r"D:\Modeling\BikeStress\scripts\group180_%s.cpickle" % sys.argv[1], "wb") as io:
         cPickle.dump(paths, io)
+    with open(r"D:\Modeling\BikeStress\scripts\group180_%s_nopaths.cpickle" % sys.argv[1], "wb") as io:
+        cPickle.dump(nopaths, io)
     
-    del pairs
+    del pairs, nopaths
     
-    with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done.txt", "wb") as io:
-        cPickle.dump("180 calculated", io)
+    # with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done.txt", "ab") as io:
+        # cPickle.dump("180 calculated", io)
     
     con = psql.connect(database = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
     cur = con.cursor()

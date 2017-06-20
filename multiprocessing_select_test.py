@@ -22,7 +22,7 @@ logger = multiprocessing.log_to_stderr(logging.INFO)
 TBL_ALL_LINKS = "montco_lts_links"
 TBL_CENTS = "montco_blockcent"
 TBL_LINKS = "montco_L3_tolerablelinks"
-TBL_SPATHS = "montco_L3_shortestpaths"
+TBL_SPATHS = "montco_L3_shortestpaths_180"
 TBL_TOLNODES = "montco_tol_nodes"
 TBL_GEOFF_LOOKUP = "montco_geoffs"
 TBL_GEOFF_GEOM = "montco_L3_geoffs_viageom"
@@ -30,8 +30,8 @@ TBL_MASTERLINKS = "montco_master_links"
 TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
 TBL_MASTERLINKS_GROUPS = "montco_master_links_grp"
 TBL_GROUPS = "montco_groups"
-TBL_EDGE = "montco_L3_edgecounts"
-TBL_USE = "montco_L3_linkuse"
+TBL_EDGE = "montco_L3_edgecounts_original180"
+TBL_USE = "montco_L3_linkuse_original180"
 TBL_TOP = "montco_L3_topLinks"
 
 # class _Worker(threading.Thread):
@@ -59,7 +59,7 @@ def worker(args):
     offset, batch_size = args
     logger.info("Offset %d" % offset)
 
-    con = psql.connect(dbname = "BikeStress", host = "toad", port = 5432, user = "postgres", password = "sergt")
+    con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
     cur = con.cursor()
     # cur.execute("""SELECT ogid, dgid, edge FROM public."montco_L3_shortestpaths" ORDER BY id, seq LIMIT {1} OFFSET {0};""".format(offset, batch_size))
     # cur.execute("""DISCARD TEMP;""")
@@ -82,11 +82,11 @@ def worker(args):
             ogid,
             dgid,
             edge
-        FROM "montco_L3_shortestpaths"
+        FROM "{2}"
         WHERE rowno >= {0}
         ORDER BY rowno ASC
         LIMIT {1}
-    """.format(offset, batch_size))
+    """.format(offset, batch_size, TBL_SPATHS))
     
     results = cur.fetchall()
     # con.rollback()
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     j = 0L
 
     work_units = []
-    while (i < 2189474044L):
+    while (i < 2147678205L):
     #while (i < 2147678205L):
         work_units.append((i, batch_size))
         i += batch_size
@@ -216,10 +216,10 @@ if __name__ == "__main__":
                 edge_count_dict[edge] = 0
             edge_count_dict[edge] += path_weight
             
-    with open(r"D:\Modeling\BikeStress\edge_count_dict.pickle", "wb") as io:
+    with open(r"D:\Modeling\BikeStress\edge_count_dict_orig180.pickle", "wb") as io:
         cPickle.dump(edge_count_dict, io)
             
-    con = psql.connect(dbname = "BikeStress", host = "toad", port = 5432, user = "postgres", password = "sergt")
+    con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
     cur = con.cursor()
     edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]
     str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edge_count_list[0]))))

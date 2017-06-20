@@ -25,10 +25,10 @@ TBL_GEOFF_LOOKUP = "montco_geoffs"
 TBL_GEOFF_GEOM = "montco_L3_geoffs_viageom"
 TBL_MASTERLINKS = "montco_master_links"
 TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
-TBL_MASTERLINKS_GROUPS = "montco_master_links_grp"
+TBL_MASTERLINKS_GROUPS = "montco_L3_master_links_grp"
 TBL_GROUPS = "montco_groups"
-TBL_EDGE = "montco_L3_edgecounts"
-TBL_USE = "montco_L3_linkuse"
+TBL_EDGE = "montco_L3_edgecounts_original180"
+TBL_USE = "montco_L3_linkuse_original180"
 TBL_TOP = "montco_L3_topLinks"
 
 
