@@ -25,6 +25,7 @@ TBL_OD = "montco_L3_OandD"
 TBL_GEOFF_NODES = "montco_L3_geoff_nodes"
 TBL_NODES_GID = "montco_L3_nodes_gid"
 TBL_NODES_GEOFF = "montco_L3_nodes_geoff"
+TBL_GEOFF_GEOM = "montco_L3_geoffs_viageom"
 
 
 #VIEW = "links_l3_grp_%s" % str(sys.argv[1])
@@ -188,14 +189,14 @@ cur.execute("COMMIT;")
         # ) AS pair_f);
         # """.format(TBL_OD_LINES, TBL_GEOFF_PAIRS)
 
-
+#
 Q_ODLines = """
     CREATE TABLE "{0}" AS(
         WITH unique_geoms AS (
             SELECT
                 geoffid,
                 geom
-            FROM "montco_L3_geoffs_viageom"
+            FROM "{2}"
             GROUP BY geoffid, geom
         )
         SELECT *
@@ -212,9 +213,9 @@ Q_ODLines = """
             ON p.togeoff = g2.geoffid
         ) AS pair_f
     );
-    CREATE SEQUENCE "{0}_id_seq";
+    CREATE SEQUENCE "{0}_id_seq2";
     SELECT setval(
-        '"{0}_id_seq"',
+        '"{0}_id_seq2"',
         (
             SELECT id
             FROM "{0}"
@@ -223,9 +224,9 @@ Q_ODLines = """
         )
     );
     ALTER TABLE "{0}" ALTER COLUMN id SET NOT NULL;
-    ALTER TABLE "{0}" ALTER COLUMN id SET DEFAULT nextval('"{0}_id_seq"'::regclass);
+    ALTER TABLE "{0}" ALTER COLUMN id SET DEFAULT nextval('"{0}_id_seq2"'::regclass);
     ALTER TABLE "{0}" ADD CONSTRAINT "{0}_pk" PRIMARY KEY (id);
-""".format(TBL_OD_LINES, TBL_GEOFF_PAIRS)
+""".format(TBL_OD_LINES, TBL_GEOFF_PAIRS, TBL_GEOFF_GEOM)
 cur.execute(Q_ODLines)
 con.commit()
 
@@ -260,12 +261,9 @@ Q_LinesBetween = """
     WHERE geom |>> ST_SetSRID(ST_MakeLine(ST_Point(%d, %d),ST_Point(%d, %d)), 26918)
         AND geom <<| ST_SetSRID(ST_MakeLine(ST_Point(%d, %d),ST_Point(%d, %d)), 26918);
     """.format(TBL_OD_LINES)
-    
-# Q_LinesAbove = 
 
-# Q_LinesBelow = 
 
-#use 5 mile when clipping network to capture full paths
+#use 1 mile buffer when clipping network to capture full paths
 Q_ClipNetwork = """
     SELECT 
         mixid,
@@ -339,8 +337,8 @@ for i in xrange(1,iterations):
     
     print chunk_id
     
-    TBL_TEMP_PAIRS = "temp_pairs_180_%d" % chunk_id
-    TBL_TEMP_NETWORK = "temp_network_180_%d" % chunk_id
+    TBL_TEMP_PAIRS = "temp2_pairs_180_%d" % chunk_id
+    TBL_TEMP_NETWORK = "temp2_network_180_%d" % chunk_id
     cur.execute(Q_CreateTempODLinesTable.format(TBL_TEMP_PAIRS))
     con.commit()
     cur.execute(Q_CreateTempNetwork.format(TBL_TEMP_NETWORK))
@@ -436,8 +434,8 @@ for i in xrange(1, iterations+1):
 
     print chunk_id
 
-    TBL_TEMP_PAIRS = "temp_pairs_180_%d" % chunk_id
-    TBL_TEMP_NETWORK = "temp_network_180_%d" % chunk_id
+    TBL_TEMP_PAIRS = "temp2_pairs_180_%d" % chunk_id
+    TBL_TEMP_NETWORK = "temp2_network_180_%d" % chunk_id
     cur.execute(Q_CreateTempODLinesTable.format(TBL_TEMP_PAIRS))
     con.commit()
     cur.execute(Q_CreateTempNetwork.format(TBL_TEMP_NETWORK))
@@ -529,15 +527,15 @@ Q_IndexExisting = """
         TABLESPACE pg_default;"""
 
 for i in xrange(1,7):
-    TBL_TEMP_NETWORK = "temp_network_180_%d" % i
-    IDX_geom = "temp_network_180_%d_geom_idx" % i
-    IDX_value = "temp_network_180_%d_value_idx" % i
+    TBL_TEMP_NETWORK = "temp2_network_180_%d" % i
+    IDX_geom = "temp2_network_180_%d_geom_idx" % i
+    IDX_value = "temp2_network_180_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_NETWORK, IDX_geom, IDX_value))
     
 for i in xrange(101,107):
-    TBL_TEMP_NETWORK = "temp_network_180_%d" % i
-    IDX_geom = "temp_network_180_%d_geom_idx" % i
-    IDX_value = "temp_network_180_%d_value_idx" % i
+    TBL_TEMP_NETWORK = "temp2_network_180_%d" % i
+    IDX_geom = "temp2_network_180_%d_geom_idx" % i
+    IDX_value = "temp2_network_180_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_NETWORK, IDX_geom, IDX_value))
 
     
@@ -552,15 +550,15 @@ Q_IndexExisting = """
         TABLESPACE pg_default;"""
         
 for i in xrange(1,7):
-    TBL_TEMP_PAIRS = "temp_pairs_180_%d" % i
-    IDX_geom = "temp_pairs_180_%d_geom_idx" % i
-    IDX_value = "temp_pairs_180_%d_value_idx" % i
+    TBL_TEMP_PAIRS = "temp2_pairs_180_%d" % i
+    IDX_geom = "temp2_pairs_180_%d_geom_idx" % i
+    IDX_value = "temp2_pairs_180_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_PAIRS, IDX_geom, IDX_value))
 
 for i in xrange(101,107):
-    TBL_TEMP_PAIRS = "temp_pairs_180_%d" % i
-    IDX_geom = "temp_pairs_180_%d_geom_idx" % i
-    IDX_value = "temp_pairs_180_%d_value_idx" % i
+    TBL_TEMP_PAIRS = "temp2_pairs_180_%d" % i
+    IDX_geom = "temp2_pairs_180_%d_geom_idx" % i
+    IDX_value = "temp2_pairs_180_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_PAIRS, IDX_geom, IDX_value))
         
 

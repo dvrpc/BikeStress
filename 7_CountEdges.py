@@ -206,6 +206,7 @@ if __name__ == "__main__":
         onode = gid_node[oGID]
         dnode = gid_node[dGID]
         weight_by_od[(oGID, dGID)] = len(node_gid[onode]) * len(node_gid[dnode])
+    #how many times each OD geoff pair should be counted if used at all
 
     print time.ctime(), "edge_count_dict"
     edge_count_dict = {}

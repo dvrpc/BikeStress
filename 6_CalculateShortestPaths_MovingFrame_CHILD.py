@@ -22,7 +22,7 @@ TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
 TBL_GROUPS = "montco_L3_groups"
 
 #need in this script
-TBL_SPATHS = "montco_L3_shortestpaths_180_movingframe"
+TBL_SPATHS = "montco_L3_shortestpaths_180_MF2"
 TBL_MASTERLINKS_GROUPS = "montco_L3_master_links_grp"
 TBL_OD = "montco_L3_OandD"
 TBL_NODENOS = "montco_L3_nodenos"
@@ -32,11 +32,11 @@ TBL_GEOFF_NODES = "montco_L3_geoff_nodes"
 
 # VIEW = "links_l3_grp_%s" % str(sys.argv[1])
 
-TBL_TEMP_PAIRS = "temp_pairs_180_%s" % str(sys.argv[1])
-TBL_TEMP_NETWORK = "temp_network_180_%s" % str(sys.argv[1])
+TBL_TEMP_PAIRS = "temp2_pairs_180_%s" % str(sys.argv[1])
+TBL_TEMP_NETWORK = "temp2_network_180_%s" % str(sys.argv[1])
 
 
-IDX_nx_SPATHS_value = "montco_spaths_nx_value_idx"
+IDX_nx_SPATHS_value = "montco_spaths_mf2_value_idx"
 
 def worker(inqueue, output):
     result = []
@@ -163,9 +163,9 @@ if __name__ == '__main__':
 
     paths, nopaths = test_workers(pairs)
         
-    with open(r"D:\Modeling\BikeStress\scripts\group180_%s.cpickle" % sys.argv[1], "wb") as io:
+    with open(r"D:\Modeling\BikeStress\scripts\group180_MF2_%s.cpickle" % sys.argv[1], "wb") as io:
         cPickle.dump(paths, io)
-    with open(r"D:\Modeling\BikeStress\scripts\group180_%s_nopaths.cpickle" % sys.argv[1], "wb") as io:
+    with open(r"D:\Modeling\BikeStress\scripts\group180_MF2_%s_nopaths.cpickle" % sys.argv[1], "wb") as io:
         cPickle.dump(nopaths, io)
     
     del pairs, nopaths
