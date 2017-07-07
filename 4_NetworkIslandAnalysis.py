@@ -24,6 +24,16 @@ TBL_NODENOS = "montco_L3_nodenos"
 TBL_NODES_GEOFF = "montco_L3_nodes_geoff"
 TBL_NODES_GID = "montco_L3_nodes_gid"
 
+#from farther below
+TBL_NODENOS = "montco_L3_nodenos"
+TBL_NODES_GEOFF = "montco_L3_nodes_geoff"
+TBL_NODES_GID = "montco_L3_nodes_gid"
+TBL_GEOFF_NODES = "montco_L3_geoff_nodes"
+IDX_NODENOS = "montco_L3_nodeno_idx"
+IDX_NODES_GEOFF = "montco_L3_nodes_geoff_idx"
+IDX_NODES_GID = "montco_L3_nodes_gid_idx"
+IDX_GEOFF_NODES = "montco_L3_geoff_nodes_idx"
+
 TBL_OD = "montco_L3_OandD"
 
 IDX_OD_value = "montco_od_value_idx"
@@ -249,15 +259,7 @@ geoff_nodes_list = [(k, v) for k, v in geoff_nodes.iteritems()]
 
 
 #write these plus nodesnos list into postgres to call later to turn back into a dictionary
-TBL_NODENOS = "montco_L3_nodenos"
-TBL_NODES_GEOFF = "montco_L3_nodes_geoff"
-TBL_NODES_GID = "montco_L3_nodes_gid"
-TBL_GEOFF_NODES = "montco_L3_geoff_nodes"
 
-IDX_NODENOS = "montco_L3_nodeno_idx"
-IDX_NODES_GEOFF = "montco_L3_nodes_geoff_idx"
-IDX_NODES_GID = "montco_L3_nodes_gid_idx"
-IDX_GEOFF_NODES = "montco_L3_geoff_nodes_idx"
 
 #write nodenos into a table in postgres to refer to later
 Q_CreateOutputTable = """

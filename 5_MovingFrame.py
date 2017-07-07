@@ -473,7 +473,7 @@ for i in xrange(1, iterations+1):
     
     print "Clipping Network"    
     
-    #clip network with 250m buffer on top and bottom      
+    #clip network with 1 mile buffer on top and bottom      
     cur.execute(Q_ClipNetwork % (
         xmin, 
         (y_value_bottom - 1609.34),

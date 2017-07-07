@@ -207,7 +207,12 @@ if __name__ == "__main__":
         dnode = gid_node[dGID]
         weight_by_od[(oGID, dGID)] = len(node_gid[onode]) * len(node_gid[dnode])
     #how many times each OD geoff pair should be counted if used at all
-
+    print "Number of Connections"
+    NumCon = sum(weight_by_od.itervalues())
+    print NumCon
+    with open(r"D:\Modeling\BikeStress\NumberOfConnections.txt", "wb") as io:
+        cPickle.dump(NumCon, io)
+    
     print time.ctime(), "edge_count_dict"
     edge_count_dict = {}
     for key, paths in dict_all_paths.iteritems():

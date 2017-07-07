@@ -94,7 +94,7 @@ print
     return result
 '''
 
-num_cores = 24 # mp.cpu_count()
+num_cores = 64 # mp.cpu_count()
 
 #grab master links to make graph with networkx
 Q_SelectMasterLinks = """

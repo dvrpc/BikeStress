@@ -108,7 +108,7 @@ print
     return result
 '''
 
-num_cores = 24 # mp.cpu_count()
+num_cores = 64 # mp.cpu_count()
 
 #grab master links to make graph with networkx
 
@@ -236,6 +236,6 @@ if __name__ == '__main__':
         
     del edges
         
-    with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done2.txt", "wb") as io:
-        cPickle.dump("180 written to DB", io)
+    # with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done2.txt", "wb") as io:
+        # cPickle.dump("180 written to DB", io)
 
