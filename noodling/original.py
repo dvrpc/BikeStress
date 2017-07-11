@@ -12,29 +12,72 @@ import sys
 import cPickle
 logger = mp.log_to_stderr(logging.INFO)
 
+num_cores = 24 # mp.cpu_count()
 
-TBL_ALL_LINKS = "montco_lts_links"
-TBL_CENTS = "montco_blockcent"
-TBL_LINKS = "montco__L3_tolerablelinks"
-TBL_NODES = "montco_nodes"
 TBL_SPATHS = "montco_L3_shortestpaths_180"
-TBL_TOLNODES = "montco__L3_tol_nodes"
-TBL_GEOFF_LOOKUP = "montco_L3_geoffs"
-TBL_GEOFF_GEOM = "montco_L3_geoffs_viageom"
-TBL_MASTERLINKS = "montco_L3_master_links"
-TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
 TBL_MASTERLINKS_GROUPS = "montco_L3_master_links_grp"
-TBL_GROUPS = "montco_L3_groups"
 TBL_OD = "montco_L3_OandD"
 TBL_NODENOS = "montco_L3_nodenos"
 TBL_NODES_GEOFF = "montco_L3_nodes_geoff"
 TBL_NODES_GID = "montco_L3_nodes_gid"
 TBL_GEOFF_NODES = "montco_L3_geoff_nodes"
 
-
-VIEW = "links_l3_grp_%s" % str(sys.argv[1])
+GROUP_NO = 180
+if len(sys.argv) > 1:
+    VIEW = "links_l3_grp_%s" % str(sys.argv[1])
+VIEW = "links_l3_grp_%d" % GROUP_NO
 
 IDX_nx_SPATHS_value = "montco_spaths_nx_value_idx"
+
+SQL_SelectAll = """
+SELECT * FROM "{0}";
+"""
+SQL_SelectMasterLinks = """
+SELECT
+    mixid,
+    fromgeoff,
+    togeoff,
+    cost
+FROM public."{0}";
+"""
+SQL_GeoffGroup = """
+WITH geoff_group AS (
+    SELECT
+        fromgeoff AS geoff,
+        strong
+    FROM "{0}"
+    WHERE strong IS NOT NULL
+    GROUP BY fromgeoff, strong
+
+    UNION ALL
+    SELECT
+        togeoff AS geoff,
+        strong
+    FROM "{0}"
+    WHERE strong IS NOT NULL
+    GROUP BY togeoff, strong
+)
+SELECT geoff, strong FROM geoff_group
+GROUP BY geoff, strong
+ORDER BY geoff DESC;
+"""
+SQL_CreateOutputTable = """
+CREATE TABLE IF NOT EXISTS public."{0}"
+(
+    id integer,
+    seq integer,
+    ogid integer,
+    dgid integer,
+    edge bigint,
+    rowno bigserial primary key
+);
+CREATE INDEX IF NOT EXISTS "{1}"
+    ON public."{0}" USING btree
+    (id, seq, ogid, dgid, edge)
+    TABLESPACE pg_default;
+COMMIT;
+"""
+SQL_Insert = """INSERT INTO public."{0}" (id, seq, ogid, dgid, edge) VALUES {1}"""
 
 def worker(inqueue, output):
     result = []
@@ -68,7 +111,7 @@ def test_workers(pairs):
     for proc in procs:
         proc.daemon = True
         proc.start()
-    for proc in procs:    
+    for proc in procs:
         inqueue.put(sentinel)
     for proc in procs:
         result.extend(output.get())
@@ -78,33 +121,9 @@ def test_workers(pairs):
     logger.info('test_workers() finished')
     return result
 
-'''
-def test_single_worker():
-    result = []
-    count = 0
-    for source, target in IT.product(sources, targets):
-        for path in nx.all_simple_paths(G, source = source, target = target,
-                                        cutoff = None):
-            result.append(path)
-            count += 1
-            if count % 10 == 0:
-                logger.info('{c}'.format(c = count))
-print 
-    return result
-'''
-
-num_cores = 24 # mp.cpu_count()
-
 #grab master links to make graph with networkx
-Q_SelectMasterLinks = """
-    SELECT
-        mixid,
-        fromgeoff,
-        togeoff,
-        cost
-    FROM public."{0}";
-    """.format(VIEW)
-    
+Q_SelectMasterLinks = SQL_SelectMasterLinks.format(VIEW)
+
 con = psql.connect(database = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
 
@@ -123,122 +142,82 @@ output = mp.Queue()
 
 if __name__ == '__main__':
     logger.info('start_time: %s' % time.ctime())
-    
+
     #grab necessary lists and turn them into dictionaries
-    Q_GetList = """
-        SELECT * FROM "{0}";
-        """.format(TBL_NODENOS)
-    cur.execute(Q_GetList)
+    cur.execute(SQL_SelectAll.format(TBL_NODENOS))
     nodenos = cur.fetchall()
-    
-    Q_GetList = """
-        SELECT * FROM "{0}";
-        """.format(TBL_NODES_GEOFF)
-    cur.execute(Q_GetList)
-    nodes_geoff_list = cur.fetchall()
-    nodes_geoff = dict(nodes_geoff_list)
-    
-    Q_GetList = """
-        SELECT * FROM "{0}";
-        """.format(TBL_NODES_GID)
-    cur.execute(Q_GetList)
-    nodes_gids_list = cur.fetchall()
-    nodes_gids = dict(nodes_gids_list)
-    
-    Q_GetList = """
-        SELECT * FROM "{0}";
-        """.format(TBL_GEOFF_NODES)
-    cur.execute(Q_GetList)
-    geoff_nodes_list = cur.fetchall()
-    geoff_nodes = dict(geoff_nodes_list)
-    
+
+    cur.execute(SQL_SelectAll.format(TBL_NODES_GEOFF))
+    nodes_geoff = dict(cur.fetchall())
+
+    cur.execute(SQL_SelectAll.format(TBL_NODES_GID))
+    nodes_gids = dict(cur.fetchall())
+
+    cur.execute(SQL_SelectAll.format(TBL_GEOFF_NODES))
+    geoff_nodes = dict(cur.fetchall())
+
     #call OD list from postgres
-    Q_GetOD = """
-        SELECT * FROM "{0}";
-        """.format(TBL_OD)
-    cur.execute(Q_GetOD)
+    cur.execute(SQL_SelectAll.format(TBL_OD))
     OandD = cur.fetchall()
 
-    Q_GeoffGroup = """
-    WITH geoff_group AS (
-        SELECT
-            fromgeoff AS geoff,
-            strong
-        FROM "{0}"
-        WHERE strong IS NOT NULL
-        GROUP BY fromgeoff, strong
-        
-        UNION ALL
-        SELECT
-            togeoff AS geoff,
-            strong
-        FROM "{0}"
-        WHERE strong IS NOT NULL
-        GROUP BY togeoff, strong
-    )
-    SELECT geoff, strong FROM geoff_group
-    GROUP BY geoff, strong
-    ORDER BY geoff DESC;
-    """.format(TBL_MASTERLINKS_GROUPS)
-
-    cur.execute(Q_GeoffGroup)
+    cur.execute(SQL_GeoffGroup.format(TBL_MASTERLINKS_GROUPS))
     geoff_grp = dict(cur.fetchall())
 
-    CloseEnough = []
-    DiffGroup = 0
-    NullGroup = 0
-    #are the OD geoffs in the same group? if so, add pair to list to be calculated
-    for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
-        #if i % pool_size == (worker_number - 1):
-        fromnodeno = nodenos[fromnodeindex][0]
-        tonodeno = nodenos[tonodeindex][0]
-        if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
-            if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
-                if geoff_grp[nodes_geoff[fromnodeno]] == int(sys.argv[1]):
-                    CloseEnough.append([
-                        nodes_gids[fromnodeno],    # FromGID
-                        #fromnodeno,                # FromNode
-                        nodes_geoff[fromnodeno],  # FromGeoff
-                        nodes_gids[tonodeno],      # ToGID
-                        #tonodeno,                  # ToNode
-                        nodes_geoff[tonodeno],    # ToGeoff
-                        geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
-                        ])
-            else:
-                DiffGroup += 1
+CloseEnough = []
+DiffGroup = 0
+NullGroup = 0
+#are the OD geoffs in the same group? if so, add pair to list to be calculated
+for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
+    #if i % pool_size == (worker_number - 1):
+    fromnodeno = nodenos[fromnodeindex][0]
+    tonodeno = nodenos[tonodeindex][0]
+    if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
+        if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
+            if geoff_grp[nodes_geoff[fromnodeno]] == int(sys.argv[1]):
+                CloseEnough.append([
+                    nodes_gids[fromnodeno],    # FromGID
+                    #fromnodeno,                # FromNode
+                    nodes_geoff[fromnodeno],  # FromGeoff
+                    nodes_gids[tonodeno],      # ToGID
+                    #tonodeno,                  # ToNode
+                    nodes_geoff[tonodeno],    # ToGeoff
+                    geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
+                    ])
         else:
-            NullGroup += 1
-            
-    del nodenos, OandD, geoff_grp, nodes_geoff
+            DiffGroup += 1
+    else:
+        NullGroup += 1
+
+del nodenos, OandD, geoff_grp, nodes_geoff
 
     pairs = []
     for i, (fgid, fgeoff, tgid, tgeoff, grp) in enumerate(CloseEnough):
         source = fgeoff
         target = tgeoff
         pairs.append((source, target))
-        
+
     del pairs
 
     paths = test_workers(pairs)
-        
+
     with open(r"D:\Modeling\BikeStress\scripts\group180.cpickle", "wb") as io:
         cPickle.dump(paths, io)
-    
+
     del pairs
-    
+
     with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done.txt", "wb") as io:
         cPickle.dump("180 calculated", io)
-    
+
     con = psql.connect(database = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
     cur = con.cursor()
 
     cur.execute(Q_SelectMasterLinks)
     MasterLinks = cur.fetchall()
-    
-    node_pairs = {}       
+
+    node_pairs = {}
     for i, (mixid, fromgeoff, togeoff, cost) in enumerate(MasterLinks):
         node_pairs[(fromgeoff, togeoff)] = mixid
-        
+
     del MasterLinks
 
     edges = []
@@ -249,32 +228,11 @@ if __name__ == '__main__':
             row = id, seq, oGID, dGID, node_pairs[(o,d)]
             edges.append(row)
     logger.info('number of records: %d' % len(edges))
-    
+
     del paths, nodes_gids, geoff_nodes, node_pairs
-    
+
     if (len(edges) > 0):
-        Q_CreateOutputTable = """
-            CREATE TABLE IF NOT EXISTS public."{0}"
-            (
-              id integer,
-              seq integer,
-              ogid integer,
-              dgid integer,
-              edge bigint,
-              rowno bigint NOT NULL DEFAULT nextval('"montco_L3_shortestpaths_rowno_seq"'::regclass),
-              CONSTRAINT "montco_L3_shortestpaths_pkey" PRIMARY KEY (rowno)
-            )
-            WITH (
-                OIDS = FALSE
-            )
-            TABLESPACE pg_default;
-            
-            CREATE INDEX IF NOT EXISTS "{1}"
-                ON public."{0}" USING btree
-                (id, seq, ogid, dgid, edge)
-                TABLESPACE pg_default;
-            COMMIT;                
-        """.format(TBL_SPATHS, IDX_nx_SPATHS_value)
+        Q_CreateOutputTable = SQL_CreateOutputTable.format(TBL_SPATHS, IDX_nx_SPATHS_value)
         cur.execute(Q_CreateOutputTable)
 
         logger.info('inserting records')
@@ -285,12 +243,12 @@ if __name__ == '__main__':
             j = i + batch_size
             arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edges[i:j])
             #print arg_str
-            Q_Insert = """INSERT INTO public."{0}" (id, seq, ogid, dgid, edge) VALUES {1}""".format(TBL_SPATHS, arg_str)
+            Q_Insert = SQL_Insert.format(TBL_SPATHS, arg_str)
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
         logger.info('end_time: %s' % time.ctime())
-        
+
     del edges
-        
+
     with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done2.txt", "wb") as io:
         cPickle.dump("180 written to DB", io)
