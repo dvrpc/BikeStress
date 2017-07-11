@@ -163,38 +163,38 @@ if __name__ == '__main__':
     cur.execute(SQL_GeoffGroup.format(TBL_MASTERLINKS_GROUPS))
     geoff_grp = dict(cur.fetchall())
 
-CloseEnough = []
-DiffGroup = 0
-NullGroup = 0
-#are the OD geoffs in the same group? if so, add pair to list to be calculated
-for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
-    #if i % pool_size == (worker_number - 1):
-    fromnodeno = nodenos[fromnodeindex][0]
-    tonodeno = nodenos[tonodeindex][0]
-    if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
-        if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
-            if geoff_grp[nodes_geoff[fromnodeno]] == int(sys.argv[1]):
-                CloseEnough.append([
-                    nodes_gids[fromnodeno],    # FromGID
-                    #fromnodeno,                # FromNode
-                    nodes_geoff[fromnodeno],  # FromGeoff
-                    nodes_gids[tonodeno],      # ToGID
-                    #tonodeno,                  # ToNode
-                    nodes_geoff[tonodeno],    # ToGeoff
-                    geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
-                    ])
+    CloseEnough = []
+    DiffGroup = 0
+    NullGroup = 0
+    #are the OD geoffs in the same group? if so, add pair to list to be calculated
+    for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
+        #if i % pool_size == (worker_number - 1):
+        fromnodeno = nodenos[fromnodeindex][0]
+        tonodeno = nodenos[tonodeindex][0]
+        if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
+            if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
+                if geoff_grp[nodes_geoff[fromnodeno]] == GROUP_NO:
+                    CloseEnough.append([
+                        nodes_gids[fromnodeno],    # FromGID
+                        #fromnodeno,                # FromNode
+                        nodes_geoff[fromnodeno],  # FromGeoff
+                        nodes_gids[tonodeno],      # ToGID
+                        #tonodeno,                  # ToNode
+                        nodes_geoff[tonodeno],    # ToGeoff
+                        geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
+                        ])
+            else:
+                DiffGroup += 1
         else:
-            DiffGroup += 1
-    else:
-        NullGroup += 1
+            NullGroup += 1
 
-del nodenos, OandD, geoff_grp, nodes_geoff
+    del nodenos, OandD, geoff_grp, nodes_geoff
 
-    pairs = []
-    for i, (fgid, fgeoff, tgid, tgeoff, grp) in enumerate(CloseEnough):
-        source = fgeoff
-        target = tgeoff
-        pairs.append((source, target))
+pairs = []
+for i, (fgid, fgeoff, tgid, tgeoff, grp) in enumerate(CloseEnough):
+    source = fgeoff
+    target = tgeoff
+    pairs.append((source, target))
 
     del pairs
 
@@ -242,13 +242,9 @@ del nodenos, OandD, geoff_grp, nodes_geoff
         for i in xrange(0, len(edges), batch_size):
             j = i + batch_size
             arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edges[i:j])
-            #print arg_str
             Q_Insert = SQL_Insert.format(TBL_SPATHS, arg_str)
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
         logger.info('end_time: %s' % time.ctime())
 
     del edges
-
-    with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done2.txt", "wb") as io:
-        cPickle.dump("180 written to DB", io)
