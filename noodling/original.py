@@ -140,70 +140,78 @@ pairs = []
 sentinel = None
 output = mp.Queue()
 
+# public static main(String[] args)
 if __name__ == '__main__':
     logger.info('start_time: %s' % time.ctime())
 
-    #grab necessary lists and turn them into dictionaries
-    cur.execute(SQL_SelectAll.format(TBL_NODENOS))
-    nodenos = cur.fetchall()
+#grab necessary lists and turn them into dictionaries
+cur.execute(SQL_SelectAll.format(TBL_NODENOS))
+nodenos = cur.fetchall()
 
-    cur.execute(SQL_SelectAll.format(TBL_NODES_GEOFF))
-    nodes_geoff = dict(cur.fetchall())
+cur.execute(SQL_SelectAll.format(TBL_NODES_GEOFF))
+nodes_geoff = dict(cur.fetchall())
 
-    cur.execute(SQL_SelectAll.format(TBL_NODES_GID))
-    nodes_gids = dict(cur.fetchall())
+cur.execute(SQL_SelectAll.format(TBL_NODES_GID))
+nodes_gids = dict(cur.fetchall())
 
-    cur.execute(SQL_SelectAll.format(TBL_GEOFF_NODES))
-    geoff_nodes = dict(cur.fetchall())
+cur.execute(SQL_SelectAll.format(TBL_GEOFF_NODES))
+geoff_nodes = dict(cur.fetchall())
 
-    #call OD list from postgres
-    cur.execute(SQL_SelectAll.format(TBL_OD))
-    OandD = cur.fetchall()
+#call OD list from postgres
+cur.execute(SQL_SelectAll.format(TBL_OD))
+OandD = cur.fetchall()
 
-    cur.execute(SQL_GeoffGroup.format(TBL_MASTERLINKS_GROUPS))
-    geoff_grp = dict(cur.fetchall())
+cur.execute(SQL_GeoffGroup.format(TBL_MASTERLINKS_GROUPS))
+geoff_grp = dict(cur.fetchall())
 
-    CloseEnough = []
-    DiffGroup = 0
-    NullGroup = 0
-    #are the OD geoffs in the same group? if so, add pair to list to be calculated
-    for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
-        #if i % pool_size == (worker_number - 1):
-        fromnodeno = nodenos[fromnodeindex][0]
-        tonodeno = nodenos[tonodeindex][0]
-        if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
-            if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
-                if geoff_grp[nodes_geoff[fromnodeno]] == GROUP_NO:
-                    CloseEnough.append([
-                        nodes_gids[fromnodeno],    # FromGID
-                        #fromnodeno,                # FromNode
-                        nodes_geoff[fromnodeno],  # FromGeoff
-                        nodes_gids[tonodeno],      # ToGID
-                        #tonodeno,                  # ToNode
-                        nodes_geoff[tonodeno],    # ToGeoff
-                        geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
-                        ])
+CloseEnough = []
+DiffGroup = 0
+NullGroup = 0
+
+#are the OD geoffs in the same group? if so, add pair to list to be calculated
+for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
+    #if i % pool_size == (worker_number - 1):
+    fromnodeno = nodenos[fromnodeindex][0]
+    tonodeno = nodenos[tonodeindex][0]
+    if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
+        if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
+            if geoff_grp[nodes_geoff[fromnodeno]] == GROUP_NO:
+                CloseEnough.append([
+                    nodes_gids[fromnodeno],    # FromGID
+                    #fromnodeno,                # FromNode
+                    nodes_geoff[fromnodeno],  # FromGeoff
+                    nodes_gids[tonodeno],      # ToGID
+                    #tonodeno,                  # ToNode
+                    nodes_geoff[tonodeno],    # ToGeoff
+                    geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
+                    ])
             else:
                 DiffGroup += 1
         else:
-            NullGroup += 1
+            DiffGroup += 1
+    else:
+        NullGroup += 1
 
-    del nodenos, OandD, geoff_grp, nodes_geoff
+    # del nodenos, OandD, geoff_grp, nodes_geoff
 
 pairs = []
 for i, (fgid, fgeoff, tgid, tgeoff, grp) in enumerate(CloseEnough):
-    source = fgeoff
-    target = tgeoff
-    pairs.append((source, target))
+    if fgeoff <> tgeoff:
+        pairs.append((fgeoff, tgeoff))
 
-    del pairs
+
+# compare pairs
+
+
+
+
 
     paths = test_workers(pairs)
 
     with open(r"D:\Modeling\BikeStress\scripts\group180.cpickle", "wb") as io:
         cPickle.dump(paths, io)
 
-    del pairs
+    # del pairs
 
     with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done.txt", "wb") as io:
         cPickle.dump("180 calculated", io)
@@ -218,7 +226,7 @@ for i, (fgid, fgeoff, tgid, tgeoff, grp) in enumerate(CloseEnough):
     for i, (mixid, fromgeoff, togeoff, cost) in enumerate(MasterLinks):
         node_pairs[(fromgeoff, togeoff)] = mixid
 
-    del MasterLinks
+    # del MasterLinks
 
     edges = []
     for id, path in enumerate(paths):
@@ -229,7 +237,7 @@ for i, (fgid, fgeoff, tgid, tgeoff, grp) in enumerate(CloseEnough):
             edges.append(row)
     logger.info('number of records: %d' % len(edges))
 
-    del paths, nodes_gids, geoff_nodes, node_pairs
+    # del paths, nodes_gids, geoff_nodes, node_pairs
 
     if (len(edges) > 0):
         Q_CreateOutputTable = SQL_CreateOutputTable.format(TBL_SPATHS, IDX_nx_SPATHS_value)
@@ -247,4 +255,4 @@ for i, (fgid, fgeoff, tgid, tgeoff, grp) in enumerate(CloseEnough):
         cur.execute("COMMIT;")
         logger.info('end_time: %s' % time.ctime())
 
-    del edges
+    # del edges
