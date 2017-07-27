@@ -8,37 +8,32 @@ import json
 import scipy.spatial
 import networkx as nx
 
-TBL_ALL_LINKS = "montco_lts_links"
-TBL_CENTS = "montco_blockcent"
-TBL_LINKS = "montco__L3_tolerablelinks"
-TBL_NODES = "montco_nodes"
-TBL_SPATHS = "montco_L3_shortestpaths"
-TBL_TOLNODES = "montco__L3_tol_nodes"
-TBL_GEOFF_LOOKUP = "montco_L3_geoffs"
-TBL_GEOFF_GEOM = "montco_L3_geoffs_viageom"
-TBL_MASTERLINKS = "montco_L3_master_links"
-TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
-TBL_MASTERLINKS_GROUPS = "montco_L3_master_links_grp"
-TBL_GROUPS = "montco_L3_groups"
-TBL_NODENOS = "montco_L3_nodenos"
-TBL_NODES_GEOFF = "montco_L3_nodes_geoff"
-TBL_NODES_GID = "montco_L3_nodes_gid"
+TBL_ALL_LINKS = "sa_lts_links"
+TBL_CENTS = "pa_blockcentroids"
+TBL_LINKS = "sa_L3_tolerablelinks"
+TBL_NODES = "sa_nodes"
+# TBL_SPATHS = "montco_L3_shortestpaths_196"
+TBL_TOLNODES = "sa_L3_tol_nodes"
+TBL_GEOFF_LOOKUP = "geoffs"
+TBL_GEOFF_GEOM = "geoffs_viageom"
+TBL_MASTERLINKS = "master_links"
+TBL_MASTERLINKS_GEO = "master_links_geo"
+TBL_MASTERLINKS_GROUPS = "master_links_grp"
 
-#from farther below
-TBL_NODENOS = "montco_L3_nodenos"
-TBL_NODES_GEOFF = "montco_L3_nodes_geoff"
-TBL_NODES_GID = "montco_L3_nodes_gid"
-TBL_GEOFF_NODES = "montco_L3_geoff_nodes"
-IDX_NODENOS = "montco_L3_nodeno_idx"
-IDX_NODES_GEOFF = "montco_L3_nodes_geoff_idx"
-IDX_NODES_GID = "montco_L3_nodes_gid_idx"
-IDX_GEOFF_NODES = "montco_L3_geoff_nodes_idx"
+TBL_GROUPS = "groups"
+TBL_NODENOS = "nodenos"
+TBL_NODES_GEOFF = "nodes_geoff"
+TBL_NODES_GID = "nodes_gid"
+TBL_GEOFF_NODES = "geoff_nodes"
+TBL_OD = "OandD"
 
-TBL_OD = "montco_L3_OandD"
+IDX_NODENOS = "nodeno_idx"
+IDX_NODES_GEOFF = "nodes_geoff_idx"
+IDX_NODES_GID = "nodes_gid_idx"
+IDX_GEOFF_NODES = "geoff_nodes_idx"
+IDX_OD_value = "od_value_idx"
 
-IDX_OD_value = "montco_od_value_idx"
-
-con = psql.connect(dbname = "BikeStress", host = "yoshi", port = 5432, user = "postgres", password = "sergt")
+con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
 
 
@@ -211,7 +206,7 @@ for i, (id, _, coord) in enumerate(data):
 del data, world_ids
     
 gids, nodenos = zip(*results)
-nodenos = sorted(set(nodenos))
+#nodenos = sorted(set(nodenos))
 # Node to GID dictionary (a 'random' GID will be selected for each node)
 nodes_gids = dict(zip(nodenos, gids))
 nodetree = scipy.spatial.cKDTree(map(lambda nodeno:node_coords[nodeno], nodenos))
@@ -351,8 +346,8 @@ cur.execute("COMMIT;")
 Q_CreateOutputTable = """
 CREATE TABLE IF NOT EXISTS public."{0}"
 (
-    nodes integer,
-    geoffid integer
+    geoffid integer,
+    nodes integer
 )
 WITH (
     OIDS = FALSE

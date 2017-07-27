@@ -25,8 +25,8 @@ TBL_MASTERLINKS = "montco_master_links"
 TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
 TBL_MASTERLINKS_GROUPS = "montco_L3_master_links_grp"
 TBL_GROUPS = "montco_groups"
-TBL_EDGE = "montco_L3_edgecounts_original180"
-TBL_USE = "montco_L3_linkuse_original180"
+TBL_EDGE = "montco_L3_edgecounts_196_MF"
+TBL_USE = "montco_L3_linkuse_196_MF"
 TBL_TOP = "montco_L3_topLinks"
 
 

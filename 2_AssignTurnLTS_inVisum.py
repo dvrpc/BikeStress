@@ -55,7 +55,7 @@ road_index = [
     [(1, 3),   (0,  25 )],
     [(4, 5),   (0,  25 )],
     [(1, 3),   (26, 34 )],
-    [(6, 999), (0,  25 )],)
+    [(6, 999), (0,  25 )],
     [(4, 5),   (26, 34 )],
     [(6, 999), (26, 34 )],
     [(1, 3),   (35, 999)],
@@ -144,7 +144,7 @@ h.SetMulti(Visum.Net.Turns, "TurnLTS", TurnStress)
 #        w.writerow([FromNode[i], ViaNode[i], ToNode[i], TurnDirection[i], TurnStress[i]])
        
 #to write to csv after TurnLTS is already assigned
-with open(r'\\PEACH\Modeling\Projects\BikeStress\TurnLTS_output_051617.csv','wb') as IO:
+with open(r'\\PEACH\Modeling\Projects\BikeStress\TurnLTS_output_072517.csv','wb') as IO:
     w = csv.writer(IO)
     #write the header row
     w.writerow(['FromNode', 'ViaNode', 'ToNode', 'MaxApproachLTS', 'TurnDirection', 'TurnLTS'])        

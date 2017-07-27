@@ -1,3 +1,4 @@
+#run in CMD
 import multiprocessing
 import multiprocessing.dummy
 # import threading
@@ -22,7 +23,7 @@ logger = multiprocessing.log_to_stderr(logging.INFO)
 TBL_ALL_LINKS = "montco_lts_links"
 TBL_CENTS = "montco_blockcent"
 TBL_LINKS = "montco_L3_tolerablelinks"
-TBL_SPATHS = "montco_L3_shortestpaths_180"
+TBL_SPATHS = "montco_L3_shortestpaths_196_MF"
 TBL_TOLNODES = "montco_tol_nodes"
 TBL_GEOFF_LOOKUP = "montco_geoffs"
 TBL_GEOFF_GEOM = "montco_L3_geoffs_viageom"
@@ -30,8 +31,8 @@ TBL_MASTERLINKS = "montco_master_links"
 TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
 TBL_MASTERLINKS_GROUPS = "montco_master_links_grp"
 TBL_GROUPS = "montco_groups"
-TBL_EDGE = "montco_L3_edgecounts_original180"
-TBL_USE = "montco_L3_linkuse_original180"
+TBL_EDGE = "montco_L3_edgecounts_196_MF"
+TBL_USE = "montco_L3_linkuse_196_MF"
 TBL_TOP = "montco_L3_topLinks"
 
 # class _Worker(threading.Thread):
@@ -116,7 +117,7 @@ if __name__ == "__main__":
     j = 0L
 
     work_units = []
-    while (i < 2147678205L):
+    while (i < 52577973):
     #while (i < 2147678205L):
         work_units.append((i, batch_size))
         i += batch_size
@@ -210,7 +211,7 @@ if __name__ == "__main__":
     print "Number of Connections"
     NumCon = sum(weight_by_od.itervalues())
     print NumCon
-    with open(r"D:\Modeling\BikeStress\NumberOfConnections.txt", "wb") as io:
+    with open(r"D:\Modeling\BikeStress\NumberOfConnections_196.txt", "wb") as io:
         cPickle.dump(NumCon, io)
     
     print time.ctime(), "edge_count_dict"
@@ -222,7 +223,7 @@ if __name__ == "__main__":
                 edge_count_dict[edge] = 0
             edge_count_dict[edge] += path_weight
             
-    with open(r"D:\Modeling\BikeStress\edge_count_dict_orig180.pickle", "wb") as io:
+    with open(r"D:\Modeling\BikeStress\edge_count_dict_196.pickle", "wb") as io:
         cPickle.dump(edge_count_dict, io)
             
     con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")

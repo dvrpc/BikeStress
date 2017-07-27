@@ -16,37 +16,37 @@ from collections import Counter
 #nodes from model(points)
 
 #table names
-TBL_ALL_LINKS = "montco_lts_links"
-TBL_CENTS = "montco_blockcent"
-TBL_LINKS = "montco__L3_tolerablelinks"
-TBL_NODES = "montco_nodes"
-TBL_SPATHS = "montco_L3_shortestpaths"
-TBL_TOLNODES = "montco__L3_tol_nodes"
-TBL_GEOFF_LOOKUP = "montco_L3_geoffs"
-TBL_GEOFF_LOOKUP_GEOM = "montco_L3_geoffs_viageom"
-TBL_MASTERLINKS = "montco_L3_master_links"
-TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
-TBL_MASTERLINKS_GROUPS = "montco_L3_master_links_grp"
-TBL_GROUPS = "montco_L3_groups"
+TBL_ALL_LINKS = "sa_lts_links"
+TBL_CENTS = "pa_blockcentroids"
+TBL_LINKS = "sa_L3_tolerablelinks"
+TBL_NODES = "sa_nodes"
+# TBL_SPATHS = "montco_L3_shortestpaths"
+TBL_TOLNODES = "sa_L3_tol_nodes"
+TBL_GEOFF_LOOKUP = "geoffs"
+TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom"
+TBL_MASTERLINKS = "master_links"
+TBL_MASTERLINKS_GEO = "master_links_geo"
+TBL_MASTERLINKS_GROUPS = "master_links_grp"
+TBL_GROUPS = "groups"
 TBL_TURNS = "all_turns"
-TBL_SUBTURNS = "montco_L3_turns"
+TBL_SUBTURNS = "sa_L3_tolerableturns"
 
 #index names
-IDX_ALL_LINKS_geom = "montco_links_geom_idx"
-IDX_ALL_LINKS_value = "montco_links_value_idx"
-IDX_CENTS_geom = "montco_centroids_geom_idx"
-IDX_CENTS_value = "montco_centroids_value_idx"
-IDX_LINKS_geom = "montco_tol_links_geom_idx"
-IDX_LINKS_value = "montco_tol_links_value_idx"
-IDX_SPATHS_value = "montco_spaths_value_idx"
-IDX_NODES_geom = "montco_nodes_geom_idx"
-IDX_NODES_value = "montco_nodes_value_idx"
-IDX_TOL_NODES_geom = "montco_nodes_geom_idx"
-IDX_TOL_NODES_value = "montco_nodes_value_idx"
+IDX_ALL_LINKS_geom = "links_geom_idx"
+IDX_ALL_LINKS_value = "links_value_idx"
+IDX_CENTS_geom = "centroids_geom_idx"
+IDX_CENTS_value = "centroids_value_idx"
+IDX_LINKS_geom = "tol_links_geom_idx"
+IDX_LINKS_value = "tol_links_value_idx"
+# IDX_SPATHS_value = "spaths_value_idx"
+IDX_NODES_geom = "nodes_geom_idx"
+IDX_NODES_value = "nodes_value_idx"
+IDX_TOL_NODES_geom = "tolnodes_geom_idx"
+IDX_TOL_NODES_value = "tolnodes_value_idx"
 IDX_ALL_TURNS_values = "All_Turns_values_idx"
 
 #connect to SQL DB in python
-con = psql.connect(dbname = "BikeStress", host = "yoshi", port = 5432, user = "postgres", password = "sergt")
+con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 #create cursor to execute querys
 cur = con.cursor()
 
@@ -97,10 +97,10 @@ cur.execute(Q_IndexExisting)
 
 
 #create subset of links based on assigned LTS
-#LTS 1 and 2 only
+#LTS 1 and 2 and 3 only
 Q_LinkSubset = """
     CREATE TABLE "{0}" AS
-        SELECT * FROM "{1}" WHERE linklts <= 0.3 AND linklts > 0;
+        SELECT * FROM "{1}" WHERE linklts <= 0.6 AND linklts > 0;
     COMMIT;
     CREATE INDEX IF NOT EXISTS "{2}"
         ON public."{0}" USING gist
@@ -166,7 +166,7 @@ CREATE INDEX IF NOT EXISTS "{1}"
 cur.execute(Q_CreateTurnTable)
 con.commit()
 
-tbl_path = r"//peach/Modeling/Projects/BikeStress/TurnLTS_output.csv"
+tbl_path = r"D:/Modeling/BikeStress/TurnLTS_output_072517.csv"
 
 #query to insert turns from csv into turn table
 Q_INSERT = """
@@ -366,26 +366,26 @@ cur.execute(Q_Master_Geom)
 
 
 #query to create table to hold shortest paths
-Q_CreatePathTable = """
-    CREATE TABLE IF NOT EXISTS public."{0}"
-    (
-      id integer,
-      seq integer,
-      ogid integer,
-      dgid integer,
-      edge bigint,
-      rowno bigint NOT NULL DEFAULT nextval('"montco_L3_shortestpaths_rowno_seq"'::regclass),
-      CONSTRAINT "montco_L3_shortestpaths_pkey" PRIMARY KEY (rowno)
-    )
-    WITH (
-        OIDS = FALSE
-    )
-    TABLESPACE pg_default;
-    COMMIT;
+# Q_CreatePathTable = """
+    # CREATE TABLE IF NOT EXISTS public."{0}"
+    # (
+      # id integer,
+      # seq integer,
+      # ogid integer,
+      # dgid integer,
+      # edge bigint,
+      # rowno bigint NOT NULL DEFAULT nextval('"montco_L3_shortestpaths_rowno_seq"'::regclass),
+      # CONSTRAINT "montco_L3_shortestpaths_pkey" PRIMARY KEY (rowno)
+    # )
+    # WITH (
+        # OIDS = FALSE
+    # )
+    # TABLESPACE pg_default;
+    # COMMIT;
     
-    CREATE INDEX IF NOT EXISTS "{1}"
-        ON public."{0}" USING btree
-        (sequence, ogid, dgid, seq, path_seq, node, edge, cost, agg_cost)
-        TABLESPACE pg_default;    
-""".format(TBL_SPATHS, IDX_SPATHS_value)
-cur.execute(Q_CreatePathTable)
+    # CREATE INDEX IF NOT EXISTS "{1}"
+        # ON public."{0}" USING btree
+        # (id, seq, ogid, dgid, edge, rowno)
+        # TABLESPACE pg_default;    
+# """.format(TBL_SPATHS, IDX_SPATHS_value)
+# cur.execute(Q_CreatePathTable)

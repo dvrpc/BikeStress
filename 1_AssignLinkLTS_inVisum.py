@@ -4,11 +4,13 @@ import VisumPy.matrices as m
 import csv
 import os
 
-
+# h.CreateVisum(15)
+# drag in version file
 
 #create SpeedToUse UDA and set to VCur_PrTSyS(Car)
 
-#grab Link attributes
+# grab Link attributes
+### make sure all these link attributes are populated, especially in newly added trail links
 FromNode         = h.GetMulti(Visum.Net.Links, r"FromNodeNo")
 #ToNode           = h.GetMulti(Visum.Net.Links, r"ToNodeNo")
 #Length           = h.GetMulti(Visum.Net.Links, r"Length")
