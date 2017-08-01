@@ -52,8 +52,9 @@ REM "C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/
 
 
 REM REMEMBER TO ESCAPE QUOTES AT END OF THESE LINES
-"C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/geoffs_viageom" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.\"geoffs_viageom\""
-"C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/master_links_grp" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.\"master_links_grp\""
+"C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/geoff_group" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.\"geoff_group\""
+"C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/block_node_geoff" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.\"block_node_geoff\""
+
 "C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/groups" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.\"groups\""
 "C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/nodenos" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.\"nodenos\""
 "C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/OandD" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.\"OandD\""
@@ -63,7 +64,7 @@ REM REMEMBER TO ESCAPE QUOTES AT END OF THESE LINES
 
 
 REM RESTORE TO TOAD
-"C:\Program Files\PostgreSQL\9.6\bin\pg_restore.exe" --host "toad" --port "5432" --username "postgres" --verbose -d "BikeStress" --table "geoffs_viageom" "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/geoffs_viageom"
+"C:\Program Files\PostgreSQL\9.6\bin\pg_restore.exe" --host "toad" --port "5432" --username "postgres" --verbose -d "BikeStress" --table "block_node_geoff" "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/block_node_geoff"
 "C:\Program Files\PostgreSQL\9.6\bin\pg_restore.exe" --host "toad" --port "5432" --username "postgres" --verbose -d "BikeStress" --table "master_links_grp" "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/master_links_grp"
 "C:\Program Files\PostgreSQL\9.6\bin\pg_restore.exe" --host "toad" --port "5432" --username "postgres" --verbose -d "BikeStress" --table "groups" "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/groups"
 "C:\Program Files\PostgreSQL\9.6\bin\pg_restore.exe" --host "toad" --port "5432" --username "postgres" --verbose -d "BikeStress" --table "nodenos" "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/nodenos"

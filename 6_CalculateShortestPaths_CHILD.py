@@ -24,11 +24,13 @@ TBL_GROUPS = "groups"
 #need in this script
 TBL_SPATHS = "shortestpaths"
 TBL_MASTERLINKS_GROUPS = "master_links_grp"
-TBL_OD = "OandD"
+# TBL_OD = "OandD"
 TBL_NODENOS = "nodenos"
 TBL_NODES_GEOFF = "nodes_geoff"
 TBL_NODES_GID = "nodes_gid"
 TBL_GEOFF_NODES = "geoff_nodes"
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
+TBL_GEOFF_GROUP = "geoff_group"
 IDX_nx_SPATHS_value = "spaths_nx_value_idx"
 
 # island 196 test
@@ -136,19 +138,6 @@ if __name__ == '__main__':
     #grab necessary lists and turn them into dictionaries
     Q_GetList = """
         SELECT * FROM "{0}";
-        """.format(TBL_NODENOS)
-    cur.execute(Q_GetList)
-    nodenos = cur.fetchall()
-    
-    Q_GetList = """
-        SELECT * FROM "{0}";
-        """.format(TBL_NODES_GEOFF)
-    cur.execute(Q_GetList)
-    nodes_geoff_list = cur.fetchall()
-    nodes_geoff = dict(nodes_geoff_list)
-    
-    Q_GetList = """
-        SELECT * FROM "{0}";
         """.format(TBL_NODES_GID)
     cur.execute(Q_GetList)
     nodes_gids_list = cur.fetchall()
@@ -161,74 +150,23 @@ if __name__ == '__main__':
     geoff_nodes_list = cur.fetchall()
     geoff_nodes = dict(geoff_nodes_list)
     
-    #call OD list from postgres
-    Q_GetOD = """
-        SELECT * FROM "{0}";
-        """.format(TBL_OD)
-    cur.execute(Q_GetOD)
-    OandD = cur.fetchall()
-
-    Q_GeoffGroup = """
-    WITH geoff_group AS (
+    Q_GetGroupPairs = """
         SELECT
-            fromgeoff AS geoff,
-            strong
+            fromgeoff AS fgeoff,
+            togeoff AS tgeoff,
+            groupnumber AS grp
         FROM "{0}"
-        WHERE strong IS NOT NULL
-        GROUP BY fromgeoff, strong
+        WHERE groupnumber = {1};
+        """.format(TBL_BLOCK_NODE_GEOFF, int(sys.argv[1]))
+    cur.execute(Q_GetGroupPairs)
+    group_pairs = cur.fetchall()
         
-        UNION ALL
-
-        SELECT
-            togeoff AS geoff,
-            strong
-        FROM "{0}"
-        WHERE strong IS NOT NULL
-        GROUP BY togeoff, strong
-    )
-    SELECT geoff, strong FROM geoff_group
-    GROUP BY geoff, strong
-    ORDER BY geoff DESC;
-    """.format(TBL_MASTERLINKS_GROUPS)
-
-    cur.execute(Q_GeoffGroup)
-    geoff_grp = dict(cur.fetchall())
-
-    CloseEnough = []
-    DiffGroup = 0
-    NullGroup = 0
-    #are the OD geoffs in the same group? if so, add pair to list to be calculated
-    for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
-        #if i % pool_size == (worker_number - 1):
-        fromnodeno = nodenos[fromnodeindex][0]
-        tonodeno = nodenos[tonodeindex][0]
-        if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
-            if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
-                if geoff_grp[nodes_geoff[fromnodeno]] == int(sys.argv[1]):
-                    CloseEnough.append([
-                        nodes_gids[fromnodeno],    # FromGID
-                        #fromnodeno,                # FromNode
-                        nodes_geoff[fromnodeno],  # FromGeoff
-                        nodes_gids[tonodeno],      # ToGID
-                        #tonodeno,                  # ToNode
-                        nodes_geoff[tonodeno],    # ToGeoff
-                        geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
-                        ])
-            else:
-                DiffGroup += 1
-        else:
-            NullGroup += 1
-            
-    del nodenos, OandD, geoff_grp, nodes_geoff
-
     pairs = []
-    for i, (fgid, fgeoff, tgid, tgeoff, grp) in enumerate(CloseEnough):
+    for i, (fgeoff, tgeoff, grp) in enumerate(group_pairs):
         source = fgeoff
         target = tgeoff
         pairs.append((source, target))
         
-    
-
     paths = test_workers(pairs)
         
     with open(r"D:\Modeling\BikeStress\scripts\paths.cpickle", "wb") as io:

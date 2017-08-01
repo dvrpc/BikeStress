@@ -26,7 +26,11 @@ TBL_NODES_GEOFF = "nodes_geoff"
 TBL_NODES_GID = "nodes_gid"
 TBL_GEOFF_NODES = "geoff_nodes"
 TBL_OD = "OandD"
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
+TBL_GEOFF_GROUP = "geoff_group"
 
+IDX_GEOFF_GROUP = "geoff_group_value_idx"
+IDX_BLOCK_NODE_GEOFF = "block_node_geoff_value_idx"
 IDX_NODENOS = "nodeno_idx"
 IDX_NODES_GEOFF = "nodes_geoff_idx"
 IDX_NODES_GID = "nodes_gid_idx"
@@ -216,36 +220,88 @@ del gids, nodetree, results
 OandD = sorted(sdm.keys())
 del sdm
 
-#write OandD into a table in postgres to refer to later
-Q_CreateOutputTable = """
-CREATE TABLE IF NOT EXISTS public."{0}"
-(
-    origin integer,
-    destination integer
-)
-WITH (
-    OIDS = FALSE
-)
-TABLESPACE pg_default;
-COMMIT;
+Q_GeoffGroup = """
+WITH geoff_group AS (
+    SELECT
+        fromgeoff AS geoff,
+        strong
+    FROM "{0}"
+    WHERE strong IS NOT NULL
+    GROUP BY fromgeoff, strong
+    
+    UNION ALL
 
-CREATE INDEX IF NOT EXISTS "{1}"
-    ON public."{0}" USING btree
-    (origin, destination)
-    TABLESPACE pg_default;    
-""".format(TBL_OD, IDX_OD_value)
-cur.execute(Q_CreateOutputTable)
+    SELECT
+        togeoff AS geoff,
+        strong
+    FROM "{0}"
+    WHERE strong IS NOT NULL
+    GROUP BY togeoff, strong
+)
+SELECT geoff, strong FROM geoff_group
+GROUP BY geoff, strong
+ORDER BY geoff DESC;
+""".format(TBL_MASTERLINKS_GROUPS)
 
-str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(OandD[0]))))
-cur.execute("""BEGIN TRANSACTION;""")
-batch_size = 10000
-for i in xrange(0, len(OandD), batch_size):
-    j = i + batch_size
-    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in OandD[i:j])
-    #print arg_str
-    Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_OD, arg_str)
-    cur.execute(Q_Insert)
-cur.execute("COMMIT;")
+cur.execute(Q_GeoffGroup)
+geoff_grp_list = cur.fetchall()
+geoff_grp = dict(geoff_grp_list)
+
+CloseEnough = []
+DiffGroup = 0
+NullGroup = 0
+#are the OD geoffs in the same group? if so, add pair to list to be calculated
+for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
+    #if i % pool_size == (worker_number - 1):
+    fromnodeno = nodenos[fromnodeindex][0]
+    tonodeno = nodenos[tonodeindex][0]
+    if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
+        if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
+            # if geoff_grp[nodes_geoff[fromnodeno]] == int(sys.argv[1]):
+                CloseEnough.append([
+                    nodes_gids[fromnodeno],    # FromGID
+                    fromnodeno,                # FromNode
+                    nodes_geoff[fromnodeno],   # FromGeoff
+                    nodes_gids[tonodeno],      # ToGID
+                    tonodeno,                  # ToNode
+                    nodes_geoff[tonodeno],     # ToGeoff
+                    geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
+                    ])
+        else:
+            DiffGroup += 1
+    else:
+        NullGroup += 1
+
+# write OandD into a table in postgres to refer to later
+# Q_CreateOutputTable = """
+# CREATE TABLE IF NOT EXISTS public."{0}"
+# (
+    # origin integer,
+    # destination integer
+# )
+# WITH (
+    # OIDS = FALSE
+# )
+# TABLESPACE pg_default;
+# COMMIT;
+
+# CREATE INDEX IF NOT EXISTS "{1}"
+    # ON public."{0}" USING btree
+    # (origin, destination)
+    # TABLESPACE pg_default;    
+# """.format(TBL_OD, IDX_OD_value)
+# cur.execute(Q_CreateOutputTable)
+
+# str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(OandD[0]))))
+# cur.execute("""BEGIN TRANSACTION;""")
+# batch_size = 10000
+# for i in xrange(0, len(OandD), batch_size):
+    # j = i + batch_size
+    # arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in OandD[i:j])
+    # #print arg_str
+    # Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_OD, arg_str)
+    # cur.execute(Q_Insert)
+# cur.execute("COMMIT;")
 
 #convert nodes_geoff, and nodes_gids dictionaries to list and save to tables in postgres
 nodes_geoff_list = [(k, v) for k, v in nodes_geoff.iteritems()]
