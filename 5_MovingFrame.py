@@ -470,49 +470,64 @@ for i in xrange(1, iterations+1):
 
 Q_IndexExisting = """
     CREATE INDEX IF NOT EXISTS "{1}"
-        ON public."{0}" USING gist
+        ON public."{0}"
+        USING gist
         (geom)
         TABLESPACE pg_default;
-    CREATE INDEX IF NOT EXISTS "{2}"
-        ON public."{0}" USING btree
-        (id, mixid, fromgeoff, togeoff, cost, strong)
-        TABLESPACE pg_default;"""
+    COMMIT;"""
+    # CREATE INDEX IF NOT EXISTS "{2}"
+        # ON public."{0}" USING btree
+        # (id, mixid, fromgeoff, togeoff, cost, strong)
+        # TABLESPACE pg_default;"""
 
-for i in xrange(1,7):
-    TBL_TEMP_NETWORK = "temp2_network_180_%d" % i
-    IDX_geom = "temp2_network_180_%d_geom_idx" % i
-    IDX_value = "temp2_network_180_%d_value_idx" % i
+for i in xrange(1,10):
+    TBL_TEMP_NETWORK = "temp_network_338_%d" % i
+    IDX_geom = "temp_network_338_%d_geom_idx" % i
+    IDX_value = "temp_network_338_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_NETWORK, IDX_geom, IDX_value))
     
-for i in xrange(101,107):
-    TBL_TEMP_NETWORK = "temp2_network_180_%d" % i
-    IDX_geom = "temp2_network_180_%d_geom_idx" % i
-    IDX_value = "temp2_network_180_%d_value_idx" % i
+for i in xrange(101,111):
+    TBL_TEMP_NETWORK = "temp_network_338_%d" % i
+    IDX_geom = "temp_network_338_%d_geom_idx" % i
+    IDX_value = "temp_network_338_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_NETWORK, IDX_geom, IDX_value))
 
     
 Q_IndexExisting = """    
     CREATE INDEX IF NOT EXISTS "{1}"
-        ON public."{0}" USING gist
+        ON public."{0}"
+        USING gist
         (geom)
         TABLESPACE pg_default;
-    CREATE INDEX IF NOT EXISTS "{2}"
-        ON public."{0}" USING btree
-        (id, fromgeoff, togeoff)
-        TABLESPACE pg_default;"""
+    COMMIT;"""
+    # CREATE INDEX IF NOT EXISTS "{2}"
+        # ON public."{0}" USING btree
+        # (id, fromgeoff, togeoff)
+        # TABLESPACE pg_default;"""
         
-for i in xrange(1,7):
-    TBL_TEMP_PAIRS = "temp2_pairs_180_%d" % i
-    IDX_geom = "temp2_pairs_180_%d_geom_idx" % i
-    IDX_value = "temp2_pairs_180_%d_value_idx" % i
+for i in xrange(1,10):
+    TBL_TEMP_PAIRS = "temp_pairs_338_%d" % i
+    IDX_geom = "temp_pairs_338_%d_geom_idx" % i
+    IDX_value = "temp_pairs_338_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_PAIRS, IDX_geom, IDX_value))
 
-for i in xrange(101,107):
-    TBL_TEMP_PAIRS = "temp2_pairs_180_%d" % i
-    IDX_geom = "temp2_pairs_180_%d_geom_idx" % i
-    IDX_value = "temp2_pairs_180_%d_value_idx" % i
+for i in xrange(101,111):
+    TBL_TEMP_PAIRS = "temp_pairs_338_%d" % i
+    IDX_geom = "temp_pairs_338_%d_geom_idx" % i
+    IDX_value = "temp_pairs_338_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_PAIRS, IDX_geom, IDX_value))
         
 
-
+        
+for i in xrange(1,6):
+    TBL_TEMP_PAIRS = "temp_pairs_338_%d" % i
+    IDX_geom = "temp_pairs_338_%d_geom_idx" % i
+    IDX_value = "temp_pairs_338_%d_value_idx" % i
+    cur.execute(Q_IndexExisting.format(TBL_TEMP_PAIRS, IDX_geom, IDX_value))
+for i in xrange(1,6):
+    TBL_TEMP_NETWORK = "temp_network_338_%d" % i
+    IDX_geom = "temp_network_338_%d_geom_idx" % i
+    IDX_value = "temp_network_338_%d_value_idx" % i
+    cur.execute(Q_IndexExisting.format(TBL_TEMP_NETWORK, IDX_geom, IDX_value))
+    
 
