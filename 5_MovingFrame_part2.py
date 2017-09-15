@@ -215,7 +215,7 @@ for c in xrange(101,111):
         newid        += 1
         
 
-for c in xrange(7,10):
+for c in xrange(101,111):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
     

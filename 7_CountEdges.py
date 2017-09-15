@@ -20,20 +20,20 @@ import scipy.spatial
 import networkx as nx
 logger = multiprocessing.log_to_stderr(logging.INFO)
 
-TBL_ALL_LINKS = "montco_lts_links"
-TBL_CENTS = "montco_blockcent"
-TBL_LINKS = "montco_L3_tolerablelinks"
-TBL_SPATHS = "montco_L3_shortestpaths_196_MF"
-TBL_TOLNODES = "montco_tol_nodes"
-TBL_GEOFF_LOOKUP = "montco_geoffs"
-TBL_GEOFF_GEOM = "montco_L3_geoffs_viageom"
-TBL_MASTERLINKS = "montco_master_links"
-TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
-TBL_MASTERLINKS_GROUPS = "montco_master_links_grp"
-TBL_GROUPS = "montco_groups"
-TBL_EDGE = "montco_L3_edgecounts_196_MF"
-TBL_USE = "montco_L3_linkuse_196_MF"
-TBL_TOP = "montco_L3_topLinks"
+TBL_ALL_LINKS = "sa_lts_links"
+TBL_CENTS = "pa_blockcentroids"
+TBL_LINKS = "sa_L3_tolerablelinks"
+TBL_SPATHS = "shortestpaths_338"
+TBL_TOLNODES = "sa_L3_tol_nodes"
+TBL_GEOFF_LOOKUP = "geoffs"
+TBL_GEOFF_GEOM = "geoffs_viageom"
+TBL_MASTERLINKS = "master_links"
+TBL_MASTERLINKS_GEO = "master_links_geo"
+TBL_MASTERLINKS_GROUPS = "master_links_grp"
+TBL_GROUPS = "groups"
+TBL_EDGE = "edgecounts_8"
+TBL_USE = "linkuse_8"
+TBL_TOP = "topLinks"
 
 # class _Worker(threading.Thread):
     # def __init__(self, queue, offset, batch_size):
@@ -159,7 +159,7 @@ if __name__ == "__main__":
     #create cursor to execute querys
     cur = con.cursor()
 
-    #repeated from OD Pair List Shortest Paths script to get OandD into memory again
+    # repeated from OD Pair List Shortest Paths script to get OandD into memory again
     SQL_GetGeoffs = """SELECT geoffid, vianode, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_GEOFF_GEOM)
     SQL_GetBlocks = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_CENTS)
 
@@ -201,6 +201,20 @@ if __name__ == "__main__":
         node_gid[nodeno].append(GID)
         gid_node[GID] = nodeno
     
+    # Q_GetList = """
+        # SELECT * FROM "{0}";
+        # """.format(TBL_NODES_GID)
+    # cur.execute(Q_GetList)
+    # nodes_gids_list = cur.fetchall()
+    # nodes_gids = dict(nodes_gids_list)
+    
+    # Q_GetList = """
+        # SELECT * FROM "{0}";
+        # """.format(TBL_GEOFF_NODES)
+    # cur.execute(Q_GetList)
+    # geoff_nodes_list = cur.fetchall()
+    # geoff_nodes = dict(geoff_nodes_list)
+    
     print time.ctime(), "weight_by_od"
     weight_by_od = {}
     for oGID, dGID in dict_all_paths.iterkeys():
@@ -211,7 +225,7 @@ if __name__ == "__main__":
     print "Number of Connections"
     NumCon = sum(weight_by_od.itervalues())
     print NumCon
-    with open(r"D:\Modeling\BikeStress\NumberOfConnections_196.txt", "wb") as io:
+    with open(r"D:\Modeling\BikeStress\NumberOfConnections_8.txt", "wb") as io:
         cPickle.dump(NumCon, io)
     
     print time.ctime(), "edge_count_dict"
@@ -223,12 +237,29 @@ if __name__ == "__main__":
                 edge_count_dict[edge] = 0
             edge_count_dict[edge] += path_weight
             
-    with open(r"D:\Modeling\BikeStress\edge_count_dict_196.pickle", "wb") as io:
+    with open(r"D:\Modeling\BikeStress\edge_count_dict_8.pickle", "wb") as io:
         cPickle.dump(edge_count_dict, io)
             
     con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
     cur = con.cursor()
+    
     edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]
+    
+    Q_CreateOutputTable = """
+        CREATE TABLE IF NOT EXISTS public."{0}"
+        (
+          edge integer,
+          count integer
+        )
+        WITH (
+            OIDS = FALSE
+        )
+        TABLESPACE pg_default;
+
+        COMMIT;                
+    """.format(TBL_EDGE)
+    cur.execute(Q_CreateOutputTable)
+    
     str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edge_count_list[0]))))
     cur.execute("""BEGIN TRANSACTION;""")
     batch_size = 10000

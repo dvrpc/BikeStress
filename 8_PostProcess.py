@@ -25,7 +25,8 @@ TBL_MASTERLINKS = "montco_master_links"
 TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
 TBL_MASTERLINKS_GROUPS = "montco_L3_master_links_grp"
 TBL_GROUPS = "montco_groups"
-TBL_EDGE = "montco_L3_edgecounts_196_MF"
+TBL_EDGE = "edgecounts"
+TBL_EDGETOTAL = "edgetotals"
 TBL_USE = "montco_L3_linkuse_196_MF"
 TBL_TOP = "montco_L3_topLinks"
 
@@ -34,6 +35,20 @@ TBL_TOP = "montco_L3_topLinks"
 con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 #create cursor to execute querys
 cur = con.cursor()
+
+
+#sum the counts of unique edges in the edge count table that was built upon by each run of 7_CountEdges.py on the subsets of the shortest path results
+Q_UniqueEdgeSum = """
+    CREATE TABLE "{0}" AS
+        SELECT edge, SUM(count) AS total
+        FROM "{1}"
+        GROUP BY edge;
+    COMMIT;
+""".format(TBL_EDGETOTAL, TBL_EDGE)
+
+
+#need to restore master links groups
+
 
 #join back to link table to get geometry for display purposes and linklts for filtering purposes
 Q_GeomJoin = """
@@ -45,7 +60,7 @@ Q_GeomJoin = """
         INNER JOIN "{1}"
         ON "{1}".mixid = edges.edge;
     COMMIT;
-""".format(TBL_USE, TBL_MASTERLINKS_GROUPS, TBL_EDGE)
+""".format(TBL_USE, TBL_MASTERLINKS_GROUPS, TBL_EDGETOTAL)
 cur.execute(Q_GeomJoin)
 
 #how many OD pairs are connected using this network?
