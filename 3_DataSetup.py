@@ -16,33 +16,33 @@ from collections import Counter
 #nodes from model(points)
 
 #table names
-TBL_ALL_LINKS = "sa_lts_links"
-TBL_CENTS = "pa_blockcentroids"
-TBL_LINKS = "sa_L3_tolerablelinks"
+TBL_ALL_LINKS = "uc_testlinks"
+TBL_CENTS = "uc_testcentroids"
+TBL_LINKS = "ucity_tolerablelinks"
 TBL_NODES = "sa_nodes"
 # TBL_SPATHS = "montco_L3_shortestpaths"
-TBL_TOLNODES = "sa_L3_tol_nodes"
-TBL_GEOFF_LOOKUP = "geoffs"
-TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom"
-TBL_MASTERLINKS = "master_links"
-TBL_MASTERLINKS_GEO = "master_links_geo"
-TBL_MASTERLINKS_GROUPS = "master_links_grp"
-TBL_GROUPS = "groups"
+TBL_TOLNODES = "ucity_tol_nodes"
+TBL_GEOFF_LOOKUP = "geoffs_uc"
+TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom_uc"
+TBL_MASTERLINKS = "master_links_uc"
+TBL_MASTERLINKS_GEO = "master_links_geo_uc"
+TBL_MASTERLINKS_GROUPS = "master_links_grp_uc"
+TBL_GROUPS = "groups_uc"
 TBL_TURNS = "all_turns"
-TBL_SUBTURNS = "sa_L3_tolerableturns"
+TBL_SUBTURNS = "ucity_tolerableturns"
 
 #index names
 IDX_ALL_LINKS_geom = "links_geom_idx"
 IDX_ALL_LINKS_value = "links_value_idx"
 IDX_CENTS_geom = "centroids_geom_idx"
 IDX_CENTS_value = "centroids_value_idx"
-IDX_LINKS_geom = "tol_links_geom_idx"
-IDX_LINKS_value = "tol_links_value_idx"
+IDX_LINKS_geom = "tol_links_geom_idx_uc"
+IDX_LINKS_value = "tol_links_value_idx_uc"
 # IDX_SPATHS_value = "spaths_value_idx"
 IDX_NODES_geom = "nodes_geom_idx"
 IDX_NODES_value = "nodes_value_idx"
-IDX_TOL_NODES_geom = "tolnodes_geom_idx"
-IDX_TOL_NODES_value = "tolnodes_value_idx"
+IDX_TOL_NODES_geom = "tolnodes_geom_idx_uc"
+IDX_TOL_NODES_value = "tolnodes_value_idx_uc"
 IDX_ALL_TURNS_values = "All_Turns_values_idx"
 
 #connect to SQL DB in python
@@ -97,7 +97,8 @@ cur.execute(Q_IndexExisting)
 
 
 #create subset of links based on assigned LTS
-#LTS 1 and 2 and 3 only
+##LTS 1 and 2 and 3 only
+
 Q_LinkSubset = """
     CREATE TABLE "{0}" AS
         SELECT * FROM "{1}" WHERE linklts <= 0.6 AND linklts > 0;

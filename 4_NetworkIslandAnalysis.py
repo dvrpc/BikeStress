@@ -8,34 +8,34 @@ import json
 import scipy.spatial
 import networkx as nx
 
-TBL_ALL_LINKS = "sa_lts_links"
-TBL_CENTS = "pa_blockcentroids"
-TBL_LINKS = "sa_L3_tolerablelinks"
+TBL_ALL_LINKS = "uc_testlinks"
+TBL_CENTS = "uc_testcentroids"
+TBL_LINKS = "ucity_tolerablelinks"
 TBL_NODES = "sa_nodes"
-# TBL_SPATHS = "montco_L3_shortestpaths_196"
-TBL_TOLNODES = "sa_L3_tol_nodes"
-TBL_GEOFF_LOOKUP = "geoffs"
-TBL_GEOFF_GEOM = "geoffs_viageom"
-TBL_MASTERLINKS = "master_links"
-TBL_MASTERLINKS_GEO = "master_links_geo"
-TBL_MASTERLINKS_GROUPS = "master_links_grp"
+# TBL_SPATHS = "montco_L3_shortestpaths"
+TBL_TOLNODES = "ucity_tol_nodes"
+TBL_GEOFF_LOOKUP = "geoffs_uc"
+TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom_uc"
+TBL_MASTERLINKS = "master_links_uc"
+TBL_MASTERLINKS_GEO = "master_links_geo_uc"
+TBL_MASTERLINKS_GROUPS = "master_links_grp_uc"
 
-TBL_GROUPS = "groups"
-TBL_NODENOS = "nodenos"
-TBL_NODES_GEOFF = "nodes_geoff"
-TBL_NODES_GID = "nodes_gid"
-TBL_GEOFF_NODES = "geoff_nodes"
-TBL_OD = "OandD"
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
-TBL_GEOFF_GROUP = "geoff_group"
+TBL_GROUPS = "groups_uc"
+TBL_NODENOS = "nodenos_uc"
+TBL_NODES_GEOFF = "nodes_geoff_uc"
+TBL_NODES_GID = "nodes_gid_uc"
+TBL_GEOFF_NODES = "geoff_nodes_uc"
+TBL_OD = "OandD_uc"
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff_uc"
+TBL_GEOFF_GROUP = "geoff_group_uc"
 
-IDX_GEOFF_GROUP = "geoff_group_value_idx"
-IDX_BLOCK_NODE_GEOFF = "block_node_geoff_value_idx"
-IDX_NODENOS = "nodeno_idx"
-IDX_NODES_GEOFF = "nodes_geoff_idx"
-IDX_NODES_GID = "nodes_gid_idx"
-IDX_GEOFF_NODES = "geoff_nodes_idx"
-IDX_OD_value = "od_value_idx"
+IDX_GEOFF_GROUP = "geoff_group_value_idx_uc"
+IDX_BLOCK_NODE_GEOFF = "block_node_geoff_value_idx_uc"
+IDX_NODENOS = "nodeno_idx_uc"
+IDX_NODES_GEOFF = "nodes_geoff_idx_uc"
+IDX_NODES_GID = "nodes_gid_idx_uc"
+IDX_GEOFF_NODES = "geoff_nodes_idx_uc"
+IDX_OD_value = "od_value_idx_uc"
 
 con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
@@ -172,14 +172,14 @@ Q_CreateView = """CREATE VIEW %s AS(
     WHERE strong = %d)
 """.format(TBL_MASTERLINKS_GROUPS)
 for grpNo in xrange(min(strong_grps)[0], max(strong_grps)[0]):
-    tblname = "links_L3_grp_%d" % grpNo
+    tblname = "links_uc_grp_%d" % grpNo
     cur.execute("""DROP VIEW IF EXISTS %s;""" % tblname)
     #create view for each group
     cur.execute(Q_CreateView % (tblname, grpNo))
     
     
     
-SQL_GetGeoffs = """SELECT geoffid, vianode, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_GEOFF_GEOM)
+SQL_GetGeoffs = """SELECT geoffid, vianode, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_GEOFF_LOOKUP_GEOM)
 SQL_GetBlocks = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_CENTS)
 
 def GetCoords(record):
@@ -253,8 +253,8 @@ NullGroup = 0
 #are the OD geoffs in the same group? if so, add pair to list to be calculated
 for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
     #if i % pool_size == (worker_number - 1):
-    fromnodeno = nodenos[fromnodeindex][0]
-    tonodeno = nodenos[tonodeindex][0]
+    fromnodeno = nodenos[fromnodeindex]
+    tonodeno = nodenos[tonodeindex]
     if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
         if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
             # if geoff_grp[nodes_geoff[fromnodeno]] == int(sys.argv[1]):

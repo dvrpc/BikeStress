@@ -33,6 +33,49 @@ ON ST_Intersects(link.geom, blobs.st_concavehull)
 -- REAL ONE
 
 -- PYTHON?
+import psycopg2 as psql # PostgreSQL connector
+import csv
+import itertools
+import numpy
+import time
+import sys
+import pickle
+import sqlite3
+from collections import Counter
+import json
+import scipy.spatial
+import networkx as nx
+
+
+#connect to SQL DB in python
+con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+#create cursor to execute querys
+cur = con.cursor()
+
+
+#select top 10 percent from county lts result tables
+TBL_bucks        = "bucks_lts3_linkuse"
+TBL_chester      = "chester_lts3_linkuse"
+TBL_delaware     = "delaware_lts3_linkuse"
+TBL_montgomery   = "montgomery_lts3_linkuse"
+TBL_philadelphia = "philadelphia_lts3_linkuse"
+
+county_tbls = (TBL_bucks, TBL_chester, TBL_delaware, TBL_montgomery, TBL_philadelphia)
+
+priority_edges = []
+
+for county in county_tbls:
+    cur.execute("""SELECT COUNT(*)/10 AS top10percent FROM public."{0}";""").format(county)
+    top = cur.fetchall()
+    topint = int(top[0][0])
+
+    cur.execute("""SELECT edge FROM public."{1}" ORDER BY total DESC LIMIT {0};""").format(topint, county)
+    results = cur.fetchall()
+    for edge in results:
+        priority_edges.append(edge[0][0])
+        
+
+
 TBL_LINKS_GRP = "montco_master_links_grp" 
 TBL_TOP20PERCENT = "montco_top20percent"
 TBL_BLOBS = "montco_grp_blobs"

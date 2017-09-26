@@ -142,7 +142,7 @@ REM BACKUP FROM TOAD
 
 
 
-"C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/edgecounts1" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.\"edgecounts\""
+"C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/lts3_linkuse" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.\"LTS3_linkuse\""
 
 "C:\Program Files\PostgreSQL\9.6\bin\pg_dump.exe" --file "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/shortestpaths_338_8" --dbname "postgresql://postgres:sergt@yoshi:5432/BikeStress" --verbose --format=c --blobs --section=data --section=pre-data --table "public.\"shortestpaths_338\""
 
@@ -203,7 +203,7 @@ REM RESTORE TO TOAD
 
 
 REM RESTORE TABLES TO YOSHI
-"C:\Program Files\PostgreSQL\9.6\bin\pg_restore.exe" --host "yoshi" --port "5432" --username "postgres" --verbose -d "BikeStress"  "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/shortestpaths_338_toad"  
+"C:\Program Files\PostgreSQL\9.6\bin\pg_restore.exe" --host "yoshi" --port "5432" --username "postgres" --verbose -d "BikeStress"  "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/block_node_geoff"  
 "C:\Program Files\PostgreSQL\9.6\bin\pg_restore.exe" --host "yoshi" --port "5432" --username "postgres" --verbose -d "BikeStress" --table "shortestpaths" "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/shortestpaths" 
 
 "C:\Program Files\PostgreSQL\9.6\bin\pg_restore.exe" --host "yoshi" --port "5432" --username "postgres" --verbose -d "BikeStress" --table "pa_blockcentroids" "P:/TransitBikePed/FY2017/LowStressBikeSEPA/Working/MontCo_TableBackup/pa_blockcentroids"
