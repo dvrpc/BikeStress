@@ -53,188 +53,203 @@ con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user 
 cur = con.cursor()
 
 
-#select top 10 percent from county lts result tables
+#select top 10 percent from county lts result tables to identify priority links to work with
 TBL_bucks        = "bucks_lts3_linkuse"
-TBL_chester      = "chester_lts3_linkuse"
-TBL_delaware     = "delaware_lts3_linkuse"
-TBL_montgomery   = "montgomery_lts3_linkuse"
-TBL_philadelphia = "philadelphia_lts3_linkuse"
+TBL_chester      = "chesco_lts3_linkuse"
+TBL_delaware     = "delco_lts3_linkuse"
+TBL_montgomery   = "montco_lts3_linkuse"
+TBL_philadelphia = "phila_lts3_linkuse"
 
 county_tbls = (TBL_bucks, TBL_chester, TBL_delaware, TBL_montgomery, TBL_philadelphia)
+county_labels = ("Bucks", "Chester", "Delaware", "Montgomery", "Philadelphia")
 
+#create list of priority edges to find connecting islands for
 priority_edges = []
+edge_county = []
 
-for county in county_tbls:
-    cur.execute("""SELECT COUNT(*)/10 AS top10percent FROM public."{0}";""").format(county)
+for i in xrange(0, len(county_tbls)):
+    cur.execute("""SELECT COUNT(*)/10 AS top10percent FROM public."{0}";""".format(county_tbls[i]))
     top = cur.fetchall()
     topint = int(top[0][0])
+    print topint
 
-    cur.execute("""SELECT edge FROM public."{1}" ORDER BY total DESC LIMIT {0};""").format(topint, county)
+    cur.execute("""SELECT edge FROM public."{1}" ORDER BY total DESC LIMIT {0};""".format(topint, county_tbls[i]))
     results = cur.fetchall()
+    
     for edge in results:
-        priority_edges.append(edge[0][0])
+        priority_edges.append(edge[0])
+        edge_county.append(county_labels[i])
+        
+priorities = zip(priority_edges, edge_county)
         
 
 
-TBL_LINKS_GRP = "montco_master_links_grp" 
-TBL_TOP20PERCENT = "montco_top20percent"
-TBL_BLOBS = "montco_grp_blobs"
-TBL_CON_ISLANDS = "montco_con_islands2"
+TBL_LINKS_GRP = "master_links_grp_L2" 
+TBL_CON_ISLANDS = "connected_islands"
 
-Q_CreateBlobs = """
-	SELECT strong, st_concavehull(st_Collect(geom), 0.99) geo
-	FROM "{0}"
-    WHERE strong = {1}
-	GROUP BY strong;"""
 
-blobs = []
-for i in xrange(1,4074):
-    cur.execute(Q_CreateBlobs.format(TBL_LINKS_GRP, i))
-    blob = cur.fetchall()
-    blobs.append(blob)
+
+
+# Q_CreateBlobs = """
+	# SELECT strong, st_concavehull(st_Collect(geom), 0.99) geo
+	# FROM "{0}"
+    # WHERE strong = {1}
+	# GROUP BY strong;"""
+
+# blobs = []
+# for i in xrange(1,4074):
+    # cur.execute(Q_CreateBlobs.format(TBL_LINKS_GRP, i))
+    # blob = cur.fetchall()
+    # blobs.append(blob)
     
-Q_CreateTable = """
-    CREATE TABLE public."{0}"
-    (
-      strong integer,
-      geom geometry(Geometry,26918)
-    )
-    WITH (
-      OIDS=FALSE
-    );
-    COMMIT;"""
+# Q_CreateTable = """
+    # CREATE TABLE public."{0}"
+    # (
+      # strong integer,
+      # geom geometry(Geometry,26918)
+    # )
+    # WITH (
+      # OIDS=FALSE
+    # );
+    # COMMIT;"""
     
-cur.execute(Q_CreateTable.format(TBL_BLOBS))
+# cur.execute(Q_CreateTable.format(TBL_BLOBS))
 
-Q_Insert = """INSERT INTO public."{0}" (strong, geom) VALUES ({1},{2});"""
+# Q_Insert = """INSERT INTO public."{0}" (strong, geom) VALUES ({1},{2});"""
 
-for i in xrange(0,len(blobs)):
-    island = blobs[i][0][0]
-    outline = blobs[i][0][1]
-    cur.execute(Q_Insert.format(TBL_BLOBS, island, outline))
+# for i in xrange(0,len(blobs)):
+    # island = blobs[i][0][0]
+    # outline = blobs[i][0][1]
+    # cur.execute(Q_Insert.format(TBL_BLOBS, island, outline))
     
 
     
     
-WITH blobs AS(
-	SELECT st_concavehull(st_Collect(geom), 0.99) geo
-	FROM montco_master_links_grp
-    WHERE strong IS NOT NULL
-	GROUP BY strong)
+# WITH blobs AS(
+	# SELECT st_concavehull(st_Collect(geom), 0.99) geo
+	# FROM montco_master_links_grp
+    # WHERE strong IS NOT NULL
+	# GROUP BY strong)
 
-SELECT link.edge, link.count, blobs.geo
-FROM blobs
-INNER JOIN (
-	SELECT *
-	FROM montco_top20percent) link
-ON ST_Intersects(link.geom, blobs.geo)
-ORDER BY count, edge
-;
-
-
--- FOR SUMMARIZING
-WITH blobs AS(
-	SELECT st_concavehull(st_Collect(geom), 0.99) geo
-	FROM montco_master_links_grp
-	GROUP BY strong)
-
-SELECT COUNT(*)
-FROM(
-	SELECT count(*) AS cnt, edge
-	FROM(
-		SELECT link.edge, link.count, blobs.geo
-		FROM blobs
-		INNER JOIN (
-			SELECT *
-			FROM montco_top20percent) link
-		ON ST_Intersects(link.geom, blobs.geo)
-		ORDER BY count, edge) foo
-	GROUP BY edge) goo
-;
+# SELECT link.edge, link.count, blobs.geo
+# FROM blobs
+# INNER JOIN (
+	# SELECT *
+	# FROM montco_top20percent) link
+# ON ST_Intersects(link.geom, blobs.geo)
+# ORDER BY count, edge
+# ;
 
 
+# -- FOR SUMMARIZING
+# WITH blobs AS(
+	# SELECT st_concavehull(st_Collect(geom), 0.99) geo
+	# FROM montco_master_links_grp
+	# GROUP BY strong)
 
--- BUFFER METHOD
-Q_BUFFER_INTERSECT = """
-    WITH buf AS(
-        SELECT foo.edge, st_buffer(geom, 10) buffer
-            FROM (
-                SELECT edge, count, linklts, geom
-                FROM "{0}"
-                WHERE edge = {1}) foo)
+# SELECT COUNT(*)
+# FROM(
+	# SELECT count(*) AS cnt, edge
+	# FROM(
+		# SELECT link.edge, link.count, blobs.geo
+		# FROM blobs
+		# INNER JOIN (
+			# SELECT *
+			# FROM montco_top20percent) link
+		# ON ST_Intersects(link.geom, blobs.geo)
+		# ORDER BY count, edge) foo
+	# GROUP BY edge) goo
+# ;
 
-    SELECT 
-        DISTINCT(strong),
-        goo.edge
-    FROM(
-        SELECT 
-            L.mixid, 
-            L.strong, 
-            L.geom, 
-            B.edge, 
-            B.buffer
-        FROM "{2}" L
-        INNER JOIN (
-            SELECT 
-                edge,
-                buffer
-            FROM buf) B
-        ON ST_Intersects(L.geom, B.buffer)) goo
-    ;"""
 
-cur.execute(Q_BUFFER_INTERSECT.format(TBL_TOP20PERCENT, 46423, TBL_LINKS_GRP))
-islands = cur.fetchall()
 
-Q_CreateBlobs = """
-	SELECT strong, ST_AsGeoJSON(st_concavehull(st_Collect(geom), 0.99)) geo
-	FROM "{0}"
-    WHERE strong = {1}
-	GROUP BY strong;"""
+# BUFFER METHOD
+# Q_BUFFER_INTERSECT = """
+    # WITH buf AS(
+        # SELECT foo.edge, st_buffer(geom, 10) buffer
+            # FROM (
+                # SELECT edge, total, linklts, geom
+                # FROM "{0}"
+                # WHERE edge = {1}) foo)
 
-edgeList = []
-islandList = []
-blobsGeoms = []
-for i in xrange(0, len(islands)):
-    if len(islands) == 1:
-        print "Only 1 island - Does not connect"
-    elif len(islands) >= 2:
-        a = islands[i][0]
-        edgeList.append(int(islands[i][1]))
-        cur.execute(Q_CreateBlobs.format(TBL_LINKS_GRP, a))
-        blob = cur.fetchall()
-        islandList.append(blob[0][0])
-        blobsGeoms.append(blob[0])
+    # SELECT 
+        # DISTINCT(strong),
+        # goo.edge
+    # FROM(
+        # SELECT 
+            # L.mixid, 
+            # L.strong, 
+            # L.geom, 
+            # B.edge, 
+            # B.buffer
+        # FROM "{2}" L
+        # INNER JOIN (
+            # SELECT 
+                # edge,
+                # buffer
+            # FROM buf) B
+        # ON ST_Intersects(L.geom, B.buffer)) goo
+    # ;"""
 
-Q_CreateTable = """
-    CREATE TABLE public."{0}"
-    (
-      edge integer,
-      strong integer,
-      geom geometry(Geometry,26918)
-    )
-    WITH (
-      OIDS=FALSE
-    );
-    COMMIT;"""
+# for county in county_tbls:
+    # for edge in priority_edges:
+        # cur.execute(Q_BUFFER_INTERSECT.format(county, edge, TBL_LINKS_GRP))
+        # islands = cur.fetchall()
+
+# Q_CreateBlobs = """
+	# SELECT strong, ST_AsGeoJSON(st_concavehull(st_Collect(geom), 0.99)) geo
+	# FROM "{0}"
+    # WHERE strong = {1}
+	# GROUP BY strong;"""
+
+# edgeList = []
+# islandList = []
+# blobsGeoms = []
+# for i in xrange(0, len(islands)):
+    # if len(islands) == 1:
+        # print "Only 1 island - Does not connect"
+    # elif len(islands) >= 2:
+        # a = islands[i][0]
+        # edgeList.append(int(islands[i][1]))
+        # cur.execute(Q_CreateBlobs.format(TBL_LINKS_GRP, a))
+        # blob = cur.fetchall()
+        # islandList.append(blob[0][0])
+        # blobsGeoms.append(blob[0])
+
+# Q_CreateTable = """
+    # CREATE TABLE public."{0}"
+    # (
+      # edge integer,
+      # strong integer,
+      # geom geometry(Geometry,26918)
+    # )
+    # WITH (
+      # OIDS=FALSE
+    # );
+    # COMMIT;"""
     
-cur.execute(Q_CreateTable.format(TBL_BLOBS))
+# cur.execute(Q_CreateTable.format(TBL_BLOBS))
 
-Q_Insert = """INSERT INTO public."{0}" (edge, strong, geom) VALUES ({1},{2},(ST_SetSRID(ST_GeomFromGeoJSON('{3}'), 26918)));"""
+# Q_Insert = """INSERT INTO public."{0}" (edge, strong, geom) VALUES ({1},{2},(ST_SetSRID(ST_GeomFromGeoJSON('{3}'), 26918)));"""
 
-for i in xrange(0,len(edgeList)):
-    edge = edgeList[i]
-    island = islandList[i]
-    blob = blobsGeoms[i][1]
-    cur.execute(Q_Insert.format(TBL_BLOBS, edge, island, blob))
+# for i in xrange(0,len(edgeList)):
+    # edge = edgeList[i]
+    # island = islandList[i]
+    # blob = blobsGeoms[i][1]
+    # cur.execute(Q_Insert.format(TBL_BLOBS, edge, island, blob))
 
 
 
+    
+    
+    
+    
 # OR SELECT ALL THE LINKS THAT ARE PART OF THAT ISLAND
 Q_BUFFER_INTERSECT = """
     WITH buf AS(
         SELECT foo.edge, st_buffer(geom, 10) buffer
             FROM (
-                SELECT edge, count, linklts, geom
+                SELECT edge, total, linklts, geom
                 FROM "{0}"
                 WHERE edge = {1}) foo)
 
@@ -257,46 +272,49 @@ Q_BUFFER_INTERSECT = """
         ON ST_Intersects(L.geom, B.buffer)) goo
     ;"""
 
-#run this to populate PriorityLinks
-Q_PriorityLinks = """
-    SELECT edge
-    FROM "{0}"
-"""
 
 
-#need to work out dissolve issue
-#use these known short links for now
-PriorityLinks = [46423, 26615, 55433, 65321, 56887, 58855, 71857]
+for edge, county in priorities:
+    if county == "Bucks":
+        tbl = TBL_bucks
+    elif county == "Chester":
+        tbl = TBL_chester
+    elif county == "Delaware":
+        tbl = TBL_delaware
+    elif county == "Montgomery":
+        tbl = TBL_montgomery
+    elif county == "Philadelphia":
+        tbl = TBL_philadelphia
+    
+    print edge, tbl
 
-# islands = []
-for link in PriorityLinks:
-    cur.execute(Q_BUFFER_INTERSECT.format(TBL_TOP20PERCENT, link, TBL_LINKS_GRP))
-    islands = cur.fetchall()
-    # for i in xrange(0,len(connected)):
-        # islands.append(connected[i])
-        
+    cur.execute(Q_BUFFER_INTERSECT.format(tbl, edge, TBL_LINKS_GRP))
+    strong = cur.fetchall()
+    
     Q_SELECT_ISLANDS = """
         SELECT mixid, strong, ST_AsGeoJSON(geom)
         FROM "{0}"
         WHERE strong = {1};"""
-        
+                
     edgeList = []
     mixidList = []
     islandList = []
     geomList = []
-    for i in xrange(0, len(islands)):
-        if len(islands) == 1:
+    countyList = []
+    for i in xrange(0, len(strong)):
+        if len(strong) == 1:
             print "Only 1 island - Does not connect"
             #add something to table for these 1 island links
-            a = islands[0][0]
-            b = int(islands[0][1]
+            a = strong[0][0]
+            b = int(strong[0][1])
             edgeList.append(b)
             mixidList.append(0)
             islandList.append(a)
             geomList.append(0)
-        elif len(islands) >= 2:
-            a = islands[i][0]
-            b = int(islands[i][1])
+            countyList.append(county)
+        elif len(strong) >= 2:
+            a = strong[i][0]
+            b = int(strong[i][1])
             cur.execute(Q_SELECT_ISLANDS.format(TBL_LINKS_GRP, a))
             links = cur.fetchall()
             for j in xrange(0, len(links)):
@@ -304,13 +322,15 @@ for link in PriorityLinks:
                 mixidList.append(links[j][0])
                 islandList.append(links[j][1])
                 geomList.append(links[j][2])
+                countyList.append(county)
 
     Q_CreateTable = """
         CREATE TABLE IF NOT EXISTS public."{0}"
         (
           edge integer,
           mixid integer,
-          strong integer,
+          island integer,
+          counties varchar(50),
           geom geometry(Geometry,26918)
         )
         WITH (
@@ -321,21 +341,30 @@ for link in PriorityLinks:
     cur.execute(Q_CreateTable.format(TBL_CON_ISLANDS))
 
     #TEST that list lengths match
-    if len(edgeList) == len(mixidList) == len(islandList) == len(geomList):
+    if len(edgeList) == len(mixidList) == len(islandList) == len(geomList) == len(countyList):
         print "All lists are of equal length"
     else:
         print "List length mismatch"
 
-    Q_Insert = """INSERT INTO public."{0}" (edge, mixid, strong, geom) VALUES ({1},{2},{3}, (ST_SetSRID(ST_GeomFromGeoJSON('{4}'), 26918)));"""
+    #geometry field will be NULL for rows where the edge does not connect multiple islands
+    Q_Insert = """INSERT INTO public."{0}" (edge, mixid, island, counties, geom) VALUES ({1},{2},{3},'{4}',(ST_SetSRID(ST_GeomFromGeoJSON('{5}'), 26918)));"""
+    Q_Insert_noGeom = """INSERT INTO public."{0}" (edge, mixid, island, counties) VALUES ({1},{2},{3},'{4}');"""
 
     for i in xrange(0,len(edgeList)):
         edge = edgeList[i]
         mixid = mixidList[i]
         island = islandList[i]
         geo = geomList[i]
-        cur.execute(Q_Insert.format(TBL_CON_ISLANDS, edge, mixid, island, geo))
+        co = countyList[i]
+        if geo == 0:
+            cur.execute(Q_Insert_noGeom.format(TBL_CON_ISLANDS, edge, mixid, island, co))
+        else:
+            cur.execute(Q_Insert.format(TBL_CON_ISLANDS, edge, mixid, island, co, geo))
 
-        
+###look at results in table and figure out what to do next...
+            
+            
+            
 #using reslts from above, find total length of connected roads based on the connecting edge
 SELECT edge, SUM(ST_Length(geom)) sumLength
 FROM montco_con_islands2
