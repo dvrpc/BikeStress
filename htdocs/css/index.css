@@ -1,0 +1,15 @@
+html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+body {
+    padding: 0;
+    margin: 0;
+}
+#box {
+    height: 100%;
+}
+#map {
+    height: 100%;
+}

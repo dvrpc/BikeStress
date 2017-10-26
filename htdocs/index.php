@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <!-- Handcrafted, locally sourced sustainable free-range HTML -->
+
+<!-- 3rd Party -->
+
 <html>
     <head>
         <title>?</title>
         <!-- Bootstrap CSS -->
-        <link rel="stylesheet" href="bootstrap.min.css">
-        <link rel="stylesheet" href="bootstrap-theme.min.css">
+        <link rel="stylesheet" href="css/bootstrap.min.css">
+        <link rel="stylesheet" href="css/bootstrap-theme.min.css">
 
         <!-- Jquery UI CSS -->
         <!-- <link rel="stylesheet" href="jquery-ui.min.css"> -->
@@ -20,8 +23,7 @@
     </head>
     <body>
         <div id="box">
-            <div id="left" class="col-md-3">
-            </div>
+            <div id="left" class="col-md-3">&nbsp;</div>
             <div id="map" class="col-md-9"></div>
         </div>
 
@@ -34,6 +36,10 @@
 
         <!-- Leaflet -->
         <script src="js/lib/leaflet.js"></script>
+
+        <!-- Leaflet-easyPrint -->
+        <!-- https://github.com/rowanwins/leaflet-easyPrint -->
+        <script src="js/lib/leaflet-easyPrint.js"></script>
 
         <!-- ? -->
         <script src="js/index.js"></script>
