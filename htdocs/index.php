@@ -22,9 +22,15 @@
         <link rel="stylesheet" href="css/index.css">
     </head>
     <body>
+        <!--
         <div id="box">
             <div id="left" class="col-md-3">&nbsp;</div>
             <div id="map" class="col-md-9"></div>
+        </div>
+        -->
+
+        <div id="box">
+            <div id="map"></div>
         </div>
 
         <!-- JQuery -->
