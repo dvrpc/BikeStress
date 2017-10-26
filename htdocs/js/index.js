@@ -77,9 +77,13 @@ var overlays = {
 }
 
 function _parseOverlayGroups(base, fn, args) {
+    var agg_fn = function(a, v) { a[a.length] = v; return a };
+    if (typeof(args._retval_agg_fn) === "function") {
+        agg_fn = args._retval_agg_fn;
+    }
     var retvals = [];
     for (var i in base) {
-        retvals[i] = fn(base[i], args);
+        retvals = agg_fn(retvals, fn(base[i], args));
     }
     return retvals;
 }
@@ -92,26 +96,29 @@ function _parseOverlayItems(base, fn, args) {
         }
         return retvals;
     };
-    return _parseOverlayGroups(base, _fn);
+    var _agg_fn = function(retvals, newval) {
+        return retvals.concat(newval);
+    };
+    return _parseOverlayGroups(base, _fn, {_retval_agg_fn: _agg_fn});
 }
+
+_parseOverlay(
+    function() {
+        return overlay.definition;
+    },
+    _parseOverlay,
+    {
+        _retval_agg_fn: function(retvals, newval) {
+            return retvals.concat(newval);
+        }
+    }
+);
 
 function _initOverlay() {
     var fn = function(item, args) {
         return item.label;
     };
     return _parseOverlayItems(overlays.definition, fn);
-}
-
-function _formatOverlayLayerControl() {
-    var flatLayers = [];
-    for (var i0 in overlays.definition) {
-        var grp = overlays.definition[i0];
-        for (var i1 in grp.items) {
-            var item = grp.items[i1];
-            flatLayers[item.label] = item.URL;
-        }
-    }
-    return flatLayers;
 }
 
 function main() {
