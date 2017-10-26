@@ -51,4 +51,8 @@ Temporary Items
 ~$*.docx
 ~$*.pptx
 
+*jquery*
+*bootstrap*
 *leaflet*
+htdocs/fonts/*
+htdocs/css/images/*

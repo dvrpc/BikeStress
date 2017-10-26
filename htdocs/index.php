@@ -4,8 +4,8 @@
     <head>
         <title>?</title>
         <!-- Bootstrap CSS -->
-        <!-- <link rel="stylesheet" href="bootstrap.min.css"> -->
-        <!-- <link rel="stylesheet" href="bootstrap-theme.min.css"> -->
+        <link rel="stylesheet" href="bootstrap.min.css">
+        <link rel="stylesheet" href="bootstrap-theme.min.css">
 
         <!-- Jquery UI CSS -->
         <!-- <link rel="stylesheet" href="jquery-ui.min.css"> -->
@@ -13,10 +13,10 @@
         <!-- <link rel="stylesheet" href="jquery-ui.theme.min.css"> -->
 
         <!-- Leaflet CSS -->
-        <link rel="stylesheet" href="leaflet.css" />
+        <link rel="stylesheet" href="css/leaflet.css" />
 
         <!-- ? -->
-        <link rel="stylesheet" href="index.css">
+        <link rel="stylesheet" href="css/index.css">
     </head>
     <body>
         <div id="box">
@@ -26,11 +26,11 @@
         </div>
 
         <!-- JQuery -->
-        <!-- <script src="js/lib/jquery-3.2.1.min.js"></script> -->
-        <!-- <script src="js/jquery-ui.min.js"></script> -->
+        <script src="js/lib/jquery-3.2.1.min.js"></script>
+        <!-- <script src="js/lib/jquery-ui.min.js"></script> -->
 
         <!-- Bootstrap -->
-        <!-- <script src="js/lib/bootstrap.min.js"></script> -->
+        <script src="js/lib/bootstrap.min.js"></script>
 
         <!-- Leaflet -->
         <script src="js/lib/leaflet.js"></script>
