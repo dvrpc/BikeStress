@@ -10,28 +10,29 @@ import cPickle
 logger = mp.log_to_stderr(logging.INFO)
 
 #don't actually need
-TBL_ALL_LINKS = "sa_lts_links"
-TBL_CENTS = "pa_blockcentroids"
-TBL_LINKS = "sa_L3_tolerablelinks"
-TBL_NODES = "nodes"
-TBL_TOLNODES = "sa_L3_tol_nodes"
-TBL_GEOFF_LOOKUP = "geoffs"
-TBL_GEOFF_GEOM = "geoffs_viageom"
-TBL_MASTERLINKS = "master_links"
-TBL_MASTERLINKS_GEO = "master_links_geo"
-TBL_GROUPS = "groups"
+TBL_ALL_LINKS = "uc_testlinks"
+TBL_CENTS = "uc_testcentroids"
+TBL_LINKS = "ucity_tolerablelinks"
+TBL_NODES = "sa_nodes"
+TBL_TOLNODES = "ucity_tol_nodes"
+TBL_GEOFF_LOOKUP = "geoffs_uc"
+TBL_GEOFF_GEOM = "geoffs_viageom_uc"
+TBL_MASTERLINKS = "master_links_geo_uc"
+TBL_MASTERLINKS_GROUPS = "master_links_grp_uc"
+TBL_GROUPS = "groups_uc"
 
 #need in this script
-TBL_SPATHS = "shortestpaths"
-TBL_MASTERLINKS_GROUPS = "master_links_grp"
+TBL_SPATHS = "shortestpaths_uc"
+TBL_MASTERLINKS_GROUPS = "master_links_grp_uc"
 # TBL_OD = "OandD"
-TBL_NODENOS = "nodenos"
-TBL_NODES_GEOFF = "nodes_geoff"
-TBL_NODES_GID = "nodes_gid"
-TBL_GEOFF_NODES = "geoff_nodes"
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
-TBL_GEOFF_GROUP = "geoff_group"
-IDX_nx_SPATHS_value = "spaths_nx_value_idx"
+TBL_NODENOS = "nodenos_uc"
+TBL_NODES_GEOFF = "nodes_geoff_uc"
+TBL_NODES_GID = "nodes_gid_uc"
+TBL_GEOFF_NODES = "geoff_nodes_uc"
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff_uc"
+TBL_GEOFF_GROUP = "geoff_group_uc"
+IDX_nx_SPATHS_value = "spaths_nx_value_idx_uc"
+
 
 # island 196 test
 # TBL_SPATHS = "montco_L3_shortestpaths_196"
@@ -43,7 +44,7 @@ IDX_nx_SPATHS_value = "spaths_nx_value_idx"
 
 
 
-VIEW = "links_l3_grp_%s" % str(sys.argv[1])
+VIEW = "links_uc_grp_%s" % str(sys.argv[1])
 
 
 
@@ -150,6 +151,33 @@ if __name__ == '__main__':
     geoff_nodes_list = cur.fetchall()
     geoff_nodes = dict(geoff_nodes_list)
     
+    Q_GetList = """
+        SELECT * FROM "{0}";
+        """.format(TBL_NODENOS)
+    cur.execute(Q_GetList)
+    nodenos = cur.fetchall()
+
+    Q_GetList = """
+        SELECT * FROM "{0}";
+        """.format(TBL_NODES_GEOFF)
+    cur.execute(Q_GetList)
+    nodes_geoff_list = cur.fetchall()
+    nodes_geoff = dict(nodes_geoff_list)
+
+    Q_GetList = """
+        SELECT * FROM "{0}";
+        """.format(TBL_NODES_GID)
+    cur.execute(Q_GetList)
+    nodes_gids_list = cur.fetchall()
+    nodes_gids = dict(nodes_gids_list)
+
+    Q_GetList = """
+        SELECT * FROM "{0}";
+        """.format(TBL_GEOFF_NODES)
+    cur.execute(Q_GetList)
+    geoff_nodes_list = cur.fetchall()
+    geoff_nodes = dict(geoff_nodes_list)
+
     Q_GetGroupPairs = """
         SELECT
             fromgeoff AS fgeoff,
@@ -157,7 +185,7 @@ if __name__ == '__main__':
             groupnumber AS grp
         FROM "{0}"
         WHERE groupnumber = {1};
-        """.format(TBL_BLOCK_NODE_GEOFF, int(sys.argv[1]))
+        """.format(TBL_BLOCK_NODE_GEOFF, str(sys.argv[1]))
     cur.execute(Q_GetGroupPairs)
     group_pairs = cur.fetchall()
         
@@ -169,7 +197,7 @@ if __name__ == '__main__':
         
     paths = test_workers(pairs)
         
-    with open(r"D:\Modeling\BikeStress\scripts\paths.cpickle", "wb") as io:
+    with open(r"D:\Modeling\BikeStress\scripts\paths_ucity.cpickle", "wb") as io:
         cPickle.dump(paths, io)
     
     del pairs
@@ -201,6 +229,7 @@ if __name__ == '__main__':
     del paths, nodes_gids, geoff_nodes, node_pairs
     
     if (len(edges) > 0):
+        logger.info('creating table')
         Q_CreateOutputTable = """
             CREATE TABLE IF NOT EXISTS public."{0}"
             (

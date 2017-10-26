@@ -10,62 +10,66 @@ import cPickle
 logger = mp.log_to_stderr(logging.INFO)
 
 #don't actually need
-TBL_ALL_LINKS = "sa_lts_links"
-TBL_CENTS = "pa_blockcentroids"
-TBL_LINKS = "sa_L3_tolerablelinks"
-TBL_NODES = "nodes"
-TBL_TOLNODES = "sa_L3_tol_nodes"
-TBL_GEOFF_LOOKUP = "geoffs"
-TBL_GEOFF_GEOM = "geoffs_viageom"
-TBL_MASTERLINKS = "master_links"
-TBL_MASTERLINKS_GEO = "master_links_geo"
-TBL_GROUPS = "groups"
+TBL_ALL_LINKS = "montco_lts_links"
+TBL_CENTS = "montco_blockcent"
+TBL_LINKS = "montco__L3_tolerablelinks"
+TBL_NODES = "montco_nodes"
+TBL_TOLNODES = "montco__L3_tol_nodes"
+TBL_GEOFF_LOOKUP = "montco_L3_geoffs"
+TBL_GEOFF_GEOM = "montco_L3_geoffs_viageom"
+TBL_MASTERLINKS = "montco_L3_master_links"
+TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
+TBL_GROUPS = "montco_L3_groups"
 
 #need in this script
-TBL_SPATHS = "shortestpaths"
-TBL_MASTERLINKS_GROUPS = "master_links_grp"
-# TBL_OD = "OandD"
-TBL_NODENOS = "nodenos"
-TBL_NODES_GEOFF = "nodes_geoff"
-TBL_NODES_GID = "nodes_gid"
-TBL_GEOFF_NODES = "geoff_nodes"
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
-TBL_GEOFF_GROUP = "geoff_group"
-IDX_nx_SPATHS_value = "spaths_nx_value_idx"
+TBL_SPATHS = "montco_L3_shortestpaths_196_MF"
+TBL_MASTERLINKS_GROUPS = "montco_L3_master_links_grp"
+TBL_OD = "montco_L3_OandD_2"
+TBL_NODENOS = "montco_L3_nodenos_2"
+TBL_NODES_GEOFF = "montco_L3_nodes_geoff_2"
+TBL_NODES_GID = "montco_L3_nodes_gid_2"
+TBL_GEOFF_NODES = "montco_L3_geoff_nodes_2"
 
-# island 196 test
-# TBL_SPATHS = "montco_L3_shortestpaths_196"
-# TBL_NODENOS = "montco_L3_nodenos_2"
-# TBL_NODES_GEOFF = "montco_L3_nodes_geoff_2"
-# TBL_NODES_GID = "montco_L3_nodes_gid_2"
-# TBL_GEOFF_NODES = "montco_L3_geoff_nodes_2"
-# TBL_OD = "montco_L3_OandD_2"
+# VIEW = "links_l3_grp_%s" % str(sys.argv[1])
+
+print sys.argv
+
+TBL_TEMP_NETWORK = "temp_network_196_%s" % str(sys.argv[1])
+TBL_TEMP_PAIRS = "temp_pairs_196_%s" % str(sys.argv[1])
 
 
-
-VIEW = "links_l3_grp_%s" % str(sys.argv[1])
-
-
+IDX_nx_SPATHS_value = "montco_spaths_MF_value_idx"
 
 def worker(inqueue, output):
     result = []
+    nopath = []
     count = 0
     start_time = time.time()
     for pair in iter(inqueue.get, sentinel):
         source, target = pair
-        length, paths = nx.bidirectional_dijkstra(G, source = source, target = target, weight = 'weight')
-        result.append(paths)
+        try:
+            length, paths = nx.bidirectional_dijkstra(G, source = source, target = target, weight = 'weight')
+        except nx.NetworkXNoPath:
+            # logger.info('{t}: {m}'.format(t = time.ctime(), m = "No path for {0}, {1}".format(source, target)))
+            nopath.append(pair)
+        except nx.NetworkXError as nxe:
+            logger.info('{t}: {m}'.format(t = time.ctime(), m = "NetworkX Error: %s" % str(nxe)))
+        except Exception as e:
+            logger.info('{t}: {m}'.format(t = time.ctime(), m = "GENERAL ERROR: %s" % str(e)))
+        else:
+            result.append(paths)
         count += 1
         if (count % 100) == 0:
             logger.info('{t}: {s}'.format(t = time.ctime(), s = time.time() - start_time))
             start_time = time.time()
-    output.put(result)
+    output.put({'result': result, 'nopath': nopath})
 
 def test_workers(pairs):
     logger.info('test_workers() started')
     result = []
+    nopath = []
     inqueue = mp.Queue()
-    for source, target in pairs:
+    for id, source, target, geom in pairs:
         inqueue.put((source, target))
     # Build O-D pair list
     # for source, target in IT.product(sources, targets):
@@ -82,12 +86,14 @@ def test_workers(pairs):
     for proc in procs:    
         inqueue.put(sentinel)
     for proc in procs:
-        result.extend(output.get())
+        retval = output.get()
+        result.extend(retval['result'])
+        nopath.extend(retval['nopath'])
     for proc in procs:
         proc.join()
 
     logger.info('test_workers() finished')
-    return result
+    return result, nopath
 
 '''
 def test_single_worker():
@@ -107,6 +113,7 @@ print
 num_cores = 64 # mp.cpu_count()
 
 #grab master links to make graph with networkx
+
 Q_SelectMasterLinks = """
     SELECT
         mixid,
@@ -114,7 +121,7 @@ Q_SelectMasterLinks = """
         togeoff,
         cost
     FROM public."{0}";
-    """.format(VIEW)
+    """.format(TBL_TEMP_NETWORK)
     
 con = psql.connect(database = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
@@ -150,31 +157,22 @@ if __name__ == '__main__':
     geoff_nodes_list = cur.fetchall()
     geoff_nodes = dict(geoff_nodes_list)
     
-    Q_GetGroupPairs = """
-        SELECT
-            fromgeoff AS fgeoff,
-            togeoff AS tgeoff,
-            groupnumber AS grp
-        FROM "{0}"
-        WHERE groupnumber = {1};
-        """.format(TBL_BLOCK_NODE_GEOFF, int(sys.argv[1]))
-    cur.execute(Q_GetGroupPairs)
-    group_pairs = cur.fetchall()
+    Q_GetPairs = """
+        SELECT * FROM "{0}";
+        """.format(TBL_TEMP_PAIRS)
+    cur.execute(Q_GetPairs)
+    pairs = cur.fetchall()
+
+    paths, nopaths = test_workers(pairs)
         
-    pairs = []
-    for i, (fgeoff, tgeoff, grp) in enumerate(group_pairs):
-        source = fgeoff
-        target = tgeoff
-        pairs.append((source, target))
-        
-    paths = test_workers(pairs)
-        
-    with open(r"D:\Modeling\BikeStress\scripts\paths.cpickle", "wb") as io:
+    with open(r"D:\Modeling\BikeStress\scripts\group196_MF_%s.cpickle" % sys.argv[1], "wb") as io:
         cPickle.dump(paths, io)
+    with open(r"D:\Modeling\BikeStress\scripts\group196_MF_%s_nopaths.cpickle" % sys.argv[1], "wb") as io:
+        cPickle.dump(nopaths, io)
     
-    del pairs
+    del pairs, nopaths
     
-    # with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done.txt", "wb") as io:
+    # with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done.txt", "ab") as io:
         # cPickle.dump("180 calculated", io)
     
     con = psql.connect(database = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")

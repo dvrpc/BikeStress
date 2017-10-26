@@ -13,25 +13,23 @@ import scipy.spatial
 import networkx as nx
 import math
 import psycopg2 as psql
-# logger = multiprocessing.log_to_stderr(logging.INFO)
+logger = multiprocessing.log_to_stderr(logging.INFO)
 
-TBL_GEOFF_GEOM = "geoffs_viageom"
-TBL_MASTERLINKS_GROUPS = "master_links_grp"
-TBL_GROUPS = "groups"
-TBL_GEOFF_PAIRS = "338_geoff_pairs"
-TBL_OD_LINES = "338_OD_lines"
-TBL_NODENOS = "nodenos"
-# TBL_OD = "OandD"
-TBL_GEOFF_NODES = "geoff_nodes"
-TBL_NODES_GID = "nodes_gid"
-TBL_NODES_GEOFF = "nodes_geoff"
-TBL_GEOFF_GEOM = "geoffs_viageom"
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
-TBL_GEOFF_GROUP = "geoff_group"
+TBL_GEOFF_GEOM = "montco_L3_geoffs_viageom"
+TBL_MASTERLINKS_GROUPS = "montco_L3_master_links_grp"
+TBL_GROUPS = "montco_groups"
+TBL_GEOFF_PAIRS = "montco_L3_196_geoff_pairs"
+TBL_OD_LINES = "montco_L3_196_OD_lines"
+TBL_NODENOS = "montco_L3_nodenos_2"
+TBL_OD = "montco_L3_OandD_2"
+TBL_GEOFF_NODES = "montco_L3_geoff_nodes_2"
+TBL_NODES_GID = "montco_L3_nodes_gid_2"
+TBL_NODES_GEOFF = "montco_L3_nodes_geoff_2"
+TBL_GEOFF_GEOM = "montco_L3_geoffs_viageom"
 
 
 #VIEW = "links_l3_grp_%s" % str(sys.argv[1])
-VIEW = "links_l3_grp_338"
+VIEW = "links_l3_grp_196"
 
 con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 #create cursor to execute querys
@@ -64,19 +62,69 @@ cur.execute(Q_GetList)
 geoff_nodes_list = cur.fetchall()
 geoff_nodes = dict(geoff_nodes_list)
 
-Q_GetGroupPairs = """
+#call OD list from postgres
+Q_GetOD = """
+    SELECT * FROM "{0}";
+    """.format(TBL_OD)
+cur.execute(Q_GetOD)
+OandD = cur.fetchall()
+
+Q_GeoffGroup = """
+WITH geoff_group AS (
     SELECT
-        fromgeoff AS fgeoff,
-        togeoff AS tgeoff,
-        groupnumber AS grp
+        fromgeoff AS geoff,
+        strong
     FROM "{0}"
-    WHERE groupnumber = 338;
-    """.format(TBL_BLOCK_NODE_GEOFF)
-cur.execute(Q_GetGroupPairs)
-group_pairs = cur.fetchall()
+    WHERE strong IS NOT NULL
+    GROUP BY fromgeoff, strong
     
+    UNION ALL
+
+    SELECT
+        togeoff AS geoff,
+        strong
+    FROM "{0}"
+    WHERE strong IS NOT NULL
+    GROUP BY togeoff, strong
+)
+SELECT geoff, strong FROM geoff_group
+GROUP BY geoff, strong
+ORDER BY geoff DESC;
+""".format(TBL_MASTERLINKS_GROUPS)
+
+cur.execute(Q_GeoffGroup)
+geoff_grp = dict(cur.fetchall())
+
+CloseEnough = []
+DiffGroup = 0
+NullGroup = 0
+#are the OD geoffs in the same group? if so, add pair to list to be calculated
+for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
+    #if i % pool_size == (worker_number - 1):
+    fromnodeno = nodenos[fromnodeindex][0]
+    tonodeno = nodenos[tonodeindex][0]
+    if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
+        if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
+            # if geoff_grp[nodes_geoff[fromnodeno]] == int(sys.argv[1]):
+            if geoff_grp[nodes_geoff[fromnodeno]] == 196:
+                CloseEnough.append([
+                    nodes_gids[fromnodeno],    # FromGID
+                    #fromnodeno,                # FromNode
+                    nodes_geoff[fromnodeno],  # FromGeoff
+                    nodes_gids[tonodeno],      # ToGID
+                    #tonodeno,                  # ToNode
+                    nodes_geoff[tonodeno],    # ToGeoff
+                    geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
+                    ])
+        else:
+            DiffGroup += 1
+    else:
+        NullGroup += 1
+        
+del nodenos, OandD, geoff_grp, nodes_geoff
+
 pairs = []
-for i, (fgeoff, tgeoff, grp) in enumerate(group_pairs):
+for i, (fgid, fgeoff, tgid, tgeoff, grp) in enumerate(CloseEnough):
     source = fgeoff
     target = tgeoff
     pairs.append((source, target))
@@ -167,7 +215,7 @@ Q_ODLines = """
     );
     CREATE SEQUENCE "{0}_id_seq2";
     SELECT setval(
-        '"{0}_id_seq2"',
+        '"{0}_id_seq3"',
         (
             SELECT id
             FROM "{0}"
@@ -176,7 +224,7 @@ Q_ODLines = """
         )
     );
     ALTER TABLE "{0}" ALTER COLUMN id SET NOT NULL;
-    ALTER TABLE "{0}" ALTER COLUMN id SET DEFAULT nextval('"{0}_id_seq2"'::regclass);
+    ALTER TABLE "{0}" ALTER COLUMN id SET DEFAULT nextval('"{0}_id_seq3"'::regclass);
     ALTER TABLE "{0}" ADD CONSTRAINT "{0}_pk" PRIMARY KEY (id);
 """.format(TBL_OD_LINES, TBL_GEOFF_PAIRS, TBL_GEOFF_GEOM)
 cur.execute(Q_ODLines)
@@ -285,12 +333,12 @@ y_value = ymin + 8046.72
 #chunk_id starting at 1 is for intersection/overlap sections
 chunk_id = 1
 #loop over break lines selecting OD lines that intersect them
-for i in xrange(1,iterations):
+for i in xrange(1, iterations):
     
     print chunk_id
     
-    TBL_TEMP_PAIRS = "temp2_pairs_180_%d" % chunk_id
-    TBL_TEMP_NETWORK = "temp2_network_180_%d" % chunk_id
+    TBL_TEMP_PAIRS = "temp_pairs_196_%d" % chunk_id
+    TBL_TEMP_NETWORK = "temp_network_196_%d" % chunk_id
     cur.execute(Q_CreateTempODLinesTable.format(TBL_TEMP_PAIRS))
     con.commit()
     cur.execute(Q_CreateTempNetwork.format(TBL_TEMP_NETWORK))
@@ -386,8 +434,8 @@ for i in xrange(1, iterations+1):
 
     print chunk_id
 
-    TBL_TEMP_PAIRS = "temp2_pairs_180_%d" % chunk_id
-    TBL_TEMP_NETWORK = "temp2_network_180_%d" % chunk_id
+    TBL_TEMP_PAIRS = "temp_pairs_196_%d" % chunk_id
+    TBL_TEMP_NETWORK = "temp_network_196_%d" % chunk_id
     cur.execute(Q_CreateTempODLinesTable.format(TBL_TEMP_PAIRS))
     con.commit()
     cur.execute(Q_CreateTempNetwork.format(TBL_TEMP_NETWORK))
@@ -470,64 +518,49 @@ for i in xrange(1, iterations+1):
 
 Q_IndexExisting = """
     CREATE INDEX IF NOT EXISTS "{1}"
-        ON public."{0}"
-        USING gist
+        ON public."{0}" USING gist
         (geom)
         TABLESPACE pg_default;
-    COMMIT;"""
-    # CREATE INDEX IF NOT EXISTS "{2}"
-        # ON public."{0}" USING btree
-        # (id, mixid, fromgeoff, togeoff, cost, strong)
-        # TABLESPACE pg_default;"""
+    CREATE INDEX IF NOT EXISTS "{2}"
+        ON public."{0}" USING btree
+        (id, mixid, fromgeoff, togeoff, cost, strong)
+        TABLESPACE pg_default;"""
 
-for i in xrange(1,10):
-    TBL_TEMP_NETWORK = "temp_network_338_%d" % i
-    IDX_geom = "temp_network_338_%d_geom_idx" % i
-    IDX_value = "temp_network_338_%d_value_idx" % i
+for i in xrange(1,4):
+    TBL_TEMP_NETWORK = "temp_network_196_%d" % i
+    IDX_geom = "temp_network_196_%d_geom_idx" % i
+    IDX_value = "temp_network_196_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_NETWORK, IDX_geom, IDX_value))
     
-for i in xrange(101,111):
-    TBL_TEMP_NETWORK = "temp_network_338_%d" % i
-    IDX_geom = "temp_network_338_%d_geom_idx" % i
-    IDX_value = "temp_network_338_%d_value_idx" % i
+for i in xrange(101,105):
+    TBL_TEMP_NETWORK = "temp_network_196_%d" % i
+    IDX_geom = "temp_network_196_%d_geom_idx" % i
+    IDX_value = "temp_network_196_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_NETWORK, IDX_geom, IDX_value))
 
     
 Q_IndexExisting = """    
     CREATE INDEX IF NOT EXISTS "{1}"
-        ON public."{0}"
-        USING gist
+        ON public."{0}" USING gist
         (geom)
         TABLESPACE pg_default;
-    COMMIT;"""
-    # CREATE INDEX IF NOT EXISTS "{2}"
-        # ON public."{0}" USING btree
-        # (id, fromgeoff, togeoff)
-        # TABLESPACE pg_default;"""
+    CREATE INDEX IF NOT EXISTS "{2}"
+        ON public."{0}" USING btree
+        (id, fromgeoff, togeoff)
+        TABLESPACE pg_default;"""
         
-for i in xrange(1,10):
-    TBL_TEMP_PAIRS = "temp_pairs_338_%d" % i
-    IDX_geom = "temp_pairs_338_%d_geom_idx" % i
-    IDX_value = "temp_pairs_338_%d_value_idx" % i
+for i in xrange(1,7):
+    TBL_TEMP_PAIRS = "temp_pairs_196_%d" % i
+    IDX_geom = "temp_pairs_196_%d_geom_idx" % i
+    IDX_value = "temp_pairs_196_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_PAIRS, IDX_geom, IDX_value))
 
-for i in xrange(101,111):
-    TBL_TEMP_PAIRS = "temp_pairs_338_%d" % i
-    IDX_geom = "temp_pairs_338_%d_geom_idx" % i
-    IDX_value = "temp_pairs_338_%d_value_idx" % i
+for i in xrange(101,107):
+    TBL_TEMP_PAIRS = "temp_pairs_196_%d" % i
+    IDX_geom = "temp_pairs_196_%d_geom_idx" % i
+    IDX_value = "temp_pairs_196_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_PAIRS, IDX_geom, IDX_value))
         
 
-        
-for i in xrange(1,6):
-    TBL_TEMP_PAIRS = "temp_pairs_338_%d" % i
-    IDX_geom = "temp_pairs_338_%d_geom_idx" % i
-    IDX_value = "temp_pairs_338_%d_value_idx" % i
-    cur.execute(Q_IndexExisting.format(TBL_TEMP_PAIRS, IDX_geom, IDX_value))
-for i in xrange(1,6):
-    TBL_TEMP_NETWORK = "temp_network_338_%d" % i
-    IDX_geom = "temp_network_338_%d_geom_idx" % i
-    IDX_value = "temp_network_338_%d_value_idx" % i
-    cur.execute(Q_IndexExisting.format(TBL_TEMP_NETWORK, IDX_geom, IDX_value))
-    
+
 
