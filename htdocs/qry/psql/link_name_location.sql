@@ -1,3 +1,4 @@
+--CREATE TABLE IF NOT EXISTS tbl AS
 SELECT
     _q.name,
     _q.county_code,
@@ -27,3 +28,4 @@ FROM (
 LEFT JOIN tim23_area
 ON _q.county_code = tim23_area.no
 WHERE tim23_area.name IS NOT NULL
+;
