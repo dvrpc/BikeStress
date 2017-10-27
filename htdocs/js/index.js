@@ -7,6 +7,7 @@ var paperUSLetterP = {
     className: 'A4Portrait page',
     name: 'Portrait'
 }
+
 var paperUSLetterL = {
     width: 1100,
     height: 840,
@@ -76,49 +77,62 @@ var overlays = {
     data: null
 }
 
-function _parseOverlayGroups(base, fn, args) {
+function _parseOverlay(base, args) {
     var agg_fn = function(a, v) { a[a.length] = v; return a };
+    var xtr_fn = function(b) { return b; };
+    var prc_fn = function(b, a) { return b; };
+    if (typeof(args._process_fn) === "function") {
+        prc_fn = args._process_fn;
+    }
     if (typeof(args._retval_agg_fn) === "function") {
         agg_fn = args._retval_agg_fn;
     }
+    if (typeof(args._base_extract_fn) === "function") {
+        xtr_fn = args._base_extract_fn;
+    }
     var retvals = [];
-    for (var i in base) {
-        retvals = agg_fn(retvals, fn(base[i], args));
+    var _base = xtr_fn(base);
+    for (var i in _base) {
+        retvals = agg_fn(retvals, prc_fn(_base[i], args));
     }
     return retvals;
 }
 
-function _parseOverlayItems(base, fn, args) {
-    var _fn = function(grp, args) {
-        var retvals = [];
-        for (var i in grp.items) {
-            retvals[i] = fn(grp.items[i], args);
-        }
-        return retvals;
-    };
-    var _agg_fn = function(retvals, newval) {
-        return retvals.concat(newval);
-    };
-    return _parseOverlayGroups(base, _fn, {_retval_agg_fn: _agg_fn});
-}
-
-_parseOverlay(
-    function() {
-        return overlay.definition;
-    },
-    _parseOverlay,
-    {
+function _parseOverlayItems(base, fn) {
+    return _parseOverlay(base, {
+        _process_fn: function(base, args) {
+            return _parseOverlay(base, {
+                _process_fn: function(base, args) {
+                    return fn(base, args);
+                },
+                _base_extract_fn:  function(base) {
+                    return base.items;
+                }
+            });
+        },
         _retval_agg_fn: function(retvals, newval) {
             return retvals.concat(newval);
         }
-    }
-);
+    });
+}
 
 function _initOverlay() {
-    var fn = function(item, args) {
-        return item.label;
-    };
-    return _parseOverlayItems(overlays.definition, fn);
+    // var fn = function(item, args) {
+        // return item.label;
+    // };
+    // return _parseOverlayItems(overlays.definition, fn);
+    overlays.data = generateLayers();
+}
+
+function generateLayers() {
+    return _parseOverlayItems(overlays.definition, function(item, args) {
+        return {
+            label: item.label,
+            layer: L.tileLayer(item.URL, {
+                attribution:"Sean Lawrence"
+            })
+        };
+    });
 }
 
 function main() {
@@ -132,8 +146,14 @@ function main() {
     // var _tl_2 = L.tileLayer('https://arcgis.dvrpc.org/arcgis/rest/services/AppData/BSTRESS_PhilaShortestPath/MapServer/tile/{z}/{y}/{x}', {attribution:"Sean Lawrence"});
     // var _tl_3 = L.tileLayer('https://arcgis.dvrpc.org/arcgis/rest/services/AppData/BSTRESS_SuburbanShortestPath/MapServer/tile/{z}/{y}/{x}', {attribution:"Sean Lawrence"});
 
-    var layerControl = L.control.layers(null, );
-
+    var layerControl = L.control.layers(null, (function() {
+        var retval = {};
+        for (var i in overlays.data) {
+            retval[overlays.data[i].label] = overlays.data[i].layer;
+        }
+        console.log(retval);
+        return retval;
+    })());
 
     map = L.map('map', {
         center: [39.9522, -75.1639],
@@ -146,7 +166,7 @@ function main() {
         ]
     }).addLayer(tileLayer);
 
-    // map.addControl(layerControl);
+    map.addControl(layerControl);
 
     printPlugin = L.easyPrint({
         title: 'Print',
