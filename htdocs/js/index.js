@@ -78,7 +78,7 @@ var overlays = {
     data: null
 }
 
-var CoordLayer = L.TileLayer.extend({
+var ESRIBBoxLayer = L.TileLayer.extend({
     _will_bboxStr: function(bounds) {
         return ""
             + bounds.getWest()
@@ -96,7 +96,7 @@ var CoordLayer = L.TileLayer.extend({
             + "&" + "bbox=" + this._will_bboxStr(bounds)
             + "&" + "bboxSR=" + "4326"
             + "&" + "imageSR=" + "102100"
-            + "&" + "size=" + "256%2C256"
+            + "&" + "size=" + this.options.tileSize + "%2C" + this.options.tileSize
             + "&" + "f=" + "image";
     }
 });
@@ -141,43 +141,57 @@ function _parseOverlayItems(base, fn) {
 }
 
 function _czechESRI(item) {
+    var key_fn = function(_item) {
+        return (_item.label === item.label);
+    };
+    var key = "layer";
     _async_czechESRI(
         item.URL,
-        _insertData,
-        function(args) {
-            
+        function() {
+            _insertData(
+                key_fn,
+                key,
+                _generateLayer(item)
+            );
         },
-        {
-            key_fn: function(_item) {
-                return (_item.label === item.label);
-            },
-            key: "layer",
-            value: _generateLayer(item)
+        function() {
+            _insertData(
+                key_fn,
+                key,
+                _generateESRILayer(item)
+            );
         }
     );
 }
 
-function _async_czechESRI(URL, success, fail, args) {
+function _async_czechESRI(URL, success, fail) {
     $.getJSON(URL + "/?f=json", function(json) {
         if (json.singleFusedMapCache) {
-            success(args);
+            success();
         } else {
-            fail(args);
+            fail();
         }
     });
 }
 
 function _generateLayer(item) {
     return L.tileLayer(item.URL + "/tile/{z}/{y}/{x}", {
-        attribution:"Sean Lawrence"
+        attribution: "Sean Lawrence"
     });
 }
 
-function _insertData(args) {
+function _generateESRILayer(item) {
+    return new ESRIBBoxLayer(item.URL, {
+        tileSize: 512,
+        attribution: "Lean Sawrence"
+    });
+}
+
+function _insertData(key_fn, key, value) {
     var success = false;
     for (var i in overlays.data) {
-        if (args.key_fn(overlays.data[i])) {
-            overlays.data[i][args.key] = args.value;
+        if (key_fn(overlays.data[i])) {
+            overlays.data[i][key] = value;
             regenerateLayerControl();
             success = true;
             break;
@@ -206,7 +220,9 @@ function generateLayerControl() {
             }
         }
         return retval;
-    })());
+    })(),{
+        collapsed: false
+    });
 }
 
 function generateLayers() {
@@ -236,12 +252,7 @@ function main() {
         sizeModes: [paperUSLetterP, paperUSLetterL]
     }).addTo(map);
 
-    lol = new CoordLayer('https://arcgis.dvrpc.org/arcgis/rest/services/AppData/BSTRESS_RegPrioritiesSuburban/MapServer');
-    lol.addTo(map);
-
     _initOverlay();
 }
-
-
 
 main();

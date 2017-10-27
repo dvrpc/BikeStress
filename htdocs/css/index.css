@@ -13,3 +13,7 @@ body {
 #map {
     height: 100%;
 }
+
+dummy {
+    background: url('https://maps.googleapis.com/maps/api/streetview?key=AIzaSyAvK54P-Pb3skEYDLFVoRnSTLtRyG5GJ6U&size=540x200&location=40.07248500,-74.85574100&heading=0');
+}
