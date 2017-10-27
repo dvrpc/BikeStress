@@ -1,4 +1,5 @@
 var map,
+    lol,
     printPlugin;
 
 var paperUSLetterP = {
@@ -77,6 +78,29 @@ var overlays = {
     data: null
 }
 
+var CoordLayer = L.TileLayer.extend({
+    _will_bboxStr: function(bounds) {
+        return ""
+            + bounds.getWest()
+            + "%2C" + bounds.getSouth()
+            + "%2C" + bounds.getEast()
+            + "%2C" + bounds.getNorth();
+    },
+    getTileUrl: function(t) {
+        var bounds = this._tileCoordsToBounds(t);
+        return this._url + "/export?"
+            +       "dpi=" + "96"
+            + "&" + "transparent=" + "true"
+            + "&" + "format=" + "png32"
+            + "&" + "layers=" + "show%3A0"
+            + "&" + "bbox=" + this._will_bboxStr(bounds)
+            + "&" + "bboxSR=" + "4326"
+            + "&" + "imageSR=" + "102100"
+            + "&" + "size=" + "256%2C256"
+            + "&" + "f=" + "image";
+    }
+});
+
 function _parseOverlay(base, args) {
     var agg_fn = function(a, v) { a[a.length] = v; return a };
     var xtr_fn = function(b) { return b; };
@@ -121,7 +145,7 @@ function _czechESRI(item) {
         item.URL,
         _insertData,
         function(args) {
-            return null;
+            
         },
         {
             key_fn: function(_item) {
@@ -181,7 +205,6 @@ function generateLayerControl() {
                 retval[overlays.data[i].label] = overlays.data[i].layer;
             }
         }
-        console.log(retval);
         return retval;
     })());
 }
@@ -213,7 +236,12 @@ function main() {
         sizeModes: [paperUSLetterP, paperUSLetterL]
     }).addTo(map);
 
+    lol = new CoordLayer('https://arcgis.dvrpc.org/arcgis/rest/services/AppData/BSTRESS_RegPrioritiesSuburban/MapServer');
+    lol.addTo(map);
+
     _initOverlay();
 }
+
+
 
 main();
