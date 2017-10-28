@@ -11,9 +11,9 @@
         <link rel="stylesheet" href="css/bootstrap-theme.min.css">
 
         <!-- Jquery UI CSS -->
-        <!-- <link rel="stylesheet" href="jquery-ui.min.css"> -->
-        <!-- <link rel="stylesheet" href="jquery-ui.structure.min.css"> -->
-        <!-- <link rel="stylesheet" href="jquery-ui.theme.min.css"> -->
+        <link rel="stylesheet" href="css/jquery-ui.min.css">
+        <link rel="stylesheet" href="css/jquery-ui.structure.min.css">
+        <link rel="stylesheet" href="css/jquery-ui.theme.min.css">
 
         <!-- Leaflet CSS -->
         <link rel="stylesheet" href="css/leaflet.css" />
@@ -30,12 +30,15 @@
         -->
 
         <div id="box">
+            <div id="hud">
+                <div class="draggable resizable">Hi</div>
+            </div>
             <div id="map"></div>
         </div>
 
         <!-- JQuery -->
         <script src="js/lib/jquery-3.2.1.min.js"></script>
-        <!-- <script src="js/lib/jquery-ui.min.js"></script> -->
+        <script src="js/lib/jquery-ui.min.js"></script>
 
         <!-- Bootstrap -->
         <script src="js/lib/bootstrap.min.js"></script>
@@ -49,5 +52,6 @@
 
         <!-- ? -->
         <script src="js/index.js"></script>
+
     </body>
 </html>

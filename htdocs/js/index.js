@@ -253,6 +253,19 @@ function main() {
     }).addTo(map);
 
     _initOverlay();
+
+    $(".draggable").draggable({
+        containment: "#map",
+        scroll: false,
+        snap: true,
+        grid: [25, 25]
+        
+    });
+    $(".resizable").resizable({
+        containment: "#map",
+        grid: 25,
+        ghost: true
+    });
 }
 
 main();

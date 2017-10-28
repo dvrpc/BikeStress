@@ -10,10 +10,26 @@ body {
 #box {
     height: 100%;
 }
+#hud {
+    position: absolute;
+    z-index: 2;
+    float: left;
+    height: 100%;
+    width: 0;
+}
 #map {
     height: 100%;
+    z-index: 1;
 }
 
-dummy {
-    background: url('https://maps.googleapis.com/maps/api/streetview?key=AIzaSyAvK54P-Pb3skEYDLFVoRnSTLtRyG5GJ6U&size=540x200&location=40.07248500,-74.85574100&heading=0');
+.draggable {
+    height: 100px;
+    width: 100px;
+    background-color: #fff;
+    opacity: 0.9;
+}
+
+.draggable {
+    /* background: url('https://maps.googleapis.com/maps/api/streetview?key=AIzaSyCPcULgKxlZHywXVke42fo1PVcd2So1GU8&size=540x200&location=40.07248500,-74.85574100&heading=0'); */
+    
 }
