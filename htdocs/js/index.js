@@ -1,6 +1,15 @@
 var map,
-    lol,
+    gmap, // 2 maps is clearly better than 1
+    panorama,
     printPlugin;
+
+var options = {
+    center: {
+        lat: 39.9522,
+        lng: -75.1639
+    },
+    zoom: 14
+}
 
 var paperUSLetterP = {
     width: 850,
@@ -241,8 +250,8 @@ function main() {
     });
 
     map = L.map('map', {
-        center: [39.9522, -75.1639],
-        zoom: 16
+        center: options.center,
+        zoom: options.zoom
     }).addLayer(tileLayer);
 
     printPlugin = L.easyPrint({
@@ -254,8 +263,20 @@ function main() {
 
     _initOverlay();
 
+    map.on("click", function(e) {
+        console.log(e);
+        console.log(
+            "https://maps.googleapis.com/maps/api/streetview?key=AIzaSyCPcULgKxlZHywXVke42fo1PVcd2So1GU8&size=540x200&heading=0&location="
+            + e.latlng.lat + '%2C'
+            + e.latlng.lng
+        );
+
+    });
+
     $(".draggable").draggable({
         containment: "#map",
+        handle: ".handle",
+        cancel: "#gmap",
         scroll: false,
         snap: true,
         grid: [25, 25]
@@ -266,6 +287,23 @@ function main() {
         grid: 25,
         ghost: true
     });
+}
+
+function initialize() {
+    gmap = new google.maps.Map(document.getElementById('gmap'), {
+        center: options.center,
+        zoom: options.zoom + 2
+    });
+    panorama = new google.maps.StreetViewPanorama(
+        document.getElementById('gpano'), {
+            position: options.center,
+            pov: {
+                heading: 34,
+                pitch: 0
+            }
+        }
+    );
+    gmap.setStreetView(panorama);
 }
 
 main();

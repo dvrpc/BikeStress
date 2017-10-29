@@ -20,6 +20,23 @@
 
         <!-- ? -->
         <link rel="stylesheet" href="css/index.css">
+        <style>
+        .handle {
+            height: 1em;
+        }
+        
+        #gpano {
+            position: absolute;
+            height: 100%;
+            width: 100%;
+        }
+        #gmap {
+            float: right;
+            height: 30%;
+            width: 30%;
+            z-index: 1;
+        }
+        </style>
     </head>
     <body>
         <!--
@@ -31,7 +48,11 @@
 
         <div id="box">
             <div id="hud">
-                <div class="draggable resizable">Hi</div>
+                <div class="draggable resizable">
+                    <div class="handle"></div>
+                    <div id="gpano"></div>
+                    <div id="gmap"></div>
+                </div>
             </div>
             <div id="map"></div>
         </div>
@@ -45,6 +66,7 @@
 
         <!-- Leaflet -->
         <script src="js/lib/leaflet.js"></script>
+        <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCPcULgKxlZHywXVke42fo1PVcd2So1GU8&callback=initialize"></script>
 
         <!-- Leaflet-easyPrint -->
         <!-- https://github.com/rowanwins/leaflet-easyPrint -->
@@ -55,3 +77,7 @@
 
     </body>
 </html>
+
+
+
+
