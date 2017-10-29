@@ -244,6 +244,13 @@ function generateLayers() {
     });
 }
 
+function _draggable_stop() {
+}
+function _resizable_stop() {
+    google.maps.event.trigger(gmap, "resize");
+    google.maps.event.trigger(panorama, "resize");
+}
+
 function main() {
     var tileLayer = L.tileLayer('http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="http://cartodb.com/attributions">CartoDB</a>'
@@ -270,7 +277,6 @@ function main() {
             + e.latlng.lat + '%2C'
             + e.latlng.lng
         );
-
     });
 
     $(".draggable").draggable({
@@ -279,13 +285,19 @@ function main() {
         cancel: "#gmap",
         scroll: false,
         snap: true,
-        grid: [25, 25]
-        
+        grid: [25, 25],
+        stop: function() {
+            _draggable_stop();
+        }
     });
+
     $(".resizable").resizable({
         containment: "#map",
         grid: 25,
-        ghost: true
+        ghost: true,
+        stop: function() {
+            _resizable_stop();
+        }
     });
 }
 
@@ -303,6 +315,9 @@ function initialize() {
             }
         }
     );
+    panorama.addListener('position_changed', function() {
+        // console.log(panorama.getPosition());
+    });
     gmap.setStreetView(panorama);
 }
 
