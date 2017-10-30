@@ -25,6 +25,48 @@ var paperUSLetterL = {
     name: 'Landscape'
 }
 
+var Scout5 = {
+    URL: "https://maps.gstatic.com/mapfiles/api-3/images/cb_scout5.png",
+    dimensions: {w: 215, h: 835},
+    // "Reverse Engineered" offset table
+    offsets: [
+        {offset:   0, min:   0.00, max:  11.25},
+        {offset: -52, min:  11.25, max:  33.75},
+        {offset:-104, min:  33.75, max:  56.25},
+        {offset:-156, min:  56.25, max:  78.75},
+        {offset:-208, min:  78.75, max: 101.25},
+        {offset:-260, min: 101.25, max: 123.75},
+        {offset:-312, min: 123.75, max: 146.25},
+        {offset:-364, min: 146.25, max: 168.75},
+        {offset:-416, min: 168.75, max: 191.25},
+        {offset:-468, min: 191.25, max: 213.75},
+        {offset:-520, min: 213.75, max: 236.25},
+        {offset:-572, min: 236.25, max: 258.75},
+        {offset:-624, min: 258.75, max: 281.25},
+        {offset:-676, min: 281.25, max: 303.75},
+        {offset:-728, min: 303.75, max: 326.25},
+        {offset:-780, min: 326.25, max: 348.75},
+        {offset:   0, min: 348.75, max: 360.00}
+    ],
+
+    headingToOffset: function(heading) {
+        var success = false;
+        var offset = null;
+        for (var i in this.offsets) {
+            var o = this.offsets[i];
+            if ((o.min <= heading) && (heading < o.max)) {
+                success = true;
+                offset = o.offset;
+                break;
+            }
+        }
+        return {
+            success: success,
+            offset: offset
+        };
+    }
+};
+
 var overlays = {
     definition: [
         {
@@ -84,7 +126,9 @@ var overlays = {
             ]
         },
     ],
-    data: null
+    layers: null,
+    data: null,
+    cameras: null
 }
 
 var ESRIBBoxLayer = L.TileLayer.extend({
@@ -198,9 +242,9 @@ function _generateESRILayer(item) {
 
 function _insertData(key_fn, key, value) {
     var success = false;
-    for (var i in overlays.data) {
-        if (key_fn(overlays.data[i])) {
-            overlays.data[i][key] = value;
+    for (var i in overlays.layers) {
+        if (key_fn(overlays.layers[i])) {
+            overlays.layers[i][key] = value;
             regenerateLayerControl();
             success = true;
             break;
@@ -210,7 +254,7 @@ function _insertData(key_fn, key, value) {
 }
 
 function _initOverlay() {
-    overlays.data = generateLayers();
+    overlays.layers = generateLayers();
     overlays.control = generateLayerControl();
     overlays.control.addTo(map);
 }
@@ -223,9 +267,9 @@ function regenerateLayerControl() {
 function generateLayerControl() {
     return L.control.layers(null, (function() {
         var retval = {};
-        for (var i in overlays.data) {
-            if (overlays.data[i].layer) {
-                retval[overlays.data[i].label] = overlays.data[i].layer;
+        for (var i in overlays.layers) {
+            if (overlays.layers[i].layer) {
+                retval[overlays.layers[i].label] = overlays.layers[i].layer;
             }
         }
         return retval;
@@ -316,9 +360,32 @@ function initialize() {
         }
     );
     panorama.addListener('position_changed', function() {
-        // console.log(panorama.getPosition());
+        var pos = panorama.getPosition();
+        // console.log(pos.lat(), pos.lng());
+    });
+    panorama.addListener('pov_changed', function() {
+        var pov = panorama.getPov();
+        // console.log(pov.heading, pov.pitch);
+        
+        // $("#gmap").css("transform", "rotate(" + pov.heading + "deg)");
+        // $("#gmap").css("-webkit-transform", "rotate(" + pov.heading + "deg)");
+        // $("#gmap").css("-ms-transform", "rotate(" + pov.heading + "deg)");
+        
+        // $("#gpano").css("transform", "rotate(" + pov.pitch + "deg)");
+        // $("#gpano").css("-webkit-transform", "rotate(" + pov.pitch + "deg)");
+        // $("#gpano").css("-ms-transform", "rotate(" + pov.pitch + "deg)");
     });
     gmap.setStreetView(panorama);
+    
+    _partialClone(".gmnoprint>img", "#temp");
+}
+
+function _partialClone(src, trgt) {
+    // var parent = $(src).parent()[0];
+    var child = $(src)[0];
+    // $(trgt).append(parent);
+    // $(trgt + ">" + parent.tagName).append(child);
+    $(trgt).append(child);
 }
 
 main();

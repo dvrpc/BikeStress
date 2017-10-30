@@ -48,6 +48,7 @@
 
         <div id="box">
             <div id="hud">
+                <div id="temp"></div>
                 <div class="draggable resizable">
                     <div class="handle"></div>
                     <div id="gpano"></div>
