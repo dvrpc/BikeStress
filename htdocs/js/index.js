@@ -29,6 +29,7 @@ var Scout5 = {
     URL: "https://maps.gstatic.com/mapfiles/api-3/images/cb_scout5.png",
     dimensions: {w: 215, h: 835},
     // "Reverse Engineered" offset table
+    // "Scout" sprite
     offsets: [
         {offset:   0, min:   0.00, max:  11.25},
         {offset: -52, min:  11.25, max:  33.75},
@@ -374,6 +375,8 @@ function initialize() {
         // $("#gpano").css("transform", "rotate(" + pov.pitch + "deg)");
         // $("#gpano").css("-webkit-transform", "rotate(" + pov.pitch + "deg)");
         // $("#gpano").css("-ms-transform", "rotate(" + pov.pitch + "deg)");
+
+        console.log(Scout5.headingToOffset(pov.heading));
     });
     gmap.setStreetView(panorama);
     
