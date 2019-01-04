@@ -3,6 +3,7 @@ import VisumPy.helpers as h
 import VisumPy.matrices as m
 import csv
 import os
+import pandas as pd
 
 Visum = h.CreateVisum(15)
 # drag in version file
@@ -18,13 +19,14 @@ Length           = h.GetMulti(Visum.Net.Links, r"Length")
 NumLanes         = h.GetMulti(Visum.Net.Links, r"NumLanes")
 BikeFac          = h.GetMulti(Visum.Net.Links, r"BIKE_FAC")
 Speed            = h.GetMulti(Visum.Net.Links, r"SPEEDTOUSE")
-OneWay           = h.GetMulti(Visum.Net.Links, r"ISONEWAY")
+OneWay           = h.GetMulti(Visum.Net.Links, r"ISONEWAY")#imported frin edited GIS file
 LinkType         = h.GetMulti(Visum.Net.Links, r"TypeNo")
 
 TotLanes = [0] * len(FromNode)
 #if one way, total number of lanes equals the number of lanes in the lane field
+#one way indicated by value of 1 in phase 2
 for i in xrange(0, len(FromNode)):
-    if OneWay[i] == True:
+    if OneWay[i] == '1':
         TotLanes[i] = NumLanes[i]
     #if not one way, total number of lanes equals 2 times the number of lanes in the lane field
     else:
@@ -101,8 +103,8 @@ for i in xrange(0, len(FromNode)):
 	y = findRowIndex(TotLanes[i], Speed[i], LinkType[i])
 	LinkStress[i] = ReducFactorTbl[y][x]
     
- 
-#for troubleshooting if needed
+'''
+#for troubleshooting
 ##view from/to node nos to search for links that are causing errors so they can be fixed (only 12 in this round - mostly related to newly split links missing attributes)
 x_error_rows = []
 y_error_rows = []
@@ -126,49 +128,59 @@ for i in xrange(0, len(y_error_rows)):
 #write into UDA field in Visum
 h.SetMulti(Visum.Net.Links, "LinkLTS", LinkStress)
 #save version file
+#Export directed links as shapefile
+#Use PostGIS shapefile importer to import into DB
 
-#create df and dump into DB
 
-
-'''            
-#write out to join to shapefile in ArcGIS (if needed)            
-#create file and open for writing as the for loop iterates
-with open(r'\\SMORAN\dvrpc_shared\PythonReference\BikeStressMap\output_data\LTS_output_test.csv','wb') as IO:
-    w = csv.writer(IO)
-    #write the header row
-    w.writerow(['FromNode', 'ToNode', 'NodeCode', 'LinkLTS', 'OneWay'])    
-    #for each row (ID), use the lookup table to find the LTS value
-    #also concatenate from node and to node to create nodecode field
-    for i in xrange(0, len(FromNode)):
-        x = bikeFacLookup(BikeFac[i])
-        y = findRowIndex(TotLanes[i], Speed[i], LinkType[i])
-        LinkStress = ReducFactorTbl[y][x]
-        w.writerow([FromNode[i], ToNode[i], str(FromNode[i])+str(ToNode[i]), LinkStress[i], OneWay[i]])'''
-
-        
-#OLD
-'''#read csv with link attributes
-with open(r'\\SMORAN\dvrpc_shared\PythonReference\BikeStressMap\input_data\TIM_directed_links_TypeTest.csv','rb') as IO:
-    r = csv.reader(IO)
-    header = r.next() #read header row and move on to next before starting for loop
-    #create array to hold data from csv
-    Links = []
-    for row in r: Links.append(([int(i) for i in row if i]))
-        '''
-#FOR TESTING
-'''
-#create place to put index results
-IDs = []
-values = []
-
-#loop over all rows in the table and send them through the functions to identify the lookup location in the stress table
-for row in Links[0:9]:
-    IDs.append(row[0])
-    x = bikeFacLookup(row[6])
-    y = findRowIndex(row[10], row[7])
-    values.append(stressTbl[y][x])
+#additional troubleshooting
+#to fix random large swath of links with incorrectly high speeds, revert to speeds from backup shapefile (9/18 from the BikeFacEditing GDB in U:\FY2017 folder)
+import csv
+with open('U:\FY2019\Transportation\TransitBikePed\BikeStressPhase2\data\WonkyPALinks_CorrectSpeeds.csv', 'rb') as f:
+    reader = csv.reader(f)
+    backupspeeds = map(tuple, reader)
     
-#maybe write out to CSV instead...    
-holder = zip(IDs, xvals, yvals)
-holder = zip(IDs, values)
+fromto = []
+newspeed =[]
+for i in xrange(len(backupspeeds)):
+    fromto.append(backupspeeds[i][0])
+    newspeed.append(backupspeeds[i][1])
+    
+OldFrom        = h.GetMulti(Visum.Net.Links, r"FromNode")
+OldTo          = h.GetMulti(Visum.Net.Links, r"ToNode")
+Speed          = h.GetMulti(Visum.Net.Links, r"SPEEDTOUSE")
 
+SpeedCopy      = h.GetMulti(Visum.Net.Links, r"SPEEDTOUSE")
+
+OldCombo = []
+for i in xrange(len(OldFrom)):
+    x = OldFrom[i]
+    y = OldTo[i]
+    if x is None and y is not None:
+        OldCombo.append('NoneFrom'+str(int(y)))
+    elif y is None and x is not None:
+        OldCombo.append(str(int(x))+'NoneTo')
+    elif x is None and y is None:
+        OldCombo.append('None')
+    else:        
+        OldCombo.append(str(int(x))+str(int(y)))
+
+#which indicies in OldCombo need to have speed updated in that same index
+
+toupdate=[]
+updatelocation = []
+pullfromindex = []
+for i in xrange(len(OldCombo)):
+    if OldCombo[i] in fromto:
+        toupdate.append(OldCombo[i])
+        updatelocation.append(i)
+        pullfromindex.append(fromto.index(OldCombo[i]))
+        
+        
+for i in xrange(len(toupdate)):
+    #print toupdate[i]
+    #print OldCombo[updatelocation[i]]
+    SpeedCopy[updatelocation[i]] = newspeed[pullfromindex[i]]
+    
+h.SetMulti(Visum.Net.Links, "SPEEDTOUSE", SpeedCopy)
+
+'''

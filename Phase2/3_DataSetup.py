@@ -10,9 +10,9 @@ import pickle
 import sqlite3
 from collections import Counter
 
-###ITEMS NEEDED IN DB###
+###ITEMS NEEDED IN DB### read in using postgis shapefile importer
 #links with LTS assigned (polyline)
-#block centroids with weights if desired (points)
+#block centroids with weights if desired (points) 
 #nodes from model(points)
 
 #table names
