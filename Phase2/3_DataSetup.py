@@ -16,37 +16,35 @@ from collections import Counter
 #nodes from model(points)
 
 #table names
-TBL_ALL_LINKS = "uc_testlinks"
-TBL_CENTS = "uc_testcentroids"
-TBL_LINKS = "ucity_tolerablelinks"
-TBL_NODES = "sa_nodes"
-# TBL_SPATHS = "montco_L3_shortestpaths"
-TBL_TOLNODES = "ucity_tol_nodes"
-TBL_GEOFF_LOOKUP = "geoffs_uc"
-TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom_uc"
-TBL_MASTERLINKS = "master_links_uc"
-TBL_MASTERLINKS_GEO = "master_links_geo_uc"
-TBL_MASTERLINKS_GROUPS = "master_links_grp_uc"
-TBL_GROUPS = "groups_uc"
+TBL_ALL_LINKS = "links_testarea"
+TBL_CENTS = "blockcentroids_testarea"
+TBL_LINKS = "tolerablelinks_testarea"
+TBL_NODES = "nodes_testarea"
+TBL_TOLNODES = "tol_nodes_testarea"
+TBL_GEOFF_LOOKUP = "geoffs_testarea"
+TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom_testarea"
+TBL_MASTERLINKS = "master_links_testarea"
+TBL_MASTERLINKS_GEO = "master_links_geo_testarea"
+TBL_MASTERLINKS_GROUPS = "master_links_grp_testarea"
+TBL_GROUPS = "groups_testarea"
 TBL_TURNS = "all_turns"
-TBL_SUBTURNS = "ucity_tolerableturns"
+TBL_SUBTURNS = "tolerableturns_testarea"
 
 #index names
-IDX_ALL_LINKS_geom = "links_geom_idx"
-IDX_ALL_LINKS_value = "links_value_idx"
-IDX_CENTS_geom = "centroids_geom_idx"
-IDX_CENTS_value = "centroids_value_idx"
-IDX_LINKS_geom = "tol_links_geom_idx_uc"
-IDX_LINKS_value = "tol_links_value_idx_uc"
-# IDX_SPATHS_value = "spaths_value_idx"
-IDX_NODES_geom = "nodes_geom_idx"
-IDX_NODES_value = "nodes_value_idx"
-IDX_TOL_NODES_geom = "tolnodes_geom_idx_uc"
-IDX_TOL_NODES_value = "tolnodes_value_idx_uc"
+IDX_ALL_LINKS_geom = "_talinks_geom_idx"
+IDX_ALL_LINKS_value = "ta_links_value_idx"
+IDX_CENTS_geom = "ta_centroids_geom_idx"
+IDX_CENTS_value = "ta_centroids_value_idx"
+IDX_LINKS_geom = "tol_links_geom_idx_ta"
+IDX_LINKS_value = "tol_links_value_idx_ta"
+IDX_NODES_geom = "nodes_geom_idx_ta"
+IDX_NODES_value = "nodes_value_idx_ta"
+IDX_TOL_NODES_geom = "tolnodes_geom_idx_ta"
+IDX_TOL_NODES_value = "tolnodes_value_idx_ta"
 IDX_ALL_TURNS_values = "All_Turns_values_idx"
 
 #connect to SQL DB in python
-con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 #create cursor to execute querys
 cur = con.cursor()
 
@@ -167,7 +165,7 @@ CREATE INDEX IF NOT EXISTS "{1}"
 cur.execute(Q_CreateTurnTable)
 con.commit()
 
-tbl_path = r"D:/Modeling/BikeStress/TurnLTS_output_072517.csv"
+tbl_path = r"U:/FY2019/Transportation/TransitBikePed/BikeStressPhase2/data/IntermediateOutputs/TurnLTS_output_010419.csv"
 
 #query to insert turns from csv into turn table
 Q_INSERT = """
@@ -175,7 +173,6 @@ INSERT INTO public."{0}" VALUES (%s, %s, %s, %s, %s, %s)
 """.format(TBL_TURNS)
 
 #open table
-
 data = []
 with open(tbl_path, "rb") as io:
     r = csv.reader(io)
@@ -242,22 +239,23 @@ con.commit()
 
 #calcualte turn cost and add to new row in table
 #1 = right, 2 = straight, 3 = left
+#changed cost constant from 0.005 to 0.009 to deal with fact that link length is in KM instead of miles
 Q_TurnCost = """    
     ALTER TABLE "{0}" ADD COLUMN cost numeric;
     COMMIT;
 
     UPDATE "{0}"
-    SET cost = (0.005*(1 + "turnlts"))
+    SET cost = (0.009*(1 + "turnlts"))
     WHERE turndirection = 2;
     COMMIT;
 
     UPDATE "{0}"
-    SET cost = (0.005*(1 + 1 + "turnlts"))
+    SET cost = (0.009*(1 + 1 + "turnlts"))
     WHERE turndirection = 1;
     COMMIT;
 
     UPDATE "{0}"
-    SET cost = (0.005*(1 + 2 + "turnlts"))
+    SET cost = (0.009*(1 + 2 + "turnlts"))
     WHERE turndirection = 3;
     COMMIT;
 """.format(TBL_SUBTURNS)
@@ -292,7 +290,7 @@ cur.execute(Q_GeomGeoffTable)
 #turns will have negative ID and links will have positive ID
 Q_CreateMasterLinks = """
     CREATE TABLE "{0}" AS(
-    SELECT tblA.gid AS mixID, tblA.fromgeoff, tblA.togeoff, CAST(trim(trailing 'mi' FROM "length") AS float)* (1 + "linklts") AS cost FROM(
+    SELECT tblA.gid AS mixID, tblA.fromgeoff, tblA.togeoff, CAST(trim(trailing 'km' FROM "length") AS float)* (1 + "linklts") AS cost FROM(
         SELECT
             t.*,
             g1.geoffid AS fromgeoff,
@@ -339,9 +337,13 @@ CREATE TABLE "{0}" AS(
             FROM (
                 SELECT
                     no,
-                    ST_SetSRID(ST_Multi(ST_MakeLine(geom, geom)), 26918) AS geom
-                FROM "{3}"
-                WHERE geom IS NOT NULL
+                    ST_SetSRID(ST_Multi(ST_MakeLine(pointgeom, pointgeom)), 26918) AS geom
+                FROM (
+                    SELECT
+                        no,
+                        (ST_Dump(geom)).geom AS pointgeom
+                    FROM "{3}") foo
+                WHERE pointgeom IS NOT NULL
                 GROUP BY no, geom
             ) AS tblA
             INNER JOIN "{4}" AS tblB

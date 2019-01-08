@@ -1,3 +1,6 @@
+#run thru cmd
+#C:\Users\model-ws>AppData\Local\Continuum\Anaconda2\python.exe #D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\4_NetworkIslandAnalysis.py
+
 import psycopg2 as psql
 import csv
 import itertools
@@ -8,36 +11,38 @@ import json
 import scipy.spatial
 import networkx as nx
 
-TBL_ALL_LINKS = "uc_testlinks"
-TBL_CENTS = "uc_testcentroids"
-TBL_LINKS = "ucity_tolerablelinks"
-TBL_NODES = "sa_nodes"
-# TBL_SPATHS = "montco_L3_shortestpaths"
-TBL_TOLNODES = "ucity_tol_nodes"
-TBL_GEOFF_LOOKUP = "geoffs_uc"
-TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom_uc"
-TBL_MASTERLINKS = "master_links_uc"
-TBL_MASTERLINKS_GEO = "master_links_geo_uc"
-TBL_MASTERLINKS_GROUPS = "master_links_grp_uc"
+#table names
+TBL_ALL_LINKS = "links_testarea"
+TBL_CENTS = "blockcentroids_testarea"
+TBL_LINKS = "tolerablelinks_testarea"
+TBL_NODES = "nodes_testarea"
+TBL_TOLNODES = "tol_nodes_testarea"
+TBL_GEOFF_LOOKUP = "geoffs_testarea"
+TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom_testarea"
+TBL_MASTERLINKS = "master_links_testarea"
+TBL_MASTERLINKS_GEO = "master_links_geo_testarea"
+TBL_MASTERLINKS_GROUPS = "master_links_grp_testarea"
+TBL_GROUPS = "groups_testarea"
+TBL_TURNS = "all_turns"
+TBL_SUBTURNS = "tolerableturns_testarea"
 
-TBL_GROUPS = "groups_uc"
-TBL_NODENOS = "nodenos_uc"
-TBL_NODES_GEOFF = "nodes_geoff_uc"
-TBL_NODES_GID = "nodes_gid_uc"
-TBL_GEOFF_NODES = "geoff_nodes_uc"
-TBL_OD = "OandD_uc"
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff_uc"
-TBL_GEOFF_GROUP = "geoff_group_uc"
+TBL_NODENOS = "nodenos_testarea"
+TBL_NODES_GEOFF = "nodes_geoff_testarea"
+TBL_NODES_GID = "nodes_gid_testarea"
+TBL_GEOFF_NODES = "geoff_nodes_testarea"
+TBL_OD = "OandD_testarea"
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff_testarea"
+TBL_GEOFF_GROUP = "geoff_group_testarea"
 
-IDX_GEOFF_GROUP = "geoff_group_value_idx_uc"
-IDX_BLOCK_NODE_GEOFF = "block_node_geoff_value_idx_uc"
-IDX_NODENOS = "nodeno_idx_uc"
-IDX_NODES_GEOFF = "nodes_geoff_idx_uc"
-IDX_NODES_GID = "nodes_gid_idx_uc"
-IDX_GEOFF_NODES = "geoff_nodes_idx_uc"
-IDX_OD_value = "od_value_idx_uc"
+IDX_GEOFF_GROUP = "geoff_group_value_idx_testarea"
+IDX_BLOCK_NODE_GEOFF = "block_node_geoff_value_idx_testarea"
+IDX_NODENOS = "nodeno_idx_testarea"
+IDX_NODES_GEOFF = "nodes_geoff_idx_testarea"
+IDX_NODES_GID = "nodes_gid_idx_testarea"
+IDX_GEOFF_NODES = "geoff_nodes_idx_testarea"
+IDX_OD_value = "od_value_idx_testarea"
 
-con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
 
 
@@ -193,18 +198,27 @@ def ExecFetchSQL(SQL_Stmt):
 #create OD list
 data = ExecFetchSQL(SQL_GetGeoffs)
 world_ids, world_vias, world_coords = zip(*data)
-node_coords = dict(zip(world_vias, world_coords))
+#remove extra brackets from coords list and replace with new list going forward
+wc = []
+for i in xrange(0, len(world_coords)):
+    wc.append(world_coords[i][0])
+    
+node_coords = dict(zip(world_vias, wc))
 geoff_nodes = dict(zip(world_ids, world_vias))
 # Node to Geoff dictionary (a 'random' geoff will be selected for each node)
 nodes_geoff = dict(zip(world_vias, world_ids))
-geofftree = scipy.spatial.cKDTree(world_coords)
-del world_coords, world_vias
+geofftree = scipy.spatial.cKDTree(wc)
+del world_coords, wc, world_vias
+#print len(world_ids)
+#print type(world_ids)
+#print world_ids[0:10]
 
 data = ExecFetchSQL(SQL_GetBlocks)
 results = []
 for i, (id, _, coord) in enumerate(data):
     dist, index = geofftree.query(coord)
-    geoffid = world_ids[index]
+    #index comes out as type = numpy.ndarray and needs to be called as such
+    geoffid = world_ids[numpy.ndarray.item(index)]
     nodeno = geoff_nodes[geoffid]
     results.append((id, nodeno))
 del data, world_ids
