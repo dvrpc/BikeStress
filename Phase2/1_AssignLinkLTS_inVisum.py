@@ -16,21 +16,13 @@ Visum = h.CreateVisum(15)
 FromNode         = h.GetMulti(Visum.Net.Links, r"FromNodeNo")
 ToNode           = h.GetMulti(Visum.Net.Links, r"ToNodeNo")
 Length           = h.GetMulti(Visum.Net.Links, r"Length")
-NumLanes         = h.GetMulti(Visum.Net.Links, r"NumLanes")
+#NumLanes         = h.GetMulti(Visum.Net.Links, r"NumLanes")
+TotLanes         = h.GetMulti(Visum.Net.Links, r"TotNumLanes")
 BikeFac          = h.GetMulti(Visum.Net.Links, r"BIKE_FAC")
 Speed            = h.GetMulti(Visum.Net.Links, r"SPEEDTOUSE")
 OneWay           = h.GetMulti(Visum.Net.Links, r"ISONEWAY")#imported frin edited GIS file
 LinkType         = h.GetMulti(Visum.Net.Links, r"TypeNo")
 
-TotLanes = [0] * len(FromNode)
-#if one way, total number of lanes equals the number of lanes in the lane field
-#one way indicated by value of 1 in phase 2
-for i in xrange(0, len(FromNode)):
-    if OneWay[i] == '1':
-        TotLanes[i] = NumLanes[i]
-    #if not one way, total number of lanes equals 2 times the number of lanes in the lane field
-    else:
-        TotLanes[i] = NumLanes[i] * 2
 
 #create lookup for lanes and speed columns in Figure 1 in paper
 #second residential line modified to include speed up to 36 to make sure all fit into that category
@@ -139,7 +131,7 @@ with open('U:\FY2019\Transportation\TransitBikePed\BikeStressPhase2\data\WonkyPA
     reader = csv.reader(f)
     backupspeeds = map(tuple, reader)
     
-fromto = []
+wfromto = []
 newspeed =[]
 for i in xrange(len(backupspeeds)):
     fromto.append(backupspeeds[i][0])
