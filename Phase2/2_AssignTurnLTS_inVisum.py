@@ -10,15 +10,10 @@ import os
 FromNode         = h.GetMulti(Visum.Net.Turns, r"FromNodeNo")
 ViaNode          = h.GetMulti(Visum.Net.Turns, r"ViaNodeNo")
 ToNode           = h.GetMulti(Visum.Net.Turns, r"ToNodeNo")
-To_LinkLTS       = h.GetMulti(Visum.Net.Turns, r"ToLink\LINKLTS")
-#To_LinkType      = h.GetMulti(Visum.Net.Turns, r"ToLink\TypeNo")
-#To_Lanes         = h.GetMulti(Visum.Net.Turns, r"ToLink\NumLanes")
-#To_OneWay        = h.GetMulti(Visum.Net.Turns, r"ToLink\ISONEWAY")
-#To_Spd           = h.GetMulti(Visum.Net.Turns, r"ToLink\SPEEDTOUSE")
-#To_BikeFac       = h.GetMulti(Visum.Net.Turns, r"ToLink\BIKE_FAC")
+To_LinkLTS       = h.GetMulti(Visum.Net.Turns, r"ToLink\LinkLTS")
 TurnDirection    = h.GetMulti(Visum.Net.Turns, r"TypeNo")
 #grab max LTS value of all out links from Via Node
-MaxApproachLTS   = h.GetMulti(Visum.Net.Turns, r"ViaNode\Max:OutLinks\LINKLTS")
+MaxApproachLTS   = h.GetMulti(Visum.Net.Turns, r"ViaNode\Max:OutLinks\LinkLTS")
 
 
 #conditional to split how different types of turns are processed
@@ -39,13 +34,13 @@ for i in xrange(0, len(FromNode)):
         TurnStress[i] = 99
 
         
-#create TurnLTS UDA in visum
+#create TurnLTS UDA in visum; float, 2 decimals
 #set turn attribute in Visum
 h.SetMulti(Visum.Net.Turns, "TurnLTS", TurnStress)
 
        
-#to write to csv after TurnLTS is already assigned
-with open(r'U:\FY2019\Transportation\TransitBikePed\BikeStressPhase2\data\IntermediateOutputs\TurnLTS_output_010419.csv','wb') as IO:
+#write to csv after TurnLTS is assigned
+with open(r'U:\FY2019\Transportation\TransitBikePed\BikeStressPhase2\data\IntermediateOutputs\TurnLTS_output_020619.csv','wb') as IO:
     w = csv.writer(IO)
     #write the header row
     w.writerow(['FromNode', 'ViaNode', 'ToNode', 'MaxApproachLTS', 'TurnDirection', 'TurnLTS'])        

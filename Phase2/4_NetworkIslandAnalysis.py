@@ -12,10 +12,10 @@ import scipy.spatial
 import networkx as nx
 
 #table names
-TBL_ALL_LINKS = "links_testarea"
+TBL_ALL_LINKS = "testarealinks"
 TBL_CENTS = "blockcentroids_testarea"
 TBL_LINKS = "tolerablelinks_testarea"
-TBL_NODES = "nodes_testarea"
+TBL_NODES = "testareanodes"
 TBL_TOLNODES = "tol_nodes_testarea"
 TBL_GEOFF_LOOKUP = "geoffs_testarea"
 TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom_testarea"

@@ -11,15 +11,16 @@ import sqlite3
 from collections import Counter
 
 ###ITEMS NEEDED IN DB### read in using postgis shapefile importer
-#links with LTS assigned (polyline)
+###SRID = 26918
+#links with LTS assigned (polyline); link length units = feet
 #block centroids with weights if desired (points) 
-#nodes from model(points)
+#nodes from model(points) - only those with >0 legs
 
 #table names
-TBL_ALL_LINKS = "links_testarea"
+TBL_ALL_LINKS = "testarealinks"
 TBL_CENTS = "blockcentroids_testarea"
 TBL_LINKS = "tolerablelinks_testarea"
-TBL_NODES = "nodes_testarea"
+TBL_NODES = "testareanodes"
 TBL_TOLNODES = "tol_nodes_testarea"
 TBL_GEOFF_LOOKUP = "geoffs_testarea"
 TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom_testarea"
@@ -165,7 +166,7 @@ CREATE INDEX IF NOT EXISTS "{1}"
 cur.execute(Q_CreateTurnTable)
 con.commit()
 
-tbl_path = r"U:/FY2019/Transportation/TransitBikePed/BikeStressPhase2/data/IntermediateOutputs/TurnLTS_output_010419.csv"
+tbl_path = r"U:/FY2019/Transportation/TransitBikePed/BikeStressPhase2/data/IntermediateOutputs/TurnLTS_output_020619.csv"
 
 #query to insert turns from csv into turn table
 Q_INSERT = """
@@ -239,23 +240,23 @@ con.commit()
 
 #calcualte turn cost and add to new row in table
 #1 = right, 2 = straight, 3 = left
-#changed cost constant from 0.005 to 0.009 to deal with fact that link length is in KM instead of miles
+#changed cost constant from 0.005 to 30 to deal with fact that link length is in feet instead of miles
 Q_TurnCost = """    
     ALTER TABLE "{0}" ADD COLUMN cost numeric;
     COMMIT;
 
     UPDATE "{0}"
-    SET cost = (0.009*(1 + "turnlts"))
+    SET cost = (30*(1 + "turnlts"))
     WHERE turndirection = 2;
     COMMIT;
 
     UPDATE "{0}"
-    SET cost = (0.009*(1 + 1 + "turnlts"))
+    SET cost = (30*(1 + 1 + "turnlts"))
     WHERE turndirection = 1;
     COMMIT;
 
     UPDATE "{0}"
-    SET cost = (0.009*(1 + 2 + "turnlts"))
+    SET cost = (30*(1 + 2 + "turnlts"))
     WHERE turndirection = 3;
     COMMIT;
 """.format(TBL_SUBTURNS)
@@ -290,7 +291,7 @@ cur.execute(Q_GeomGeoffTable)
 #turns will have negative ID and links will have positive ID
 Q_CreateMasterLinks = """
     CREATE TABLE "{0}" AS(
-    SELECT tblA.gid AS mixID, tblA.fromgeoff, tblA.togeoff, CAST(trim(trailing 'km' FROM "length") AS float)* (1 + "linklts") AS cost FROM(
+    SELECT tblA.gid AS mixID, tblA.fromgeoff, tblA.togeoff, (length*(1 + linklts)) AS cost FROM(
         SELECT
             t.*,
             g1.geoffid AS fromgeoff,
