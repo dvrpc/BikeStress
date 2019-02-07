@@ -100,7 +100,7 @@ cur.execute(Q_IndexExisting)
 
 Q_LinkSubset = """
     CREATE TABLE "{0}" AS
-        SELECT * FROM "{1}" WHERE linklts <= 0.6 AND linklts > 0;
+        SELECT * FROM "{1}" WHERE linklts <= 0.6 AND linklts >= 0;
     COMMIT;
     CREATE INDEX IF NOT EXISTS "{2}"
         ON public."{0}" USING gist
@@ -246,17 +246,17 @@ Q_TurnCost = """
     COMMIT;
 
     UPDATE "{0}"
-    SET cost = (30*(1 + "turnlts"))
+    SET cost = (0.005*(1 + "turnlts"))
     WHERE turndirection = 2;
     COMMIT;
 
     UPDATE "{0}"
-    SET cost = (30*(1 + 1 + "turnlts"))
+    SET cost = (0.005*(1 + 1 + "turnlts"))
     WHERE turndirection = 1;
     COMMIT;
 
     UPDATE "{0}"
-    SET cost = (30*(1 + 2 + "turnlts"))
+    SET cost = (0.005*(1 + 2 + "turnlts"))
     WHERE turndirection = 3;
     COMMIT;
 """.format(TBL_SUBTURNS)

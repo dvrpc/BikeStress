@@ -131,13 +131,14 @@ cur.execute(Q_InsertGrps)
 con.commit()
 del results
 
-#join strong group number to master links geo
+#join strong and weak group number to master links geo
 Q_JoinGroupGeo = """
     CREATE TABLE public."{1}" AS(
         SELECT * FROM(
             SELECT 
                 t1.*,
-                t0.strong
+                t0.strong,
+                t0.weak
             FROM "{0}" AS t0
             LEFT JOIN "{2}" AS t1
             ON t0.mixid = t1.mixid
@@ -148,14 +149,14 @@ con.commit()
 
 # Q_CREATEINDEX = """
 # CREATE INDEX montco_master_links_grp_idx
-   # ON public.montco_master_links_grp (strong ASC NULLS LAST);
+   # ON public.montco_master_links_grp (weak ASC NULLS LAST);
 # """
 
 
-#query to find min and max number of strong
+#query to find min and max number of weak
 Q_StrongSelect = """
-    SELECT strong FROM "{0}"
-    WHERE strong > 1
+    SELECT weak FROM "{0}"
+    WHERE weak > 1
     ;""".format(TBL_MASTERLINKS_GROUPS)
 cur.execute(Q_StrongSelect)
 strong_grps = cur.fetchall()
@@ -164,7 +165,7 @@ print time.ctime(), "Create Group Views"
 ##iterate over groups
 #Q_CreateView = """CREATE VIEW %s AS(
 #                    SELECT * FROM "{0}"
-#                    WHERE strong = %d)""".format(TBL_MASTERLINKS_GROUPS)
+#                    WHERE weak = %d)""".format(TBL_MASTERLINKS_GROUPS)
 #for grpNo in xrange(0, max(strong_grps)[0]):
 #    tblname = "links_grp_%d" % grpNo
 #    cur.execute("""DROP VIEW IF EXISTS %s;""" % tblname)
@@ -174,14 +175,13 @@ print time.ctime(), "Create Group Views"
 #for level 3 analysis
 Q_CreateView = """CREATE VIEW %s AS(
     SELECT * FROM "{0}"
-    WHERE strong = %d)
+    WHERE weak = %d)
 """.format(TBL_MASTERLINKS_GROUPS)
 for grpNo in xrange(min(strong_grps)[0], max(strong_grps)[0]):
-    tblname = "links_uc_grp_%d" % grpNo
+    tblname = "links_grp_%d" % grpNo
     cur.execute("""DROP VIEW IF EXISTS %s;""" % tblname)
     #create view for each group
     cur.execute(Q_CreateView % (tblname, grpNo))
-    
     
     
 SQL_GetGeoffs = """SELECT geoffid, vianode, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_GEOFF_LOOKUP_GEOM)
@@ -194,30 +194,21 @@ def ExecFetchSQL(SQL_Stmt):
     cur = con.cursor()
     cur.execute(SQL_Stmt)
     return map(GetCoords, cur.fetchall())
-    
+
 #create OD list
 data = ExecFetchSQL(SQL_GetGeoffs)
 world_ids, world_vias, world_coords = zip(*data)
-#remove extra brackets from coords list and replace with new list going forward
-wc = []
-for i in xrange(0, len(world_coords)):
-    wc.append(world_coords[i][0])
-    
-node_coords = dict(zip(world_vias, wc))
+node_coords = dict(zip(world_vias, world_coords))
 geoff_nodes = dict(zip(world_ids, world_vias))
 # Node to Geoff dictionary (a 'random' geoff will be selected for each node)
 nodes_geoff = dict(zip(world_vias, world_ids))
-geofftree = scipy.spatial.cKDTree(wc)
-del world_coords, wc, world_vias
-#print len(world_ids)
-#print type(world_ids)
-#print world_ids[0:10]
+geofftree = scipy.spatial.cKDTree(world_coords)
+del world_coords, world_vias
 
 data = ExecFetchSQL(SQL_GetBlocks)
 results = []
 for i, (id, _, coord) in enumerate(data):
     dist, index = geofftree.query(coord)
-    #index comes out as type = numpy.ndarray and needs to be called as such
     geoffid = world_ids[numpy.ndarray.item(index)]
     nodeno = geoff_nodes[geoffid]
     results.append((id, nodeno))
@@ -238,22 +229,22 @@ Q_GeoffGroup = """
 WITH geoff_group AS (
     SELECT
         fromgeoff AS geoff,
-        strong
+        weak
     FROM "{0}"
-    WHERE strong IS NOT NULL
-    GROUP BY fromgeoff, strong
+    WHERE weak IS NOT NULL
+    GROUP BY fromgeoff, weak
     
     UNION ALL
 
     SELECT
         togeoff AS geoff,
-        strong
+        weak
     FROM "{0}"
-    WHERE strong IS NOT NULL
-    GROUP BY togeoff, strong
+    WHERE weak IS NOT NULL
+    GROUP BY togeoff, weak
 )
-SELECT geoff, strong FROM geoff_group
-GROUP BY geoff, strong
+SELECT geoff, weak FROM geoff_group
+GROUP BY geoff, weak
 ORDER BY geoff DESC;
 """.format(TBL_MASTERLINKS_GROUPS)
 
