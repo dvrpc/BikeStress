@@ -1,5 +1,5 @@
 #run thru cmd
-#C:\Users\model-ws>AppData\Local\Continuum\Anaconda2\python.exe #D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\4_NetworkIslandAnalysis.py
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\4_NetworkIslandAnalysis.py
 
 import psycopg2 as psql
 import csv
@@ -12,10 +12,10 @@ import scipy.spatial
 import networkx as nx
 
 #table names
-TBL_ALL_LINKS = "testarealinks"
+TBL_ALL_LINKS = "testarea_links"
 TBL_CENTS = "blockcentroids_testarea"
 TBL_LINKS = "tolerablelinks_testarea"
-TBL_NODES = "testareanodes"
+TBL_NODES = "testarea_nodes"
 TBL_TOLNODES = "tol_nodes_testarea"
 TBL_GEOFF_LOOKUP = "geoffs_testarea"
 TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom_testarea"
@@ -153,10 +153,10 @@ con.commit()
 # """
 
 
-#query to find min and max number of weak
+#query to find min and max number of strong
 Q_StrongSelect = """
-    SELECT weak FROM "{0}"
-    WHERE weak > 1
+    SELECT strong FROM "{0}"
+    WHERE strong IS NOT NULL
     ;""".format(TBL_MASTERLINKS_GROUPS)
 cur.execute(Q_StrongSelect)
 strong_grps = cur.fetchall()
@@ -165,7 +165,7 @@ print time.ctime(), "Create Group Views"
 ##iterate over groups
 #Q_CreateView = """CREATE VIEW %s AS(
 #                    SELECT * FROM "{0}"
-#                    WHERE weak = %d)""".format(TBL_MASTERLINKS_GROUPS)
+#                    WHERE strong = %d)""".format(TBL_MASTERLINKS_GROUPS)
 #for grpNo in xrange(0, max(strong_grps)[0]):
 #    tblname = "links_grp_%d" % grpNo
 #    cur.execute("""DROP VIEW IF EXISTS %s;""" % tblname)
@@ -175,7 +175,7 @@ print time.ctime(), "Create Group Views"
 #for level 3 analysis
 Q_CreateView = """CREATE VIEW %s AS(
     SELECT * FROM "{0}"
-    WHERE weak = %d)
+    WHERE strong = %d)
 """.format(TBL_MASTERLINKS_GROUPS)
 for grpNo in xrange(min(strong_grps)[0], max(strong_grps)[0]):
     tblname = "links_grp_%d" % grpNo
@@ -229,22 +229,22 @@ Q_GeoffGroup = """
 WITH geoff_group AS (
     SELECT
         fromgeoff AS geoff,
-        weak
+        strong
     FROM "{0}"
-    WHERE weak IS NOT NULL
-    GROUP BY fromgeoff, weak
+    WHERE strong IS NOT NULL
+    GROUP BY fromgeoff, strong
     
     UNION ALL
 
     SELECT
         togeoff AS geoff,
-        weak
+        strong
     FROM "{0}"
-    WHERE weak IS NOT NULL
-    GROUP BY togeoff, weak
+    WHERE strong IS NOT NULL
+    GROUP BY togeoff, strong
 )
-SELECT geoff, weak FROM geoff_group
-GROUP BY geoff, weak
+SELECT geoff, strong FROM geoff_group
+GROUP BY geoff, strong
 ORDER BY geoff DESC;
 """.format(TBL_MASTERLINKS_GROUPS)
 

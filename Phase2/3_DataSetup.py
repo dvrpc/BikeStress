@@ -13,14 +13,17 @@ from collections import Counter
 ###ITEMS NEEDED IN DB### read in using postgis shapefile importer
 ###SRID = 26918
 #links with LTS assigned (polyline); link length units = feet
+    #when exporting directed links from Visum, iclude the following fields: 
+        #No, Fromnodeno, Tonodeno, length, numlanes, bike_facility, speedtouse, typeno, linklts, circuit flag
+        #turn off all units; link length should be in miles
 #block centroids with weights if desired (points) 
 #nodes from model(points) - only those with >0 legs
 
 #table names
-TBL_ALL_LINKS = "testarealinks"
+TBL_ALL_LINKS = "testarea_links"
 TBL_CENTS = "blockcentroids_testarea"
 TBL_LINKS = "tolerablelinks_testarea"
-TBL_NODES = "testareanodes"
+TBL_NODES = "testarea_nodes"
 TBL_TOLNODES = "tol_nodes_testarea"
 TBL_GEOFF_LOOKUP = "geoffs_testarea"
 TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom_testarea"
@@ -166,7 +169,7 @@ CREATE INDEX IF NOT EXISTS "{1}"
 cur.execute(Q_CreateTurnTable)
 con.commit()
 
-tbl_path = r"U:/FY2019/Transportation/TransitBikePed/BikeStressPhase2/data/IntermediateOutputs/TurnLTS_output_020619.csv"
+tbl_path = r"U:/FY2019/Transportation/TransitBikePed/BikeStressPhase2/data/IntermediateOutputs/TurnLTS_output_022819.csv"
 
 #query to insert turns from csv into turn table
 Q_INSERT = """
@@ -240,7 +243,7 @@ con.commit()
 
 #calcualte turn cost and add to new row in table
 #1 = right, 2 = straight, 3 = left
-#changed cost constant from 0.005 to 30 to deal with fact that link length is in feet instead of miles
+#use cost constant from 0.005 for link length in miles
 Q_TurnCost = """    
     ALTER TABLE "{0}" ADD COLUMN cost numeric;
     COMMIT;

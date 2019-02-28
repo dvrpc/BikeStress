@@ -10,40 +10,31 @@ import cPickle
 logger = mp.log_to_stderr(logging.INFO)
 
 #don't actually need
-TBL_ALL_LINKS = "sa_lts_links"
-TBL_CENTS = "pa_blockcentroids"
-TBL_LINKS = "sa_L3_tolerablelinks"
-TBL_NODES = "nodes"
-TBL_TOLNODES = "sa_L3_tol_nodes"
-TBL_GEOFF_LOOKUP = "geoffs"
-TBL_GEOFF_GEOM = "geoffs_viageom"
-TBL_MASTERLINKS = "master_links"
-TBL_MASTERLINKS_GEO = "master_links_geo"
-TBL_GROUPS = "groups"
+#TBL_ALL_LINKS = "sa_lts_links"
+#TBL_CENTS = "pa_blockcentroids"
+#TBL_LINKS = "sa_L3_tolerablelinks"
+#TBL_NODES = "nodes"
+#TBL_TOLNODES = "sa_L3_tol_nodes"
+#TBL_GEOFF_LOOKUP = "geoffs"
+#TBL_GEOFF_GEOM = "geoffs_viageom"
+#TBL_MASTERLINKS = "master_links"
+#TBL_MASTERLINKS_GEO = "master_links_geo"
+#TBL_GROUPS = "groups"
 
 #need in this script
-TBL_SPATHS = "shortestpaths"
-TBL_MASTERLINKS_GROUPS = "master_links_grp"
+TBL_SPATHS = "shortestpaths_testarea"
+TBL_MASTERLINKS_GROUPS ="master_links_grp_testarea"
 # TBL_OD = "OandD"
-TBL_NODENOS = "nodenos"
-TBL_NODES_GEOFF = "nodes_geoff"
-TBL_NODES_GID = "nodes_gid"
-TBL_GEOFF_NODES = "geoff_nodes"
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
-TBL_GEOFF_GROUP = "geoff_group"
-IDX_nx_SPATHS_value = "spaths_nx_value_idx"
-
-# island 196 test
-# TBL_SPATHS = "montco_L3_shortestpaths_196"
-# TBL_NODENOS = "montco_L3_nodenos_2"
-# TBL_NODES_GEOFF = "montco_L3_nodes_geoff_2"
-# TBL_NODES_GID = "montco_L3_nodes_gid_2"
-# TBL_GEOFF_NODES = "montco_L3_geoff_nodes_2"
-# TBL_OD = "montco_L3_OandD_2"
+TBL_NODENOS = "nodenos_testarea"
+TBL_NODES_GEOFF = "nodes_geoff_testarea"
+TBL_NODES_GID = "nodes_gid_testarea"
+TBL_GEOFF_NODES = "geoff_nodes_testarea"
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff_testarea"
+TBL_GEOFF_GROUP = "geoff_group_testarea"
+IDX_nx_SPATHS_value = "spaths_ ta_nx_value_idx"
 
 
-
-VIEW = "links_l3_grp_%s" % str(sys.argv[1])
+VIEW = "links_grp_%s" % str(sys.argv[1])
 
 
 
@@ -169,7 +160,7 @@ if __name__ == '__main__':
         
     paths = test_workers(pairs)
         
-    with open(r"D:\Modeling\BikeStress\scripts\paths.cpickle", "wb") as io:
+    with open(r"D:\BikePedTransit\BikeStress\scripts\phase2_pickles\paths_testarea.cpickle", "wb") as io:
         cPickle.dump(paths, io)
     
     del pairs
@@ -177,7 +168,7 @@ if __name__ == '__main__':
     # with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done.txt", "wb") as io:
         # cPickle.dump("180 calculated", io)
     
-    con = psql.connect(database = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+    con = psql.connect(database = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
     cur = con.cursor()
 
     cur.execute(Q_SelectMasterLinks)

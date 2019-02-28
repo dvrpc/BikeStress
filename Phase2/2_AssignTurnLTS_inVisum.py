@@ -40,7 +40,7 @@ h.SetMulti(Visum.Net.Turns, "TurnLTS", TurnStress)
 
        
 #write to csv after TurnLTS is assigned
-with open(r'U:\FY2019\Transportation\TransitBikePed\BikeStressPhase2\data\IntermediateOutputs\TurnLTS_output_020619.csv','wb') as IO:
+with open(r'U:\FY2019\Transportation\TransitBikePed\BikeStressPhase2\data\IntermediateOutputs\TurnLTS_output_022819.csv','wb') as IO:
     w = csv.writer(IO)
     #write the header row
     w.writerow(['FromNode', 'ViaNode', 'ToNode', 'MaxApproachLTS', 'TurnDirection', 'TurnLTS'])        

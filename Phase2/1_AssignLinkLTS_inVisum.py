@@ -7,7 +7,7 @@ import pandas as pd
 
 Visum = h.CreateVisum(15)
 # drag in version file
-#D:\BikePedTransit\BikeStress\versionfiles\Phase2_NJEdits\2015_Base_Tim_2x_15Jan2019_sm.ver
+#D:\BikePedTransit\BikeStress\versionfiles\Phase2_NJEdits\2015_Base_Tim_2x_07Feb2019_sm.ver
 
 # grab Link attributes
 ### make sure all these link attributes are populated, especially in newly added trail links
@@ -15,7 +15,7 @@ FromNode         = h.GetMulti(Visum.Net.Links, r"FromNodeNo")
 ToNode           = h.GetMulti(Visum.Net.Links, r"ToNodeNo")
 Length           = h.GetMulti(Visum.Net.Links, r"Length")
 TotLanes         = h.GetMulti(Visum.Net.Links, r"TotNumLanes")
-BikeFac          = h.GetMulti(Visum.Net.Links, r"BIKE_FAC")
+BikeFac          = h.GetMulti(Visum.Net.Links, r"Bike_Facility")
 Speed            = h.GetMulti(Visum.Net.Links, r"SPEEDTOUSE")
 #OneWay           = h.GetMulti(Visum.Net.Links, r"ISONEWAY")#imported from edited GIS file
 LinkType         = h.GetMulti(Visum.Net.Links, r"TypeNo")
