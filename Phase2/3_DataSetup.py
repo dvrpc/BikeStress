@@ -371,28 +371,3 @@ COMMIT;
 cur.execute(Q_Master_Geom)
 
 
-
-#query to create table to hold shortest paths
-# Q_CreatePathTable = """
-    # CREATE TABLE IF NOT EXISTS public."{0}"
-    # (
-      # id integer,
-      # seq integer,
-      # ogid integer,
-      # dgid integer,
-      # edge bigint,
-      # rowno bigint NOT NULL DEFAULT nextval('"montco_L3_shortestpaths_rowno_seq"'::regclass),
-      # CONSTRAINT "montco_L3_shortestpaths_pkey" PRIMARY KEY (rowno)
-    # )
-    # WITH (
-        # OIDS = FALSE
-    # )
-    # TABLESPACE pg_default;
-    # COMMIT;
-    
-    # CREATE INDEX IF NOT EXISTS "{1}"
-        # ON public."{0}" USING btree
-        # (id, seq, ogid, dgid, edge, rowno)
-        # TABLESPACE pg_default;    
-# """.format(TBL_SPATHS, IDX_SPATHS_value)
-# cur.execute(Q_CreatePathTable)
