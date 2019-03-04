@@ -1,4 +1,6 @@
-#run in CMD
+#copy to run in cmd
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\7_CountEdges.py
+
 import multiprocessing
 import multiprocessing.dummy
 # import threading
@@ -20,20 +22,19 @@ import scipy.spatial
 import networkx as nx
 logger = multiprocessing.log_to_stderr(logging.INFO)
 
-TBL_ALL_LINKS = "sa_lts_links"
-TBL_CENTS = "pa_blockcentroids"
-TBL_LINKS = "sa_L3_tolerablelinks"
-TBL_SPATHS = "shortestpaths_338"
-TBL_TOLNODES = "sa_L3_tol_nodes"
-TBL_GEOFF_LOOKUP = "geoffs"
-TBL_GEOFF_GEOM = "geoffs_viageom"
-TBL_MASTERLINKS = "master_links"
-TBL_MASTERLINKS_GEO = "master_links_geo"
-TBL_MASTERLINKS_GROUPS = "master_links_grp"
-TBL_GROUPS = "groups"
-TBL_EDGE = "edgecounts_8"
-TBL_USE = "linkuse_8"
-TBL_TOP = "topLinks"
+TBL_ALL_LINKS = "testarea_links"
+TBL_CENTS = "blockcentroids_testarea"
+TBL_LINKS = "tolerablelinks_testarea"
+TBL_SPATHS = "shortestpaths_testarea"
+TBL_TOLNODES = "tol_nodes_testarea"
+TBL_GEOFF_LOOKUP = "geoffs_testarea"
+TBL_GEOFF_GEOM = "geoffs_viageom_testarea"
+TBL_MASTERLINKS = "master_links_testarea"
+TBL_MASTERLINKS_GEO = "master_links_geo_testarea"
+TBL_MASTERLINKS_GROUPS = "master_links_grp_testarea"
+TBL_GROUPS = "groups_testarea"
+TBL_EDGE = "edgecounts_testarea"
+
 
 # class _Worker(threading.Thread):
     # def __init__(self, queue, offset, batch_size):
@@ -91,8 +92,6 @@ def worker(args):
     
     results = cur.fetchall()
     # con.rollback()
-    con.close()
-    del con, cur
     # time.sleep(5)
 
     temp_path_dict = {}
@@ -115,9 +114,20 @@ if __name__ == "__main__":
     i = 0L
     i = 0L
     j = 0L
+    
+    con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+    cur = con.cursor()
 
     work_units = []
-    while (i < 52577973):
+
+    cur.execute("""
+        SELECT count(*) 
+        FROM "{0}";""".format(TBL_SPATHS))
+    a = cur.fetchall()
+    b = int(a[0][0])+1
+    con.close()
+    del con, cur
+    while (i < b):
     #while (i < 2147678205L):
         work_units.append((i, batch_size))
         i += batch_size
@@ -155,7 +165,7 @@ if __name__ == "__main__":
     print sum([len(v) for v in dict_all_paths.itervalues()])
     print time.ctime()
     
-    con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+    con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
     #create cursor to execute querys
     cur = con.cursor()
 
@@ -186,7 +196,7 @@ if __name__ == "__main__":
     results = []
     for i, (id, _, coord) in enumerate(data):
         dist, index = geofftree.query(coord)
-        geoffid = world_ids[index]
+        geoffid = world_ids[numpy.ndarray.item(index)]
         nodeno = geoff_nodes[geoffid]
         results.append((id, nodeno))
     del data, geoff_nodes, world_ids
@@ -225,7 +235,7 @@ if __name__ == "__main__":
     print "Number of Connections"
     NumCon = sum(weight_by_od.itervalues())
     print NumCon
-    with open(r"D:\Modeling\BikeStress\NumberOfConnections_8.txt", "wb") as io:
+    with open(r"D:\BikePedTransit\BikeStress\scripts\phase2_pickles\NumberOfConnections.txt", "wb") as io:
         cPickle.dump(NumCon, io)
     
     print time.ctime(), "edge_count_dict"
@@ -237,10 +247,10 @@ if __name__ == "__main__":
                 edge_count_dict[edge] = 0
             edge_count_dict[edge] += path_weight
             
-    with open(r"D:\Modeling\BikeStress\edge_count_dict_8.pickle", "wb") as io:
+    with open(r"D:\BikePedTransit\BikeStress\scripts\phase2_pickles\edge_count_dict.pickle", "wb") as io:
         cPickle.dump(edge_count_dict, io)
             
-    con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+    con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
     cur = con.cursor()
     
     edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]

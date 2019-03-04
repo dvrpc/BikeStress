@@ -14,22 +14,13 @@ import scipy.spatial
 import networkx as nx
 
 ####table names to modify in subsequent runs###
-TBL_ALL_LINKS = "sa_lts_links"
-#TBL_CENTS = "montco_blockcent"
-#TBL_LINKS = "montco_L3_tolerablelinks"
-#TBL_SPATHS = "montco_L3_shortestpaths"
-#TBL_TOLNODES = "montco_tol_nodes"
-#TBL_GEOFF_LOOKUP = "montco_geoffs"
-#TBL_GEOFF_GEOM = "montco_L3_geoffs_viageom"
-#TBL_MASTERLINKS = "montco_master_links"
-#TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
-TBL_MASTERLINKS_GROUPS = "master_links_grp"
-#TBL_GROUPS = "montco_groups"
-TBL_EDGE = "edgecounts"
-TBL_EDGETOTAL = "edgetotals"
-TBL_USE = "linkuse"
-TBL_COUNTLTS = "linkuse_lts"
-TBL_LTS3 = "LTS3_linkuse"
+TBL_ALL_LINKS = "testarea_links"
+TBL_MASTERLINKS_GROUPS = "master_links_grp_testarea"
+TBL_EDGE = "edgecounts_testarea"
+TBL_EDGETOTAL = "edgetotals_testarea"
+TBL_USE = "linkuse_testarea"
+TBL_COUNTLTS = "linkuse_lts_testarea"
+TBL_LTS3 = "LTS3_linkuse_testarea"
 
 
 #connect to SQL DB in python

@@ -277,36 +277,54 @@ for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
     else:
         NullGroup += 1
 
-# write OandD into a table in postgres to refer to later
-# Q_CreateOutputTable = """
-# CREATE TABLE IF NOT EXISTS public."{0}"
-# (
-    # origin integer,
-    # destination integer
-# )
-# WITH (
-    # OIDS = FALSE
-# )
-# TABLESPACE pg_default;
-# COMMIT;
+#write out close enough to table
+Q_CreateOutputTable = """
+CREATE TABLE IF NOT EXISTS public."{0}"
+(
 
-# CREATE INDEX IF NOT EXISTS "{1}"
-    # ON public."{0}" USING btree
-    # (origin, destination)
-    # TABLESPACE pg_default;    
-# """.format(TBL_OD, IDX_OD_value)
-# cur.execute(Q_CreateOutputTable)
+    fromgid     integer,
+    fromnode    integer,
+    fromgeoff   integer,
+    togid       integer,
+    tonode      integer,
+    togeoff     integer,
+    groupnumber integer,
+    rowno       BIGSERIAL PRIMARY KEY
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+COMMIT;
 
-# str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(OandD[0]))))
-# cur.execute("""BEGIN TRANSACTION;""")
-# batch_size = 10000
-# for i in xrange(0, len(OandD), batch_size):
-    # j = i + batch_size
-    # arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in OandD[i:j])
-    # #print arg_str
-    # Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_OD, arg_str)
-    # cur.execute(Q_Insert)
-# cur.execute("COMMIT;")
+CREATE INDEX IF NOT EXISTS "{1}"
+    ON public."{0}" USING btree
+    (fromgid, fromnode, fromgeoff, togid, tonode, togeoff, groupnumber)
+    TABLESPACE pg_default;    
+""".format(TBL_BLOCK_NODE_GEOFF, IDX_BLOCK_NODE_GEOFF)
+cur.execute(Q_CreateOutputTable)
+
+str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(CloseEnough[0]))))
+cur.execute("""BEGIN TRANSACTION;""")
+batch_size = 10000
+for i in xrange(0, len(CloseEnough), batch_size):
+    j = i + batch_size
+    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in CloseEnough[i:j])
+    #print arg_str
+    Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_BLOCK_NODE_GEOFF, arg_str)
+    cur.execute(Q_Insert)
+cur.execute("COMMIT;")
+
+Q_Index = """
+    CREATE INDEX block_node_geoff_grp_idx
+      ON public.{0}
+      USING btree
+      (groupnumber);
+
+    COMMIT;
+    """.format(TBL_BLOCK_NODE_GEOFF)
+cur.execute(Q_Index)
+
 
 #convert nodes_geoff, and nodes_gids dictionaries to list and save to tables in postgres
 nodes_geoff_list = [(k, v) for k, v in nodes_geoff.iteritems()]

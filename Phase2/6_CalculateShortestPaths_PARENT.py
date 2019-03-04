@@ -45,7 +45,7 @@ FROM (
 
 
 a = 0 #min island number
-b = 13 #max island number
+b = 12 #max island number
 c= b+1
 
 for i in xrange(a, c):
