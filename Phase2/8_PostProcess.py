@@ -35,6 +35,7 @@ TBL_MASTERLINKS_GROUPS_L3 = "master_links_grp_testarea"
 TBL_GROUPS = "l2_groups_testarea"
 TBL_TURNS = "all_turns"
 TBL_SUBTURNS = "l2_tolerableturns_testarea"
+TBL_RESULTS = "l3_island_results_testarea"
 
 #index names
 IDX_LINKS_geom = "l2tol_links_geom_idx_ta"
@@ -449,132 +450,50 @@ priorities = zip(priority_edges, edge_county)
 
 ##SELECT ALL THE LINKS THAT ARE PART OF EACH ISLAND
 Q_BUFFER_INTERSECT = """
-    WITH buf AS(
-        SELECT foo.edge, st_buffer(geom, 10) buffer
-            FROM (
-                SELECT edge, total, linklts, geom
-                FROM "{0}"
-                WHERE edge = {1}) foo)
+    CREATE TABLE {2} AS(
+        WITH buf AS(
+            SELECT edge, st_buffer(geom, 10) buffer
+            FROM "{0}"),
 
-    SELECT 
-        DISTINCT(strong),
-        goo.edge
-    FROM(
-        SELECT 
-            L.mixid, 
-            L.strong, 
-            L.geom, 
-            B.edge, 
-            B.buffer
-        FROM "{2}" L
-        INNER JOIN (
+        tblA AS(
             SELECT 
+                DISTINCT(strong),
+                goo.edge
+            FROM(
+                SELECT 
+                    L.mixid, 
+                    L.strong, 
+                    L.geom, 
+                    B.edge, 
+                    B.buffer
+                FROM {1} L
+            INNER JOIN (
+                SELECT 
                 edge,
                 buffer
-            FROM buf) B
-        ON ST_Intersects(L.geom, B.buffer)) goo
-    ;"""
-#for testarea - will need to add county back into insert at bottom
-cur.execute("""SELECT edge FROM "{0}";""".format(TBL_LTS3))
-testedges = cur.fetchall()
+                FROM buf) B
+            ON ST_Intersects(L.geom, B.buffer)) goo)
 
-for edge in testedges:
-    
-# for edge, county in priorities:
-    # if county == "Bucks":
-        # tbl = TBL_bucks
-    # elif county == "Chester":
-        # tbl = TBL_chester
-    # elif county == "Delaware":
-        # tbl = TBL_delaware
-    # elif county == "Montgomery":
-        # tbl = TBL_montgomery
-    # elif county == "Philadelphia":
-        # tbl = TBL_philadelphia
-    
-    # print edge, tbl
+        SELECT 
+            tblA.edge,
+            string_agg(strong::text, ', ') AS islands,
+            g.geom
+        FROM tblA
+        INNER JOIN "{0}" g
+        ON tblA.edge = g.edge
+        GROUP BY tblA.edge, g.geom
+);
+"""
 
-    cur.execute(Q_BUFFER_INTERSECT.format(TBL_LTS3, int(edge[0]), TBL_MASTERLINKS_GROUPS))
-    strong = cur.fetchall()
-    
-    Q_SELECT_ISLANDS = """
-        SELECT mixid, strong, ST_AsGeoJSON(geom)
-        FROM "{0}"
-        WHERE strong = {1};"""
-                
-    edgeList = []
-    mixidList = []
-    islandList = []
-    geomList = []
-    ###ADD BACK IN AFTER TESTING
-    #countyList = []
-    for i in xrange(0, len(strong)):
-        if len(strong) == 1:
-            print "Only 1 island - Does not connect"
-            #add something to table for these 1 island links
-            a = strong[0][0]
-            b = int(strong[0][1])
-            edgeList.append(b)
-            mixidList.append(0)
-            islandList.append(a)
-            geomList.append(0)
-            #countyList.append(county)
-        elif len(strong) >= 2:
-            a = strong[i][0]
-            b = int(strong[i][1])
-            cur.execute(Q_SELECT_ISLANDS.format(TBL_MASTERLINKS_GROUPS, a))
-            links = cur.fetchall()
-            for j in xrange(0, len(links)):
-                edgeList.append(b)
-                mixidList.append(links[j][0])
-                islandList.append(links[j][1])
-                geomList.append(links[j][2])
-                #countyList.append(county)
+cur.execute(Q_BUFFER_INTERSECT.format(TBL_LTS3, TBL_MASTERLINKS_GROUPS, TBL_CON_ISLANDS))
 
-    Q_CreateTable = """
-        CREATE TABLE IF NOT EXISTS public."{0}"
-        (
-          edge integer,
-          mixid integer,
-          island integer,
-          counties varchar(50),
-          geom geometry(Geometry,26918)
-        )
-        WITH (
-          OIDS=FALSE
-        );
-        COMMIT;"""
-        
-    cur.execute(Q_CreateTable.format(TBL_CON_ISLANDS))
-
-    #TEST that list lengths match
-    if len(edgeList) == len(mixidList) == len(islandList) == len(geomList): #== len(countyList):
-        print "All lists are of equal length"
-    else:
-        print "List length mismatch"
-
-    #geometry field will be NULL for rows where the edge does not connect multiple islands
-    Q_Insert = """INSERT INTO public."{0}" (edge, mixid, island, geom) VALUES ({1},{2},{3},(ST_SetSRID(ST_GeomFromGeoJSON('{4}'), 26918)));"""
-    Q_Insert_noGeom = """INSERT INTO public."{0}" (edge, mixid, island) VALUES ({1},{2},{3});"""
-    # Q_Insert = """INSERT INTO public."{0}" (edge, mixid, island, counties, geom) VALUES ({1},{2},{3},'{4}',(ST_SetSRID(ST_GeomFromGeoJSON('{5}'), 26918)));"""
-    # Q_Insert_noGeom = """INSERT INTO public."{0}" (edge, mixid, island, counties) VALUES ({1},{2},{3},'{4}');"""
-
-    for i in xrange(0,len(edgeList)):
-        edge = edgeList[i]
-        mixid = mixidList[i]
-        island = islandList[i]
-        geo = geomList[i]
-        #co = countyList[i]
-        if geo == 0:
-            cur.execute(Q_Insert_noGeom.format(TBL_CON_ISLANDS, edge, mixid, island))
-        else:
-            cur.execute(Q_Insert.format(TBL_CON_ISLANDS, edge, mixid, island, geo))
-
-            
-            
-            
-#using reslts from above, find total length of connected roads based on the connecting edge
-SELECT edge, SUM(ST_Length(geom)) sumLength
-FROM montco_con_islands2
-GROUP BY edge
-ORDER BY sumLength DESC
+#do we just want to do this for the 'priorities'? it might be better to have for everything, and just leave it blank where it does not apply
+Q_JOIN = """
+CREATE TABLE {0}
+    SELECT l.*, c.islands
+    FROM "{1}" l
+    FULL JOIN {2} c
+    ON l.edge = c.edge
+    );
+"""
+cur.execute(Q_JOIN.format(TBL_RESULTS, TBL_LTS3, TBL_CON_ISLANDS))
