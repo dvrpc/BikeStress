@@ -1,4 +1,4 @@
-#rcopy to run in cmd
+#copy to run in cmd
 #C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\6_CalculateShortestPaths_PARENT.py
 
 import psycopg2 as psql
@@ -8,6 +8,7 @@ import sys
 
 PYEXE = r"C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe "
 script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\6_CalculateShortestPaths_CHILD.py"
+cleanup_script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\6_CalculateShortestPaths_CLEANUP.py"
 
 con = psql.connect(database = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
@@ -47,7 +48,7 @@ FROM (
 a = 0 #min island number
 b = 12 #max island number
 c= b+1
-
+dumpers = []
 for i in xrange(a, c):
     cur.execute("SELECT COUNT(*) FROM %s WHERE MIXID > 0" % (TBL_TEMP_NETWORK % i))
     cnt, = cur.fetchone()
@@ -61,6 +62,11 @@ for i in xrange(a, c):
                 io.write("{0}: {1}\r\n".format(time.ctime(), i))
             p = subprocess.Popen([PYEXE, script, '%d' % i], stdout = subprocess.PIPE)
             p.communicate()
+            # _p = subprocess.Popen([PYEXE, cleanup_script, '%d' % i], stdout = subprocess.PIPE) #call script to dump and delete tables
+            # dumpers.append(_p)
+
+# for p in dumpers:
+    # p.communicate()
 
 #######for split islands/moving frame#################
 # for i in xrange(1, 4):

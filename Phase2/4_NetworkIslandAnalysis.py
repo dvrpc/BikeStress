@@ -33,6 +33,8 @@ TBL_GEOFF_NODES = "geoff_nodes_testarea"
 TBL_OD = "OandD_testarea"
 TBL_BLOCK_NODE_GEOFF = "block_node_geoff_testarea"
 TBL_GEOFF_GROUP = "geoff_group_testarea"
+TBL_GID_NODES = "gid_nodes_testarea"
+TBL_NODE_GID = "node_gid_post_testarea"
 
 IDX_GEOFF_GROUP = "geoff_group_value_idx_testarea"
 IDX_BLOCK_NODE_GEOFF = "block_node_geoff_value_idx_testarea"
@@ -40,7 +42,9 @@ IDX_NODENOS = "nodeno_idx_testarea"
 IDX_NODES_GEOFF = "nodes_geoff_idx_testarea"
 IDX_NODES_GID = "nodes_gid_idx_testarea"
 IDX_GEOFF_NODES = "geoff_nodes_idx_testarea"
+IDX_GID_NODES = "gid_nodes_idx_testarea"
 IDX_OD_value = "od_value_idx_testarea"
+IDX_NODE_GID = "node_gid_post_testarea"
 
 con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
@@ -220,6 +224,20 @@ gids, nodenos = zip(*results)
 nodes_gids = dict(zip(nodenos, gids))
 nodetree = scipy.spatial.cKDTree(map(lambda nodeno:node_coords[nodeno], nodenos))
 sdm = nodetree.sparse_distance_matrix(nodetree, 8046.72)
+
+#create gid_node to track which blocks use the same O and D nodes 
+#this will be used to determine how many times to count each path later
+node_gid = {}
+gid_node = {}
+for GID, nodeno in results:
+    if not nodeno in node_gid:
+        node_gid[nodeno] = []
+    if GID in gid_node:
+        print "Warn %d" % GID
+    node_gid[nodeno].append(GID)
+    gid_node[GID] = nodeno
+
+
 del gids, nodetree, results
 
 OandD = sorted(sdm.keys())
@@ -330,10 +348,15 @@ cur.execute(Q_Index)
 nodes_geoff_list = [(k, v) for k, v in nodes_geoff.iteritems()]
 nodes_gids_list = [(k, v) for k, v in nodes_gids.iteritems()]
 geoff_nodes_list = [(k, v) for k, v in geoff_nodes.iteritems()]
+gid_node_list = [(k, v) for k, v in gid_node.iteritems()]#added for postprocessing
 
-
+node_gid_list = [] #added for postprocessing
+for key, value in node_gid.iteritems():
+    for item in value:
+        node_gid_list.append((key, item))
+        
 #write these plus nodesnos list into postgres to call later to turn back into a dictionary
-
+print time.ctime(), "node_gid len = ", len(node_gid_list)
 
 #write nodenos into a table in postgres to refer to later
 Q_CreateOutputTable = """
@@ -449,5 +472,67 @@ for i in xrange(0, len(geoff_nodes_list), batch_size):
     arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in geoff_nodes_list[i:j])
     #print arg_str
     Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_GEOFF_NODES, arg_str)
+    cur.execute(Q_Insert)
+cur.execute("COMMIT;")
+
+#write gid_node into a table in postgres to refer to later
+Q_CreateOutputTable = """
+CREATE TABLE IF NOT EXISTS public."{0}"
+(
+    gid integer,
+    nodes integer
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+COMMIT;
+
+CREATE INDEX IF NOT EXISTS "{1}"
+    ON public."{0}" USING btree
+    (nodes, gid)
+    TABLESPACE pg_default;    
+""".format(TBL_GID_NODES, IDX_GID_NODES)
+cur.execute(Q_CreateOutputTable)
+
+str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(gid_node_list[0]))))
+cur.execute("""BEGIN TRANSACTION;""")
+batch_size = 10000
+for i in xrange(0, len(gid_node_list), batch_size):
+    j = i + batch_size
+    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in gid_node_list[i:j])
+    #print arg_str
+    Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_GID_NODES, arg_str)
+    cur.execute(Q_Insert)
+cur.execute("COMMIT;")
+
+#write gid_node into a table in postgres to refer to later
+Q_CreateOutputTable = """
+CREATE TABLE IF NOT EXISTS public."{0}"
+(
+    node integer,
+    gid integer
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+COMMIT;
+
+CREATE INDEX IF NOT EXISTS "{1}"
+    ON public."{0}" USING btree
+    (node, gid)
+    TABLESPACE pg_default;    
+""".format(TBL_NODE_GID, IDX_NODE_GID)
+cur.execute(Q_CreateOutputTable)
+
+str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(node_gid_list[0]))))
+cur.execute("""BEGIN TRANSACTION;""")
+batch_size = 10000
+for i in xrange(0, len(node_gid_list), batch_size):
+    j = i + batch_size
+    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in node_gid_list[i:j])
+    #print arg_str
+    Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_NODE_GID, arg_str)
     cur.execute(Q_Insert)
 cur.execute("COMMIT;")

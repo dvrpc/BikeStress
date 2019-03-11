@@ -31,6 +31,9 @@ TBL_NODES_GID = "nodes_gid_testarea"
 TBL_GEOFF_NODES = "geoff_nodes_testarea"
 TBL_BLOCK_NODE_GEOFF = "block_node_geoff_testarea"
 TBL_GEOFF_GROUP = "geoff_group_testarea"
+TBL_GID_NODES = "gid_nodes_testarea"
+TBL_NODE_GID = "node_gid_post_testarea"
+TBL_EDGE = "edgecounts_testarea"
 IDX_nx_SPATHS_value = "spaths_ ta_nx_value_idx"
 
 
@@ -141,6 +144,25 @@ if __name__ == '__main__':
     geoff_nodes_list = cur.fetchall()
     geoff_nodes = dict(geoff_nodes_list)
     
+    Q_GetList = """
+    SELECT * FROM "{0}";
+    """.format(TBL_GID_NODES)
+    cur.execute(Q_GetList)
+    gid_node_list = cur.fetchall()
+    gid_node = dict(gid_node_list)
+    
+    Q_GetList = """
+    SELECT * FROM "{0}";
+    """.format(TBL_NODE_GID)
+    cur.execute(Q_GetList)
+    node_gid_list = cur.fetchall()
+    node_gid = {}
+    for node, gid in node_gid_list:
+        key = node
+        if not key in node_gid:
+            node_gid[key] = []
+        node_gid[key].append(gid)
+    
     Q_GetGroupPairs = """
         SELECT
             fromgeoff AS fgeoff,
@@ -189,8 +211,11 @@ if __name__ == '__main__':
             edges.append(row)
     logger.info('number of records: %d' % len(edges))
     
-    del paths, nodes_gids, geoff_nodes, node_pairs
-    
+    con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+    cur = con.cursor()
+
+######incorporate this into above for loop????????????????????????????????????????from 7
+#which listing has the extras/doubles? might need to pull creation of gid_nodes from 7 into 4 and write that out as a table to pull from in 6?
     if (len(edges) > 0):
         Q_CreateOutputTable = """
             CREATE TABLE IF NOT EXISTS public."{0}"
@@ -227,10 +252,73 @@ if __name__ == '__main__':
             Q_Insert = """INSERT INTO public."{0}" (id, seq, ogid, dgid, edge) VALUES {1}""".format(TBL_SPATHS, arg_str)
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
-        logger.info('end_time: %s' % time.ctime())
         
+        
+        dict_all_paths = {}    
+        #convert edges to dictionary
+        for id, seq, ogid, dgid, edge in edges:
+            #only count links, not turns
+            if edge > 0:
+                key = (ogid, dgid)
+                if not key in dict_all_paths:
+                    dict_all_paths[key] = []
+                dict_all_paths[key].append(edge)
+
+        #how many times each OD geoff pair should be counted if used at all
+        weight_by_od = {}
+        for oGID, dGID in dict_all_paths.iterkeys():
+            onode = gid_node[oGID]
+            dnode = gid_node[dGID]
+            weight_by_od[(oGID, dGID)] = len(node_gid[onode]) * len(node_gid[dnode])
+
+        edge_count_dict = {}
+        for key, paths in dict_all_paths.iteritems():
+            path_weight = weight_by_od[key]
+            for edge in paths:
+                if not edge in edge_count_dict:
+                    edge_count_dict[edge] = 0
+                edge_count_dict[edge] += path_weight
+                
+        with open(r"D:\BikePedTransit\BikeStress\scripts\phase2_pickles\edge_count_dict.pickle", "wb") as io:
+            cPickle.dump(edge_count_dict, io)
+                
+        con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+        cur = con.cursor()
+        
+        edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]
+        
+        logger.info('inserting counts')
+        
+        Q_CreateOutputTable = """
+            CREATE TABLE IF NOT EXISTS public."{0}"
+            (
+              edge integer,
+              count integer
+            )
+            WITH (
+                OIDS = FALSE
+            )
+            TABLESPACE pg_default;
+
+            COMMIT;                
+        """.format(TBL_EDGE)
+        cur.execute(Q_CreateOutputTable)
+        
+        str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edge_count_list[0]))))
+        cur.execute("""BEGIN TRANSACTION;""")
+        batch_size = 10000
+        for i in xrange(0, len(edge_count_list), batch_size):
+            j = i + batch_size
+            arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edge_count_list[i:j])
+            Q_Insert = """INSERT INTO "{0}" VALUES {1};""".format(TBL_EDGE, arg_str)
+            cur.execute(Q_Insert)
+        cur.execute("COMMIT;")
+        con.commit()
+######################?????????????????????????????????????????????????????????????????????
+    del paths, nodes_gids, geoff_nodes, node_pairs
+    
     del edges
         
     # with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done2.txt", "wb") as io:
         # cPickle.dump("180 written to DB", io)
-
+    logger.info('end_time: %s' % time.ctime())
