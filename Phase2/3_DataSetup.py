@@ -33,6 +33,7 @@ TBL_MASTERLINKS_GROUPS = "master_links_grp_testarea"
 TBL_GROUPS = "groups_testarea"
 TBL_TURNS = "all_turns"
 TBL_SUBTURNS = "tolerableturns_testarea"
+TBL_BRIDGES = "delawareriverbridges"
 
 #index names
 IDX_ALL_LINKS_geom = "_talinks_geom_idx"
@@ -369,5 +370,18 @@ SELECT UpdateGeometrySRID('{0}', 'geom', 26918);
 COMMIT;
 """.format(TBL_MASTERLINKS_GEO, TBL_MASTERLINKS, TBL_ALL_LINKS, TBL_TOLNODES, TBL_SUBTURNS)
 cur.execute(Q_Master_Geom)
+
+#create table to hold list of block centroids within 5 miles of the delaware river bridges
+Q_BridgeBuffer = """
+    CREATE TABLE bridge_buffer AS(
+        SELECT c.gid, c.statefp10, c.geom
+        FROM "{0}" c, "{1}" b
+        WHERE ST_Intersects(
+            c.geom,
+            ST_Transform(b.geom, 26918)
+        );
+    COMMIT;
+    """.format(TBL_CENTS, TBL_BRIDGES)
+cur.execute(Q_BridgeBuffer)
 
 

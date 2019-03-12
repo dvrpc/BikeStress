@@ -25,6 +25,7 @@ TBL_MASTERLINKS_GROUPS = "master_links_grp_testarea"
 TBL_GROUPS = "groups_testarea"
 TBL_TURNS = "all_turns"
 TBL_SUBTURNS = "tolerableturns_testarea"
+TBL_BRIDGES = "bridge_buffer"
 
 TBL_NODENOS = "nodenos_testarea"
 TBL_NODES_GEOFF = "nodes_geoff_testarea"
@@ -223,6 +224,7 @@ gids, nodenos = zip(*results)
 # Node to GID dictionary (a 'random' GID will be selected for each node)
 nodes_gids = dict(zip(nodenos, gids))
 nodetree = scipy.spatial.cKDTree(map(lambda nodeno:node_coords[nodeno], nodenos))
+#are O and D nodes within 5 miles
 sdm = nodetree.sparse_distance_matrix(nodetree, 8046.72)
 
 #create gid_node to track which blocks use the same O and D nodes 
@@ -270,7 +272,14 @@ cur.execute(Q_GeoffGroup)
 geoff_grp_list = cur.fetchall()
 geoff_grp = dict(geoff_grp_list)
 
+#grab list of block centroid gids that are within 5 miles of a delaware river bridge
+Q_BridgeList = """SELECT gid, statefp10 FROM "{0}";""".format(TBL_BRIDGES)
+cur.execute(Q_BridgeList)
+bridge_list = cur.fetchall()
+cent, state = zip(*bridge_list)
+
 CloseEnough = []
+OutsideBridgeBuffer = 0
 DiffGroup = 0
 NullGroup = 0
 #are the OD geoffs in the same group? if so, add pair to list to be calculated
@@ -278,8 +287,12 @@ for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
     #if i % pool_size == (worker_number - 1):
     fromnodeno = nodenos[fromnodeindex]
     tonodeno = nodenos[tonodeindex]
+    #are the nodes on the same island?
     if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
+        #are the from/to nodes of the OD pair the same point?
         if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
+            #are they in the same state? if so, calculate
+            if state_lookup[nodes_gids[fromnodeno]] == state_lookup[nodes_gids[tonodeno]]:
             # if geoff_grp[nodes_geoff[fromnodeno]] == int(sys.argv[1]):
                 CloseEnough.append([
                     nodes_gids[fromnodeno],    # FromGID
@@ -290,6 +303,20 @@ for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
                     nodes_geoff[tonodeno],     # ToGeoff
                     geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
                     ])
+                #if not, are both ends in the bridge buffer? if so, calculate
+            elif nodes_gids[fromnodeno] and nodes_gids[tonodeno] in cent:
+                CloseEnough.append([
+                    nodes_gids[fromnodeno],    # FromGID
+                    fromnodeno,                # FromNode
+                    nodes_geoff[fromnodeno],   # FromGeoff
+                    nodes_gids[tonodeno],      # ToGID
+                    tonodeno,                  # ToNode
+                    nodes_geoff[tonodeno],     # ToGeoff
+                    geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
+                    ])
+                #if not, don't calculate
+            else:
+                OutsideBridgeBuffer += 1        
         else:
             DiffGroup += 1
     else:
