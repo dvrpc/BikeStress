@@ -60,13 +60,13 @@ for i in xrange(a, c):
             print TBL_TEMP_NETWORK % i
             with open("temp_processing.txt", "ab") as io:
                 io.write("{0}: {1}\r\n".format(time.ctime(), i))
-            p = subprocess.Popen([PYEXE, script, '%d' % i], stdout = subprocess.PIPE)
+            p = subprocess.Popen([PYEXE, script, '%d' % i], stdout = subprocess.PIPE)#call script to calculate shortest paths
             p.communicate()
-            # _p = subprocess.Popen([PYEXE, cleanup_script, '%d' % i], stdout = subprocess.PIPE) #call script to dump and delete tables
-            # dumpers.append(_p)
+            _p = subprocess.Popen([PYEXE, cleanup_script, '%d' % i], stdout = subprocess.PIPE) #call script to dump and delete tables
+            dumpers.append(_p)
 
-# for p in dumpers:
-    # p.communicate()
+for p in dumpers:
+    p.communicate()
 
 #######for split islands/moving frame#################
 # for i in xrange(1, 4):

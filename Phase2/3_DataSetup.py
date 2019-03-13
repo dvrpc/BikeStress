@@ -18,6 +18,7 @@ from collections import Counter
         #turn off all units; link length should be in miles
 #block centroids with weights if desired (points) 
 #nodes from model(points) - only those with >0 legs
+#points of delaware river bridge locations
 
 #table names
 TBL_ALL_LINKS = "testarea_links"
@@ -34,6 +35,8 @@ TBL_GROUPS = "groups_testarea"
 TBL_TURNS = "all_turns"
 TBL_SUBTURNS = "tolerableturns_testarea"
 TBL_BRIDGES = "delawareriverbridges"
+TBL_BRIDGEBUF = "bridges_5mibuf"
+TBL_BRIDGECENTS = "bridge_buffer_cents"
 
 #index names
 IDX_ALL_LINKS_geom = "_talinks_geom_idx"
@@ -372,16 +375,17 @@ COMMIT;
 cur.execute(Q_Master_Geom)
 
 #create table to hold list of block centroids within 5 miles of the delaware river bridges
+#run once on full study area block centroids - do not need to re-run for each test itteration
 Q_BridgeBuffer = """
-    CREATE TABLE bridge_buffer AS(
+    CREATE TABLE "{2}" AS(
         SELECT c.gid, c.statefp10, c.geom
-        FROM "{0}" c, "{1}" b
+        FROM block_centroids c, "{1}" b
         WHERE ST_Intersects(
             c.geom,
             ST_Transform(b.geom, 26918)
-        );
+        ));
     COMMIT;
-    """.format(TBL_CENTS, TBL_BRIDGES)
+    """.format(TBL_CENTS, TBL_BRIDGEBUF, TBL_BRIDGECENTS)
 cur.execute(Q_BridgeBuffer)
 
 

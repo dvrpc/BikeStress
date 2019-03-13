@@ -1,18 +1,28 @@
 import os
 import subprocess
+import sys
 
-p = subprocess.Popen([r"C:\Program Files (x86)\pgAdmin III\1.22\pg_dump.exe", "--host", "localhost"], stdout = subprocess.PIPE)
+TBL_SPATHS = "shortestpaths_%s_testarea" % str(sys.argv[1])
 
+p = subprocess.Popen(
+    [
+        r"C:\Program Files (x86)\pgAdmin III\1.22\pg_dump.exe", 
+        "--host", "localhost", 
+        "--port", "5432", 
+        "--username", "postgres", 
+        "--no-password", 
+        "--format", "tar", 
+        "--verbose", 
+        "--file", r"M:\Modeling\Projects\BikeStress_p2\%s.backup" % TBL_SPATHS, 
+        "--table", "public.%s" % TBL_SPATHS,
+        "BikeStress_p2"],
+    stdout = subprocess.PIPE, 
+    stderr = subprocess.PIPE) 
 
-["C:\Program Files (x86)\pgAdmin III\1.22\pg_dump.exe", "--host", "localhost"]
---port 5432 
---username "postgres" 
---no-password  
---format custom 
---verbose 
---file "C:\Users\model-ws\Desktop\temp.backup" 
---table "public.\"TSYS\"" "postgres"
+stdout, stderr = p.communicate()
+
+cur.execute("DROP TABLE public.%s;"% (TBL_SPATHS))
+con.commit()
 
 ###dump to modeling or external drive (faster)
-###use TAR compression
 
