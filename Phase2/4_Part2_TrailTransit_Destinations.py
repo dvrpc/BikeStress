@@ -14,6 +14,7 @@ import networkx as nx
 #table names
 TBL_ALL_LINKS = "testarea_links"
 TBL_CENTS = "blockcentroids_testarea"
+TBL_ALLCENTS = "block_centroids"
 TBL_LINKS = "tolerablelinks_testarea"
 TBL_NODES = "testarea_nodes"
 TBL_TOLNODES = "tol_nodes_testarea"
@@ -26,6 +27,8 @@ TBL_GROUPS = "groups_testarea"
 TBL_TURNS = "all_turns"
 TBL_SUBTURNS = "tolerableturns_testarea"
 TBL_BRIDGECENTS = "bridge_buffer_cents"
+
+TBL_TRAILS = "trailint_testarea"
 
 TBL_NODENOS = "nodenos_testarea"
 TBL_NODES_GEOFF = "nodes_geoff_testarea"
@@ -49,148 +52,12 @@ IDX_NODE_GID = "node_gid_post_testarea"
 
 con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
-
-
-class Sponge:
-    def __init__(self, *args, **kwds):
-        self._args = args
-        self._kwds = kwds
-        for k, v in kwds.iteritems():
-            setattr(self, k, v)
-        self.code = 0
-        self.groups = {}
-        
-def Group(groupNo, subgraphs, counter):
-    for i, g in enumerate(subgraphs):
-        for (fg, tg) in g.edges():
-            if (fg, tg) in links:
-                links[(fg, tg)].groups[groupNo] = counter
-            if (tg, fg) in links:
-                links[(tg, fg)].groups[groupNo] = counter
-        counter += 1
-    return counter
-
-#grab master links to make graph with networkx
-Q_SelectMasterLinks = """
-    SELECT
-        mixid,
-        fromgeoff,
-        togeoff,
-        cost
-    FROM "{0}";
-    """.format(TBL_MASTERLINKS_GEO)
-cur.execute(Q_SelectMasterLinks)
-#format master links so networkx can read them
-h = ['id','fg','tg','cost']
-links = {}
-for row in cur.fetchall():
-    l = Sponge(**dict(zip(h, row)))
-    links[(l.fg, l.tg)] = l
-
-print time.ctime(), "Creating Graph"
-#create graph
-G = nx.MultiDiGraph()
-for l in links.itervalues():
-    G.add_edge(l.fg, l.tg)
-
-print time.ctime(), "Find Islands"
-counter = 0
-counter = Group(0, list(nx.strongly_connected_component_subgraphs(G)), counter)
-counter = Group(1, list(nx.weakly_connected_component_subgraphs(G)), counter)
-counter = Group(2, list(nx.attracting_component_subgraphs(G)), counter)
-counter = Group(3, list(nx.connected_component_subgraphs(G.to_undirected())), counter)
-
-results = []
-for l in links.itervalues():
-    row = [l.id, l.fg, l.tg]
-    for i in xrange(4):
-        if i in l.groups:
-            row.append(l.groups[i])
-        else:
-            row.append(None)
-    results.append(row)
-
-#get groups back into postgis
-Q_CreateLinkGrpTable = """
-    CREATE TABLE public."{0}"(
-        mixid integer, 
-        fromgeoff integer, 
-        togeoff integer, 
-        strong integer,
-        weak integer,
-        attracting integer,
-        undirected integer
-    );""".format(TBL_GROUPS)
-cur.execute(Q_CreateLinkGrpTable)
-
-str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(results[0]))))
-arg_str = ','.join(cur.mogrify(str_rpl, x) for x in results)
-
-Q_InsertGrps = """
-INSERT INTO
-    public."{0}"
-VALUES {1}
-""".format(TBL_GROUPS, arg_str)
-
-cur.execute(Q_InsertGrps)
-con.commit()
-del results
-
-#join strong and weak group number to master links geo
-Q_JoinGroupGeo = """
-    CREATE TABLE public."{1}" AS(
-        SELECT * FROM(
-            SELECT 
-                t1.*,
-                t0.strong,
-                t0.weak
-            FROM "{0}" AS t0
-            LEFT JOIN "{2}" AS t1
-            ON t0.mixid = t1.mixid
-        ) AS "{1}"
-    );""".format(TBL_GROUPS, TBL_MASTERLINKS_GROUPS, TBL_MASTERLINKS_GEO)
-cur.execute(Q_JoinGroupGeo)
-con.commit()
-
-# Q_CREATEINDEX = """
-# CREATE INDEX montco_master_links_grp_idx
-   # ON public.montco_master_links_grp (weak ASC NULLS LAST);
-# """
-
-
-#query to find min and max number of strong
-Q_StrongSelect = """
-    SELECT strong FROM "{0}"
-    WHERE strong IS NOT NULL
-    ;""".format(TBL_MASTERLINKS_GROUPS)
-cur.execute(Q_StrongSelect)
-strong_grps = cur.fetchall()
-
-print time.ctime(), "Create Group Views"
-##iterate over groups
-#Q_CreateView = """CREATE VIEW %s AS(
-#                    SELECT * FROM "{0}"
-#                    WHERE strong = %d)""".format(TBL_MASTERLINKS_GROUPS)
-#for grpNo in xrange(0, max(strong_grps)[0]):
-#    tblname = "links_grp_%d" % grpNo
-#    cur.execute("""DROP VIEW IF EXISTS %s;""" % tblname)
-#    #create view for each group
-#    cur.execute(Q_CreateView % (tblname, grpNo))
-
-#for level 3 analysis
-Q_CreateView = """CREATE VIEW %s AS(
-    SELECT * FROM "{0}"
-    WHERE strong = %d)
-""".format(TBL_MASTERLINKS_GROUPS)
-for grpNo in xrange(min(strong_grps)[0], max(strong_grps)[0]):
-    tblname = "links_grp_%d" % grpNo
-    cur.execute("""DROP VIEW IF EXISTS %s;""" % tblname)
-    #create view for each group
-    cur.execute(Q_CreateView % (tblname, grpNo))
     
     
 SQL_GetGeoffs = """SELECT geoffid, vianode, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_GEOFF_LOOKUP_GEOM)
 SQL_GetBlocks = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_CENTS)
+
+SQL_GetTrailInt = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_TRAILS)
 
 def GetCoords(record):
     id, vianode, geojson = record
@@ -211,13 +78,30 @@ geofftree = scipy.spatial.cKDTree(world_coords)
 del world_coords, world_vias
 
 data = ExecFetchSQL(SQL_GetBlocks)
+#results is list of block ids and closest nodenos
 results = []
 for i, (id, _, coord) in enumerate(data):
     dist, index = geofftree.query(coord)
     geoffid = world_ids[numpy.ndarray.item(index)]
     nodeno = geoff_nodes[geoffid]
     results.append((id, nodeno))
-del data, world_ids
+    
+trails = ExecFetchSQL(SQL_GetTrailInt)
+#trail results is list of trail ids and closest nodenos
+trail_results = []
+for i, (id, _, coord) in enumerate(trails):
+    dist, index = geofftree.query(coord)
+    geoffid = world_ids[numpy.ndarray.item(index)]
+    nodeno = geoff_nodes[geoffid]
+    trail_results.append((id, nodeno))
+    
+trail_dict = {}
+for tid, node in trail_results:
+    if not tid in trail_dict:
+        trail_dict[tid] = []
+    trail_dict[tid].append(node)
+    
+del data, trails, world_ids
     
 gids, nodenos = zip(*results)
 #nodenos = sorted(set(nodenos))
@@ -273,7 +157,7 @@ geoff_grp_list = cur.fetchall()
 geoff_grp = dict(geoff_grp_list)
 
 #grab list of block centroids states to create a lookup to be referenced later
-SQL_GetBlockState = """SELECT gid, statefp10 FROM "{0}";""".format(TBL_CENTS)
+SQL_GetBlockState = """SELECT gid, statefp10 FROM "{0}";""".format(TBL_ALLCENTS)
 cur.execute(SQL_GetBlockState)
 states = cur.fetchall()
 
@@ -293,45 +177,43 @@ CloseEnough = []
 OutsideBridgeBuffer = 0
 DiffGroup = 0
 NullGroup = 0
-#are the OD geoffs in the same group? if so, add pair to list to be calculated
-for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
-    #if i % pool_size == (worker_number - 1):
-    fromnodeno = nodenos[fromnodeindex]
-    tonodeno = nodenos[tonodeindex]
-    #are the nodes on the same island?
-    if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
-        #are the from/to nodes of the OD pair the same point?
-        if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
-            #are they in the same state? if so, calculate
-            if state_lookup[nodes_gids[fromnodeno]] == state_lookup[nodes_gids[tonodeno]]:
-            # if geoff_grp[nodes_geoff[fromnodeno]] == int(sys.argv[1]):
-                CloseEnough.append([
-                    nodes_gids[fromnodeno],    # FromGID
-                    fromnodeno,                # FromNode
-                    nodes_geoff[fromnodeno],   # FromGeoff
-                    nodes_gids[tonodeno],      # ToGID
-                    tonodeno,                  # ToNode
-                    nodes_geoff[tonodeno],     # ToGeoff
-                    geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
-                    ])
-                #if not, are both ends in the bridge buffer? if so, calculate
-            elif nodes_gids[fromnodeno] and nodes_gids[tonodeno] in cent:
-                CloseEnough.append([
-                    nodes_gids[fromnodeno],    # FromGID
-                    fromnodeno,                # FromNode
-                    nodes_geoff[fromnodeno],   # FromGeoff
-                    nodes_gids[tonodeno],      # ToGID
-                    tonodeno,                  # ToNode
-                    nodes_geoff[tonodeno],     # ToGeoff
-                    geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
-                    ])
-                #if not, don't calculate
+for i, (tid, gid) in enumerate(trailpairs):
+        fromnodeno = trail_dict[tid][0]
+        tonodeno = geoff_nodes[gid]
+        #are the nodes on the same island?
+        if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
+            #are the from/to nodes of the OD pair the same point?
+            if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
+                #are they in the same state? if so, calculate
+                if state_lookup[tid] == state_lookup[gid]:
+                    # if geoff_grp[nodes_geoff[fromnodeno]] == int(sys.argv[1]):
+                    CloseEnough.append([
+                        tid,    # FromGID
+                        fromnodeno,                # FromNode
+                        nodes_geoff[fromnodeno],   # FromGeoff
+                        gid,      # ToGID
+                        tonodeno,                  # ToNode
+                        nodes_geoff[tonodeno],     # ToGeoff
+                        geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
+                        ])
+                    #if not, are both ends in the bridge buffer? if so, calculate
+                elif tid and gid in cent:
+                    CloseEnough.append([
+                        tid,    # FromGID
+                        fromnodeno,                # FromNode
+                        nodes_geoff[fromnodeno],   # FromGeoff
+                        gid,      # ToGID
+                        tonodeno,                  # ToNode
+                        nodes_geoff[tonodeno],     # ToGeoff
+                        geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
+                        ])
+                    #if not, don't calculate
+                else:
+                    OutsideBridgeBuffer += 1        
             else:
-                OutsideBridgeBuffer += 1        
+                DiffGroup += 1
         else:
-            DiffGroup += 1
-    else:
-        NullGroup += 1
+            NullGroup += 1
         
 print time.ctime(), "Length of CloseEnough = ", len(CloseEnough)
 
@@ -340,7 +222,7 @@ Q_CreateOutputTable = """
 CREATE TABLE IF NOT EXISTS public."{0}"
 (
 
-    fromgid     integer,
+    fromtid     integer,
     fromnode    integer,
     fromgeoff   integer,
     togid       integer,
