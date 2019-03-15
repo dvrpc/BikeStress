@@ -1,5 +1,5 @@
 #run thru cmd
-#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\4_NetworkIslandAnalysis.py
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\5_ODpairs.py
 
 import psycopg2 as psql
 import csv
@@ -14,7 +14,6 @@ import networkx as nx
 #table names
 TBL_ALL_LINKS = "testarea_links"
 TBL_CENTS = "blockcentroids_testarea"
-TBL_ALLCENTS = "block_centroids"
 TBL_LINKS = "tolerablelinks_testarea"
 TBL_NODES = "testarea_nodes"
 TBL_TOLNODES = "tol_nodes_testarea"
@@ -27,8 +26,6 @@ TBL_GROUPS = "groups_testarea"
 TBL_TURNS = "all_turns"
 TBL_SUBTURNS = "tolerableturns_testarea"
 TBL_BRIDGECENTS = "bridge_buffer_cents"
-
-TBL_TRAILS = "trailint_testarea"
 
 TBL_NODENOS = "nodenos_testarea"
 TBL_NODES_GEOFF = "nodes_geoff_testarea"
@@ -52,12 +49,10 @@ IDX_NODE_GID = "node_gid_post_testarea"
 
 con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
-    
-    
+
+##FIND PAIRS TO CALCULATE PATHS FOR
 SQL_GetGeoffs = """SELECT geoffid, vianode, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_GEOFF_LOOKUP_GEOM)
 SQL_GetBlocks = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_CENTS)
-
-SQL_GetTrailInt = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_TRAILS)
 
 def GetCoords(record):
     id, vianode, geojson = record
@@ -78,30 +73,13 @@ geofftree = scipy.spatial.cKDTree(world_coords)
 del world_coords, world_vias
 
 data = ExecFetchSQL(SQL_GetBlocks)
-#results is list of block ids and closest nodenos
 results = []
 for i, (id, _, coord) in enumerate(data):
     dist, index = geofftree.query(coord)
     geoffid = world_ids[numpy.ndarray.item(index)]
     nodeno = geoff_nodes[geoffid]
     results.append((id, nodeno))
-    
-trails = ExecFetchSQL(SQL_GetTrailInt)
-#trail results is list of trail ids and closest nodenos
-trail_results = []
-for i, (id, _, coord) in enumerate(trails):
-    dist, index = geofftree.query(coord)
-    geoffid = world_ids[numpy.ndarray.item(index)]
-    nodeno = geoff_nodes[geoffid]
-    trail_results.append((id, nodeno))
-    
-trail_dict = {}
-for tid, node in trail_results:
-    if not tid in trail_dict:
-        trail_dict[tid] = []
-    trail_dict[tid].append(node)
-    
-del data, trails, world_ids
+del data, world_ids
     
 gids, nodenos = zip(*results)
 #nodenos = sorted(set(nodenos))
@@ -157,7 +135,7 @@ geoff_grp_list = cur.fetchall()
 geoff_grp = dict(geoff_grp_list)
 
 #grab list of block centroids states to create a lookup to be referenced later
-SQL_GetBlockState = """SELECT gid, statefp10 FROM "{0}";""".format(TBL_ALLCENTS)
+SQL_GetBlockState = """SELECT gid, statefp10 FROM "{0}";""".format(TBL_CENTS)
 cur.execute(SQL_GetBlockState)
 states = cur.fetchall()
 
@@ -177,43 +155,45 @@ CloseEnough = []
 OutsideBridgeBuffer = 0
 DiffGroup = 0
 NullGroup = 0
-for i, (tid, gid) in enumerate(trailpairs):
-        fromnodeno = trail_dict[tid][0]
-        tonodeno = geoff_nodes[gid]
-        #are the nodes on the same island?
-        if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
-            #are the from/to nodes of the OD pair the same point?
-            if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
-                #are they in the same state? if so, calculate
-                if state_lookup[tid] == state_lookup[gid]:
-                    # if geoff_grp[nodes_geoff[fromnodeno]] == int(sys.argv[1]):
-                    CloseEnough.append([
-                        tid,    # FromGID
-                        fromnodeno,                # FromNode
-                        nodes_geoff[fromnodeno],   # FromGeoff
-                        gid,      # ToGID
-                        tonodeno,                  # ToNode
-                        nodes_geoff[tonodeno],     # ToGeoff
-                        geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
-                        ])
-                    #if not, are both ends in the bridge buffer? if so, calculate
-                elif tid and gid in cent:
-                    CloseEnough.append([
-                        tid,    # FromGID
-                        fromnodeno,                # FromNode
-                        nodes_geoff[fromnodeno],   # FromGeoff
-                        gid,      # ToGID
-                        tonodeno,                  # ToNode
-                        nodes_geoff[tonodeno],     # ToGeoff
-                        geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
-                        ])
-                    #if not, don't calculate
-                else:
-                    OutsideBridgeBuffer += 1        
+#are the OD geoffs in the same group? if so, add pair to list to be calculated
+for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
+    #if i % pool_size == (worker_number - 1):
+    fromnodeno = nodenos[fromnodeindex]
+    tonodeno = nodenos[tonodeindex]
+    #are the nodes on the same island?
+    if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
+        #are the from/to nodes of the OD pair the same point?
+        if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
+            #are they in the same state? if so, calculate
+            if state_lookup[nodes_gids[fromnodeno]] == state_lookup[nodes_gids[tonodeno]]:
+            # if geoff_grp[nodes_geoff[fromnodeno]] == int(sys.argv[1]):
+                CloseEnough.append([
+                    nodes_gids[fromnodeno],    # FromGID
+                    fromnodeno,                # FromNode
+                    nodes_geoff[fromnodeno],   # FromGeoff
+                    nodes_gids[tonodeno],      # ToGID
+                    tonodeno,                  # ToNode
+                    nodes_geoff[tonodeno],     # ToGeoff
+                    geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
+                    ])
+                #if not, are both ends in the bridge buffer? if so, calculate
+            elif nodes_gids[fromnodeno] and nodes_gids[tonodeno] in cent:
+                CloseEnough.append([
+                    nodes_gids[fromnodeno],    # FromGID
+                    fromnodeno,                # FromNode
+                    nodes_geoff[fromnodeno],   # FromGeoff
+                    nodes_gids[tonodeno],      # ToGID
+                    tonodeno,                  # ToNode
+                    nodes_geoff[tonodeno],     # ToGeoff
+                    geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
+                    ])
+                #if not, don't calculate
             else:
-                DiffGroup += 1
+                OutsideBridgeBuffer += 1        
         else:
-            NullGroup += 1
+            DiffGroup += 1
+    else:
+        NullGroup += 1
         
 print time.ctime(), "Length of CloseEnough = ", len(CloseEnough)
 
@@ -222,7 +202,7 @@ Q_CreateOutputTable = """
 CREATE TABLE IF NOT EXISTS public."{0}"
 (
 
-    fromtid     integer,
+    fromgid     integer,
     fromnode    integer,
     fromgeoff   integer,
     togid       integer,

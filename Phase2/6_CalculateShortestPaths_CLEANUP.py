@@ -21,6 +21,11 @@ p = subprocess.Popen(
 
 stdout, stderr = p.communicate()
 
+
+con = psql.connect(database = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+cur = con.cursor()
+
+
 cur.execute("DROP TABLE public.%s;"% (TBL_SPATHS))
 con.commit()
 

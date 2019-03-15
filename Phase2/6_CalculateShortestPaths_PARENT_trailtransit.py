@@ -7,7 +7,7 @@ import time
 import sys
 
 PYEXE = r"C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe "
-script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\6_CalculateShortestPaths_CHILDtrail.py"
+script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\6_CalculateShortestPaths_CHILD_trailtransit.py"
 cleanup_script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\6_CalculateShortestPaths_CLEANUP.py"
 
 con = psql.connect(database = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
@@ -24,11 +24,11 @@ SELECT
     COUNT(*) AS cnt 
 FROM (
     SELECT 
-        fromgid, 
+        fromtid, 
         togid 
     FROM "{0}" 
-    WHERE groupnumber = %d AND fromgid <> togid 
-    GROUP BY fromgid, togid )
+    WHERE groupnumber = %d AND fromtid <> togid 
+    GROUP BY fromtid, togid )
     AS _q0
     """.format(TBL_BLOCK_NODE_GEOFF)
 

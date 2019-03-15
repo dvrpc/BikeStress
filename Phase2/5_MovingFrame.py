@@ -1,3 +1,4 @@
+#only run for large islands (the largest ~5 when the full study area is run)
 import logging
 import csv
 import itertools
