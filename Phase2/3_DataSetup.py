@@ -21,34 +21,34 @@ from collections import Counter
 #points of delaware river bridge locations
 
 #table names
-TBL_ALL_LINKS = "testarea_links"
-TBL_CENTS = "blockcentroids_testarea"
-TBL_LINKS = "tolerablelinks_testarea"
-TBL_NODES = "testarea_nodes"
-TBL_TOLNODES = "tol_nodes_testarea"
-TBL_GEOFF_LOOKUP = "geoffs_testarea"
-TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom_testarea"
-TBL_MASTERLINKS = "master_links_testarea"
-TBL_MASTERLINKS_GEO = "master_links_geo_testarea"
-TBL_MASTERLINKS_GROUPS = "master_links_grp_testarea"
-TBL_GROUPS = "groups_testarea"
+TBL_ALL_LINKS = "links"
+TBL_CENTS = "block_centroids"
+TBL_LINKS = "tolerablelinks"
+TBL_NODES = "nodes"
+TBL_TOLNODES = "tol_nodes"
+TBL_GEOFF_LOOKUP = "geoffs"
+TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom"
+TBL_MASTERLINKS = "master_links"
+TBL_MASTERLINKS_GEO = "master_links_geo"
+TBL_MASTERLINKS_GROUPS = "master_links_grp"
+TBL_GROUPS = "groups"
 TBL_TURNS = "all_turns"
-TBL_SUBTURNS = "tolerableturns_testarea"
+TBL_SUBTURNS = "tolerableturns"
 TBL_BRIDGES = "delawareriverbridges"
 TBL_BRIDGEBUF = "bridges_5mibuf"
 TBL_BRIDGECENTS = "bridge_buffer_cents"
 
 #index names
-IDX_ALL_LINKS_geom = "_talinks_geom_idx"
-IDX_ALL_LINKS_value = "ta_links_value_idx"
-IDX_CENTS_geom = "ta_centroids_geom_idx"
-IDX_CENTS_value = "ta_centroids_value_idx"
-IDX_LINKS_geom = "tol_links_geom_idx_ta"
-IDX_LINKS_value = "tol_links_value_idx_ta"
-IDX_NODES_geom = "nodes_geom_idx_ta"
-IDX_NODES_value = "nodes_value_idx_ta"
-IDX_TOL_NODES_geom = "tolnodes_geom_idx_ta"
-IDX_TOL_NODES_value = "tolnodes_value_idx_ta"
+IDX_ALL_LINKS_geom = "links_geom_idx"
+IDX_ALL_LINKS_value = "links_value_idx"
+IDX_CENTS_geom = "centroids_geom_idx"
+IDX_CENTS_value = "centroids_value_idx"
+IDX_LINKS_geom = "tol_links_geom_idx"
+IDX_LINKS_value = "tol_links_value_idx"
+IDX_NODES_geom = "nodes_geom_idx"
+IDX_NODES_value = "nodes_value_idx"
+IDX_TOL_NODES_geom = "tolnodes_geom_idx"
+IDX_TOL_NODES_value = "tolnodes_value_idx"
 IDX_ALL_TURNS_values = "All_Turns_values_idx"
 
 #connect to SQL DB in python
@@ -173,7 +173,7 @@ CREATE INDEX IF NOT EXISTS "{1}"
 cur.execute(Q_CreateTurnTable)
 con.commit()
 
-tbl_path = r"U:/FY2019/Transportation/TransitBikePed/BikeStressPhase2/data/IntermediateOutputs/TurnLTS_output_022819.csv"
+tbl_path = r"U:/FY2019/Transportation/TransitBikePed/BikeStressPhase2/data/IntermediateOutputs/TurnLTS_output_031819.csv"
 
 #query to insert turns from csv into turn table
 Q_INSERT = """

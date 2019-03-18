@@ -7,7 +7,7 @@ import pandas as pd
 
 Visum = h.CreateVisum(15)
 # drag in version file
-#D:\BikePedTransit\BikeStress\versionfiles\Phase2_NJEdits\2015_Base_Tim_2x_07Feb2019_sm.ver
+#D:\BikePedTransit\BikeStress\versionfiles\Phase2_NJEdits\2015_Base_Tim_2x_18Mar2019_sm.ver
 
 # grab Link attributes
 ### make sure all these link attributes are populated, especially in newly added trail links
@@ -99,79 +99,3 @@ h.SetMulti(Visum.Net.Links, "LinkLTS", LinkStress)
 #save version file
 #Export directed links as shapefile
 #Use PostGIS shapefile importer to import into DB
-
-    
-'''
-#for troubleshooting
-##view from/to node nos to search for links that are causing errors so they can be fixed (only 12 in this round - mostly related to newly split links missing attributes)
-x_error_rows = []
-y_error_rows = []
-for i in xrange(0, len(FromNode)):
-    x = bikeFacLookup(BikeFac[i])
-    y = findRowIndex(TotLanes[i], Speed[i], LinkType[i])
-    if x is None:
-        x_error_rows.append(i)
-    if y is None:
-        y_error_rows.append(i)
-  
-x_pairs=[]
-for i in xrange(0, len(x_error_rows)):
-    x_pairs.append(str(FromNode[x_error_rows[i]]) + ', ' +str(ToNode[x_error_rows[i]]))
-    
-y_pairs=[]
-for i in xrange(0, len(y_error_rows)):
-    y_pairs.append(str(FromNode[y_error_rows[i]]) + ', ' +str(ToNode[y_error_rows[i]]))
- 
-
-#additional troubleshooting
-#to fix random large swath of links with incorrectly high speeds, revert to speeds from backup shapefile (9/18 from the BikeFacEditing GDB in U:\FY2017 folder)
-import csv
-with open('U:\FY2019\Transportation\TransitBikePed\BikeStressPhase2\data\WonkyPALinks_CorrectSpeeds.csv', 'rb') as f:
-    reader = csv.reader(f)
-    backupspeeds = map(tuple, reader)
-    
-wfromto = []
-newspeed =[]
-for i in xrange(len(backupspeeds)):
-    fromto.append(backupspeeds[i][0])
-    newspeed.append(backupspeeds[i][1])
-    
-OldFrom        = h.GetMulti(Visum.Net.Links, r"FromNode")
-OldTo          = h.GetMulti(Visum.Net.Links, r"ToNode")
-Speed          = h.GetMulti(Visum.Net.Links, r"SPEEDTOUSE")
-
-SpeedCopy      = h.GetMulti(Visum.Net.Links, r"SPEEDTOUSE")
-
-OldCombo = []
-for i in xrange(len(OldFrom)):
-    x = OldFrom[i]
-    y = OldTo[i]
-    if x is None and y is not None:
-        OldCombo.append('NoneFrom'+str(int(y)))
-    elif y is None and x is not None:
-        OldCombo.append(str(int(x))+'NoneTo')
-    elif x is None and y is None:
-        OldCombo.append('None')
-    else:        
-        OldCombo.append(str(int(x))+str(int(y)))
-
-#which indicies in OldCombo need to have speed updated in that same index
-
-toupdate=[]
-updatelocation = []
-pullfromindex = []
-for i in xrange(len(OldCombo)):
-    if OldCombo[i] in fromto:
-        toupdate.append(OldCombo[i])
-        updatelocation.append(i)
-        pullfromindex.append(fromto.index(OldCombo[i]))
-        
-        
-for i in xrange(len(toupdate)):
-    #print toupdate[i]
-    #print OldCombo[updatelocation[i]]
-    SpeedCopy[updatelocation[i]] = newspeed[pullfromindex[i]]
-    
-h.SetMulti(Visum.Net.Links, "SPEEDTOUSE", SpeedCopy)
-
-'''
