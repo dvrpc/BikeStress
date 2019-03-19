@@ -62,6 +62,7 @@ def ExecFetchSQL(SQL_Stmt):
     cur.execute(SQL_Stmt)
     return map(GetCoords, cur.fetchall())
 
+print time.ctime(), "Getting Blocks"
 #create OD list
 data = ExecFetchSQL(SQL_GetGeoffs)
 world_ids, world_vias, world_coords = zip(*data)
@@ -151,6 +152,8 @@ cur.execute(Q_BridgeList)
 bridge_list = cur.fetchall()
 cent, state = zip(*bridge_list)
 
+print time.ctime(), "Creating OD Pair List"
+
 CloseEnough = []
 OutsideBridgeBuffer = 0
 DiffGroup = 0
@@ -197,6 +200,7 @@ for i, (fromnodeindex, tonodeindex) in enumerate(OandD):
         
 print time.ctime(), "Length of CloseEnough = ", len(CloseEnough)
 
+print time.ctime(), "Writing out OD pair list"
 #write out close enough to table
 Q_CreateOutputTable = """
 CREATE TABLE IF NOT EXISTS public."{0}"
@@ -245,7 +249,7 @@ Q_Index = """
     """.format(TBL_BLOCK_NODE_GEOFF)
 cur.execute(Q_Index)
 
-
+print time.ctime(), "Writing Intermediate Tables"
 #convert nodes_geoff, and nodes_gids dictionaries to list and save to tables in postgres
 nodes_geoff_list = [(k, v) for k, v in nodes_geoff.iteritems()]
 nodes_gids_list = [(k, v) for k, v in nodes_gids.iteritems()]
@@ -437,3 +441,6 @@ for i in xrange(0, len(node_gid_list), batch_size):
     Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_NODE_GID, arg_str)
     cur.execute(Q_Insert)
 cur.execute("COMMIT;")
+
+
+print time.ctime(), "Finished"

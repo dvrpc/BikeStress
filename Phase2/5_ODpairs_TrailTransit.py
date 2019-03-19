@@ -36,7 +36,6 @@ TBL_NODENOS = "nodenos"
 TBL_NODES_GEOFF = "nodes_geoff"
 TBL_NODES_GID = "nodes_gid"
 TBL_GEOFF_NODES = "geoff_nodes"
-TBL_OD = "OandD"
 TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
 TBL_GEOFF_GROUP = "geoff_group"
 TBL_GID_NODES = "gid_nodes"
@@ -44,7 +43,7 @@ TBL_NODE_GID = "node_gid_post"
 
 IDX_GEOFF_GROUP = "geoff_group_value_idx"
 IDX_BLOCK_NODE_GEOFF = "block_node_geoff_value_idx"
-IDX_NODENOS = "nodeno_idx
+IDX_NODENOS = "nodeno_idx"
 IDX_NODES_GEOFF = "nodes_geoff_idx"
 IDX_NODES_GID = "nodes_gid_idx"
 IDX_GEOFF_NODES = "geoff_nodes_idx"
@@ -72,6 +71,7 @@ def ExecFetchSQL(SQL_Stmt):
     cur.execute(SQL_Stmt)
     return map(GetCoords, cur.fetchall())
 
+print time.ctime(), "Getting Blocks"
 #create OD list
 data = ExecFetchSQL(SQL_GetGeoffs)
 world_ids, world_vias, world_coords = zip(*data)
@@ -87,10 +87,11 @@ data = ExecFetchSQL(SQL_GetBlocks)
 results = []
 for i, (id, _, coord) in enumerate(data):
     dist, index = geofftree.query(coord)
-    geoffid = world_ids[numpy.ndarray.item(index)]
+    geoffid = world_ids[index]
     nodeno = geoff_nodes[geoffid]
     results.append((id, nodeno))
     
+print time.ctime(), "Getting Trails"
 trails = ExecFetchSQL(SQL_GetTrailInt)
 #trail results is list of trail ids and closest nodenos
 trail_results = []
@@ -129,7 +130,7 @@ for GID, nodeno in results:
     node_gid[nodeno].append(GID)
     gid_node[GID] = nodeno
     
-
+print time.ctime(), "Writing Intermediate Tables"
 #convert nodes_geoff, and nodes_gids dictionaries to list and save to tables in postgres
 nodes_geoff_list = [(k, v) for k, v in nodes_geoff.iteritems()]
 nodes_gids_list = [(k, v) for k, v in nodes_gids.iteritems()]
@@ -387,6 +388,7 @@ for i in xrange(0, len(node_trail_list), batch_size):
     cur.execute(Q_Insert)
 cur.execute("COMMIT;")
 
+print time.ctime(), "Calculating Trail Distance"
 #find trail/block centroid pairs within 2.5 miles SLD
 Q_TrailDist = """
     WITH tblA AS(
@@ -473,6 +475,7 @@ cur.execute(Q_BridgeList)
 bridge_list = cur.fetchall()
 cent, state = zip(*bridge_list)
 
+print time.ctime(), "Creating OD Pair List"
 CloseEnough = []
 OutsideBridgeBuffer = 0
 DiffGroup = 0
@@ -517,6 +520,7 @@ for i, (tid, gid) in enumerate(trailpairs):
         
 print time.ctime(), "Length of CloseEnough = ", len(CloseEnough)
 
+print time.ctime(), "Writing out OD pair list"
 #write out close enough to table
 Q_CreateOutputTable = """
 CREATE TABLE IF NOT EXISTS public."{0}"
@@ -564,4 +568,6 @@ Q_Index = """
     """.format(TBL_BLOCK_NODE_GEOFF)
 cur.execute(Q_Index)
 
+
+print time.ctime(), "Finished"
 

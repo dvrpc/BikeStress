@@ -203,9 +203,10 @@ con.commit()
 ############################################################################################
 
 #query to select turns that share a node with the links in the subset of links being used
+#and turnlts is positive!
 Q_SubsetTurns = """
-CREATE TABLE "{2}" AS
-    SELECT * FROM(
+CREATE TABLE "{2}" AS(
+     SELECT * FROM(
         SELECT tblB.fromnode, tblB.vianode, tblB.tonode, tblB.maxapproach, tblB.turndirection, tblB.turnlts FROM (
             SELECT * FROM(
                 SELECT DISTINCT(fromnodeno) FROM "{1}"
@@ -229,7 +230,8 @@ CREATE TABLE "{2}" AS
                 SELECT DISTINCT(tonodeno) FROM "{1}") AS tblA
             INNER JOIN public."{0}"
             ON public."{0}".tonode = tblA.fromnodeno) AS tblD
-        ) AS t0;
+        )AS t0
+        );
 """.format(TBL_TURNS, TBL_LINKS, TBL_SUBTURNS)
 cur.execute(Q_SubsetTurns)
 con.commit()
@@ -246,7 +248,6 @@ cur.execute(Q_AddID)
 con.commit()
 
 #calcualte turn cost and add to new row in table
-#1 = right, 2 = straight, 3 = left
 #use cost constant from 0.005 for link length in miles
 Q_TurnCost = """    
     ALTER TABLE "{0}" ADD COLUMN cost numeric;
@@ -254,17 +255,12 @@ Q_TurnCost = """
 
     UPDATE "{0}"
     SET cost = (0.005*(1 + "turnlts"))
-    WHERE turndirection = 2;
+    WHERE "turnlts">= 0;
     COMMIT;
-
+    
     UPDATE "{0}"
-    SET cost = (0.005*(1 + 1 + "turnlts"))
-    WHERE turndirection = 1;
-    COMMIT;
-
-    UPDATE "{0}"
-    SET cost = (0.005*(1 + 2 + "turnlts"))
-    WHERE turndirection = 3;
+    SET cost = (0.005*(1 + abs("turnlts")))
+    WHERE "turnlts"< 0;
     COMMIT;
 """.format(TBL_SUBTURNS)
 cur.execute(Q_TurnCost)

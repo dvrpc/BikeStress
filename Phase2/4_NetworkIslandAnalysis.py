@@ -182,9 +182,9 @@ Q_CreateView = """CREATE VIEW %s AS(
     SELECT * FROM "{0}"
     WHERE strong = %d)
 """.format(TBL_MASTERLINKS_GROUPS)
-for grpNo in xrange(min(strong_grps)[0], max(strong_grps)[0]):
+for grpNo in xrange(min(strong_grps)[0], (max(strong_grps)[0]+1)):
     tblname = "links_grp_%d" % grpNo
-    cur.execute("""DROP VIEW IF EXISTS %s;""" % tblname)
+    #cur.execute("""DROP VIEW IF EXISTS %s;""" % tblname)
     #create view for each group
     cur.execute(Q_CreateView % (tblname, grpNo))
    

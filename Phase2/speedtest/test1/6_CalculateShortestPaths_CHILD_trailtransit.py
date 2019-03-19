@@ -11,29 +11,29 @@ logger = mp.log_to_stderr(logging.INFO)
 
 
 #need in this script
-TBL_SPATHS = "shortestpaths_%s_testarea" % str(sys.argv[1])
-TBL_MASTERLINKS_GROUPS ="master_links_grp_testarea"
-# TBL_OD = "OandD"
-TBL_NODENOS = "nodenos_testarea"
-TBL_NODES_GEOFF = "nodes_geoff_testarea"
-TBL_NODES_GID = "nodes_gid_testarea"
-TBL_GEOFF_NODES = "geoff_nodes_testarea"
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff_testarea"
-TBL_GEOFF_GROUP = "geoff_group_testarea"
-TBL_GID_NODES = "gid_nodes_testarea"
-TBL_NODE_GID = "node_gid_post_testarea"
-TBL_EDGE = "edgecounts_testarea"
-IDX_nx_SPATHS_value = "spaths_ ta_nx_value_idx"
+TBL_SPATHS = "shortestpaths_%s" % str(sys.argv[1])
+TBL_MASTERLINKS_GROUPS ="master_links_grp"
+TBL_NODENOS = "nodenos"
+TBL_NODES_GEOFF = "nodes_geoff"
+TBL_NODES_GID = "nodes_gid"
+TBL_GEOFF_NODES = "geoff_nodes"
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
+TBL_GEOFF_GROUP = "geoff_group"
+TBL_GID_NODES = "gid_nodes"
+TBL_NODE_GID = "node_gid_post"
+TBL_EDGE = "edgecounts"
+IDX_nx_SPATHS_value = "spaths_nx_value_idx"
 
-TBL_TRAILS = "trailint_testarea"
-TBL_TRAIL_NODE = "trail_node_testarea"
-TBL_NODE_TRAIL = "node_trail_testarea"
+TBL_TRAILS = "trail_ints"
+TBL_TRAIL_NODE = "trail_node"
+TBL_NODE_TRAIL = "node_trail"
 
 
 
 VIEW = "links_grp_%s" % str(sys.argv[1])
 
-
+with open(r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\speedtest\timecheck_test1.txt", "a") as io:
+    io.write("start:  %s\n" % time.ctime())
 
 def worker(inqueue, output):
     result = []
@@ -189,9 +189,14 @@ if __name__ == '__main__':
         pairs.append((source, target))
         
     paths = test_workers(pairs)
+    
+    with open(r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\speedtest\timecheck_test1.txt", "a") as io:
+        io.write("paths calculated:  %s\n" % time.ctime())
         
-    with open(r"D:\BikePedTransit\BikeStress\scripts\phase2_pickles\paths_testarea.cpickle", "wb") as io:
-        cPickle.dump(paths, io)
+    # with open(r"D:\BikePedTransit\BikeStress\scripts\phase2_pickles\paths.cpickle", "wb") as io:
+        # cPickle.dump(paths, io)
+    # with open(r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\speedtest\timecheck.txt", "a") as io:
+        # io.write("paths written to pickle:  %s\n" % time.ctime())
     
     del pairs
     
@@ -247,7 +252,7 @@ if __name__ == '__main__':
         """.format(TBL_SPATHS, IDX_nx_SPATHS_value)
         cur.execute(Q_CreateOutputTable)
 
-        logger.info('inserting records')
+        logger.info('inserting paths')
         str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edges[0]))))
         cur.execute("""BEGIN TRANSACTION;""")
         batch_size = 10000
@@ -259,6 +264,8 @@ if __name__ == '__main__':
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
         
+        with open(r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\speedtest\timecheck_test1.txt", "a") as io:
+            io.write("paths written to DB:  %s\n" % time.ctime())
         
         dict_all_paths = {}    
         #convert edges to dictionary
@@ -285,8 +292,13 @@ if __name__ == '__main__':
                     edge_count_dict[edge] = 0
                 edge_count_dict[edge] += path_weight
                 
+        with open(r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\speedtest\timecheck_test1.txt", "a") as io:
+            io.write("edges counted:  %s\n" % time.ctime())
+                
         with open(r"D:\BikePedTransit\BikeStress\scripts\phase2_pickles\edge_count_dict.pickle", "wb") as io:
             cPickle.dump(edge_count_dict, io)
+        with open(r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\speedtest\timecheck_test1.txt", "a") as io:
+            io.write("edge counts in pickle:  %s\n" % time.ctime())
                 
         con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
         cur = con.cursor()
@@ -325,6 +337,6 @@ if __name__ == '__main__':
     
     del edges
         
-    # with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done2.txt", "wb") as io:
-        # cPickle.dump("180 written to DB", io)
+    with open(r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\speedtest\timecheck_test1.txt", "a") as io:
+        io.write("edge counts written to DB:  %s\n" % time.ctime())
     logger.info('end_time: %s' % time.ctime())
