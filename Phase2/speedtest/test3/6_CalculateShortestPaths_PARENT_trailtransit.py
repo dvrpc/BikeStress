@@ -1,5 +1,5 @@
 #copy to run in cmd
-#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\speedtest\6_CalculateShortestPaths_PARENT_trailtransit.py
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\speedtest\test3\6_CalculateShortestPaths_PARENT_trailtransit.py
 
 import psycopg2 as psql
 import subprocess

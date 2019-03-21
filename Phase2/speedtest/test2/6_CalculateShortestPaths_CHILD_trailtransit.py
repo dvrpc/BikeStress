@@ -265,71 +265,71 @@ if __name__ == '__main__':
         # with open(r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\speedtest\timecheck.txt", "a") as io:
         # io.write("paths written to DB:  %s\n" % time.ctime())
         
-        dict_all_paths = {}    
-        #convert edges to dictionary
-        for id, seq, otid, dgid, edge in edges:
-            #only count links, not turns
-            if edge > 0:
-                key = (otid, dgid)
-                if not key in dict_all_paths:
-                    dict_all_paths[key] = []
-                dict_all_paths[key].append(edge)
+    dict_all_paths = {}    
+    #convert edges to dictionary
+    for id, seq, otid, dgid, edge in edges:
+        #only count links, not turns
+        if edge > 0:
+            key = (otid, dgid)
+            if not key in dict_all_paths:
+                dict_all_paths[key] = []
+            dict_all_paths[key].append(edge)
 
-        #how many times each OD geoff pair should be counted if used at all
-        weight_by_od = {}
-        for oTID, dGID in dict_all_paths.iterkeys():
-            onode = trail_dict[oTID]
-            dnode = gid_node[dGID]
-            weight_by_od[(oTID, dGID)] = len(node_gid[dnode])
+    #how many times each OD geoff pair should be counted if used at all
+    weight_by_od = {}
+    for oTID, dGID in dict_all_paths.iterkeys():
+        onode = trail_dict[oTID]
+        dnode = gid_node[dGID]
+        weight_by_od[(oTID, dGID)] = len(node_gid[dnode])
 
-        edge_count_dict = {}
-        for key, paths in dict_all_paths.iteritems():
-            path_weight = weight_by_od[key]
-            for edge in paths:
-                if not edge in edge_count_dict:
-                    edge_count_dict[edge] = 0
-                edge_count_dict[edge] += path_weight
-                
-        with open(r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\speedtest\timecheck_test2.txt", "a") as io:
-            io.write("edges counted:  %s\n" % time.ctime())
-                
-        with open(r"D:\BikePedTransit\BikeStress\scripts\phase2_pickles\edge_count_dict.pickle", "wb") as io:
-            cPickle.dump(edge_count_dict, io)
-        with open(r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\speedtest\timecheck_test2.txt", "a") as io:
+    edge_count_dict = {}
+    for key, paths in dict_all_paths.iteritems():
+        path_weight = weight_by_od[key]
+        for edge in paths:
+            if not edge in edge_count_dict:
+                edge_count_dict[edge] = 0
+            edge_count_dict[edge] += path_weight
+            
+    with open(r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\speedtest\timecheck_test2.txt", "a") as io:
+        io.write("edges counted:  %s\n" % time.ctime())
+            
+    with open(r"D:\BikePedTransit\BikeStress\scripts\phase2_pickles\edge_count_dict.pickle", "wb") as io:
+        cPickle.dump(edge_count_dict, io)
+    with open(r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\speedtest\timecheck_test2.txt", "a") as io:
         io.write("edge counts in pickle:  %s\n" % time.ctime())
-                
-        con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-        cur = con.cursor()
+            
+    con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+    cur = con.cursor()
+    
+    edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]
+    
+    logger.info('inserting counts')
         
-        edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]
-        
-        logger.info('inserting counts')
-        
-        Q_CreateOutputTable2 = """
-            CREATE TABLE IF NOT EXISTS public."{0}"
-            (
-              edge integer,
-              count integer
-            )
-            WITH (
-                OIDS = FALSE
-            )
-            TABLESPACE pg_default;
+    Q_CreateOutputTable2 = """
+        CREATE TABLE IF NOT EXISTS public."{0}"
+        (
+          edge integer,
+          count integer
+        )
+        WITH (
+            OIDS = FALSE
+        )
+        TABLESPACE pg_default;
 
-            COMMIT;                
-        """.format(TBL_EDGE)
-        cur.execute(Q_CreateOutputTable2)
-        
-        str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edge_count_list[0]))))
-        cur.execute("""BEGIN TRANSACTION;""")
-        batch_size = 10000
-        for i in xrange(0, len(edge_count_list), batch_size):
-            j = i + batch_size
-            arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edge_count_list[i:j])
-            Q_Insert = """INSERT INTO "{0}" VALUES {1};""".format(TBL_EDGE, arg_str)
-            cur.execute(Q_Insert)
-        cur.execute("COMMIT;")
-        con.commit()
+        COMMIT;                
+    """.format(TBL_EDGE)
+    cur.execute(Q_CreateOutputTable2)
+    
+    str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edge_count_list[0]))))
+    cur.execute("""BEGIN TRANSACTION;""")
+    batch_size = 10000
+    for i in xrange(0, len(edge_count_list), batch_size):
+        j = i + batch_size
+        arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edge_count_list[i:j])
+        Q_Insert = """INSERT INTO "{0}" VALUES {1};""".format(TBL_EDGE, arg_str)
+        cur.execute(Q_Insert)
+    cur.execute("COMMIT;")
+    con.commit()
 
     del paths, nodes_gids, geoff_nodes, node_pairs
     

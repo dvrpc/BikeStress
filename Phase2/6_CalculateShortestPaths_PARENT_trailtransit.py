@@ -44,9 +44,31 @@ FROM (
         # p = subprocess.Popen([PYEXE, script, '%d' % i], stdout = subprocess.PIPE)
         # p.communicate()
 
-
 a = 0 #min island number
-b = 12 #max island number
+b = 331 #max island number  
+c= b+1 #this number is not calcualted (this is the big island in this case)
+dumpers = []
+for i in xrange(a, c):
+    cur.execute("SELECT COUNT(*) FROM %s WHERE MIXID > 0" % (TBL_TEMP_NETWORK % i))
+    cnt, = cur.fetchone()
+    if cnt > 0:
+        cur.execute(Q_GeoffCount % i)
+        geoffCount = cur.fetchall()
+        if geoffCount > 0:
+            cur.execute("SELECT ")
+            print TBL_TEMP_NETWORK % i
+            with open("temp_processing.txt", "ab") as io:
+                io.write("{0}: {1}\r\n".format(time.ctime(), i))
+            p = subprocess.Popen([PYEXE, script, '%d' % i], stdout = subprocess.PIPE)#call script to calculate shortest paths
+            p.communicate()
+            _p = subprocess.Popen([PYEXE, cleanup_script, '%d' % i], stdout = subprocess.PIPE) #call script to dump and delete tables
+            dumpers.append(_p)
+
+for p in dumpers:
+    p.communicate()
+
+a = 333 #min island number
+b = 7880 #max island number
 c= b+1
 dumpers = []
 for i in xrange(a, c):
@@ -68,24 +90,4 @@ for i in xrange(a, c):
 for p in dumpers:
     p.communicate()
 
-#######for split islands/moving frame#################
-# for i in xrange(1, 4):
-    # cur.execute("SELECT COUNT(*) FROM %s WHERE MIXID > 0" % (TBL_TEMP_NETWORK % i))
-    # cnt, = cur.fetchone()
-    # if cnt > 0:
-        # print TBL_TEMP_NETWORK % i
-        # with open("temp_processing.txt", "ab") as io:
-            # io.write("{0}: {1}\r\n".format(time.ctime(), i))
-        # print [PYEXE, script, '%d' % i]
-        # p = subprocess.Popen([PYEXE, script, '%d' % i], stdout = subprocess.PIPE)
-        # p.communicate()
-        
-# for i in xrange(101, 105):
-    # cur.execute("SELECT COUNT(*) FROM %s WHERE MIXID > 0" % (TBL_TEMP_NETWORK % i))
-    # cnt, = cur.fetchone()
-    # if cnt > 0:
-        # print TBL_TEMP_NETWORK % i
-        # with open("temp_processing.txt", "ab") as io:
-            # io.write("{0}: {1}\r\n".format(time.ctime(), i))
-        # p = subprocess.Popen([PYEXE, script, '%d' % i], stdout = subprocess.PIPE)
-        # p.communicate()
+
