@@ -1,4 +1,4 @@
-#only run for large islands (the largest ~5 when the full study area is run)
+#only run for largest island
 import logging
 import csv
 import itertools
@@ -19,51 +19,49 @@ import psycopg2 as psql
 TBL_GEOFF_GEOM = "geoffs_viageom"
 TBL_MASTERLINKS_GROUPS = "master_links_grp"
 TBL_GROUPS = "groups"
-TBL_GEOFF_PAIRS = "338_geoff_pairs"
-TBL_OD_LINES = "338_OD_lines"
+TBL_GEOFF_PAIRS = "332_geoff_pairs"
+TBL_OD_LINES = "332_OD_lines"
 TBL_NODENOS = "nodenos"
 # TBL_OD = "OandD"
 TBL_GEOFF_NODES = "geoff_nodes"
 TBL_NODES_GID = "nodes_gid"
 TBL_NODES_GEOFF = "nodes_geoff"
-TBL_GEOFF_GEOM = "geoffs_viageom"
 TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
 TBL_GEOFF_GROUP = "geoff_group"
 
 
-VIEW = "links_l3_grp_%s" % str(sys.argv[1])
-#VIEW = "links_l3_grp_338"
+VIEW = "links_grp_332"
 
 con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 #create cursor to execute querys
 cur = con.cursor()
 
-Q_GetList = """
-    SELECT * FROM "{0}";
-    """.format(TBL_NODENOS)
-cur.execute(Q_GetList)
-nodenos = cur.fetchall()
+# Q_GetList = """
+    # SELECT * FROM "{0}";
+    # """.format(TBL_NODENOS)
+# cur.execute(Q_GetList)
+# nodenos = cur.fetchall()
 
-Q_GetList = """
-    SELECT * FROM "{0}";
-    """.format(TBL_NODES_GEOFF)
-cur.execute(Q_GetList)
-nodes_geoff_list = cur.fetchall()
-nodes_geoff = dict(nodes_geoff_list)
+# Q_GetList = """
+    # SELECT * FROM "{0}";
+    # """.format(TBL_NODES_GEOFF)
+# cur.execute(Q_GetList)
+# nodes_geoff_list = cur.fetchall()
+# nodes_geoff = dict(nodes_geoff_list)
 
-Q_GetList = """
-    SELECT * FROM "{0}";
-    """.format(TBL_NODES_GID)
-cur.execute(Q_GetList)
-nodes_gids_list = cur.fetchall()
-nodes_gids = dict(nodes_gids_list)
+# Q_GetList = """
+    # SELECT * FROM "{0}";
+    # """.format(TBL_NODES_GID)
+# cur.execute(Q_GetList)
+# nodes_gids_list = cur.fetchall()
+# nodes_gids = dict(nodes_gids_list)
 
-Q_GetList = """
-    SELECT * FROM "{0}";
-    """.format(TBL_GEOFF_NODES)
-cur.execute(Q_GetList)
-geoff_nodes_list = cur.fetchall()
-geoff_nodes = dict(geoff_nodes_list)
+# Q_GetList = """
+    # SELECT * FROM "{0}";
+    # """.format(TBL_GEOFF_NODES)
+# cur.execute(Q_GetList)
+# geoff_nodes_list = cur.fetchall()
+# geoff_nodes = dict(geoff_nodes_list)
 
 Q_GetGroupPairs = """
     SELECT
@@ -71,7 +69,7 @@ Q_GetGroupPairs = """
         togeoff AS tgeoff,
         groupnumber AS grp
     FROM "{0}"
-    WHERE groupnumber = 338;
+    WHERE groupnumber = 332;
     """.format(TBL_BLOCK_NODE_GEOFF)
 cur.execute(Q_GetGroupPairs)
 group_pairs = cur.fetchall()
@@ -81,7 +79,6 @@ for i, (fgeoff, tgeoff, grp) in enumerate(group_pairs):
     source = fgeoff
     target = tgeoff
     pairs.append((source, target))
-
 
 #create table in DB to hold pairs
 Q_Pairs = """
@@ -112,35 +109,6 @@ for i in xrange(0, len(pairs), batch_size):
     cur.execute(Q_Insert)
 cur.execute("COMMIT;")
 
-# for fg, tg in pairs:
-    # cur.execute(Q_Insert % (fg, tg))
-    
-# con.commit()
-
-
-#create table in DB to hold OD lines
-# Q_ODLines = """
-    # CREATE TABLE "{0}" AS(
-        # WITH unique_geoms AS (
-            # SELECT
-                # geoffid,
-                # geom
-            # FROM "montco_L3_geoffs_viageom"
-            # GROUP BY geoffid, geom
-        # )
-        # SELECT *
-        # FROM(
-            # SELECT
-                # p.fromgeoff,
-                # p.togeoff,
-                # ST_MakeLine(g1.geom, g2.geom) AS geom
-            # FROM "{1}" as p
-            # INNER JOIN unique_geoms AS g1
-            # ON p.fromgeoff = g1.geoffid
-            # INNER JOIN unique_geoms AS g2
-            # ON p.togeoff = g2.geoffid
-        # ) AS pair_f);
-        # """.format(TBL_OD_LINES, TBL_GEOFF_PAIRS)
 
 #
 Q_ODLines = """
@@ -290,10 +258,14 @@ for i in xrange(1,iterations):
     
     print chunk_id
     
-    TBL_TEMP_PAIRS = "temp2_pairs_180_%d" % chunk_id
-    TBL_TEMP_NETWORK = "temp2_network_180_%d" % chunk_id
+    TBL_TEMP_PAIRS = "temp_pairs_332_%d" % chunk_id
+    TBL_TEMP_NETWORK = "temp_network_332_%d" % chunk_id
+    
+    print "Creating Pairs Table"
     cur.execute(Q_CreateTempODLinesTable.format(TBL_TEMP_PAIRS))
     con.commit()
+    
+    print "Creating Network Table"
     cur.execute(Q_CreateTempNetwork.format(TBL_TEMP_NETWORK))
     con.commit()
     
@@ -313,7 +285,6 @@ for i in xrange(1,iterations):
         Q_Insert = """INSERT INTO "{0}" (fromgeoff, togeoff, geom) VALUES {1};""".format(TBL_TEMP_PAIRS, arg_str)
         cur.execute(Q_Insert)
     con.commit()
-    
     
     # for fg, tg, geom in intersect_pairs:
         # cur.execute(Q_InsertTempPairs.format(TBL_TEMP_PAIRS) % (fg, tg, geom))
@@ -387,10 +358,14 @@ for i in xrange(1, iterations+1):
 
     print chunk_id
 
-    TBL_TEMP_PAIRS = "temp2_pairs_180_%d" % chunk_id
-    TBL_TEMP_NETWORK = "temp2_network_180_%d" % chunk_id
+    TBL_TEMP_PAIRS = "temp_pairs_332_%d" % chunk_id
+    TBL_TEMP_NETWORK = "temp_network_332_%d" % chunk_id
+    
+    print "Creating Pairs Table"
     cur.execute(Q_CreateTempODLinesTable.format(TBL_TEMP_PAIRS))
     con.commit()
+    
+    print "Creating Network Table"
     cur.execute(Q_CreateTempNetwork.format(TBL_TEMP_NETWORK))
     con.commit()
     
@@ -475,22 +450,23 @@ Q_IndexExisting = """
         USING gist
         (geom)
         TABLESPACE pg_default;
+    COMMIT;
+    CREATE INDEX IF NOT EXISTS "{2}"
+        ON public."{0}" USING btree
+        (id, mixid, fromgeoff, togeoff, cost, strong)
+        TABLESPACE pg_default;
     COMMIT;"""
-    # CREATE INDEX IF NOT EXISTS "{2}"
-        # ON public."{0}" USING btree
-        # (id, mixid, fromgeoff, togeoff, cost, strong)
-        # TABLESPACE pg_default;"""
 
-for i in xrange(1,10):
-    TBL_TEMP_NETWORK = "temp_network_338_%d" % i
-    IDX_geom = "temp_network_338_%d_geom_idx" % i
-    IDX_value = "temp_network_338_%d_value_idx" % i
+for i in xrange(1,11):
+    TBL_TEMP_NETWORK = "temp_network_332_%d" % i
+    IDX_geom = "temp_network_332_%d_geom_idx" % i
+    IDX_value = "temp_network_332_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_NETWORK, IDX_geom, IDX_value))
     
-for i in xrange(101,111):
-    TBL_TEMP_NETWORK = "temp_network_338_%d" % i
-    IDX_geom = "temp_network_338_%d_geom_idx" % i
-    IDX_value = "temp_network_338_%d_value_idx" % i
+for i in xrange(101,112):
+    TBL_TEMP_NETWORK = "temp_network_332_%d" % i
+    IDX_geom = "temp_network_332_%d_geom_idx" % i
+    IDX_value = "temp_network_332_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_NETWORK, IDX_geom, IDX_value))
 
     
@@ -500,35 +476,26 @@ Q_IndexExisting = """
         USING gist
         (geom)
         TABLESPACE pg_default;
+    COMMIT;
+    CREATE INDEX IF NOT EXISTS "{2}"
+        ON public."{0}" USING btree
+        (id, fromgeoff, togeoff)
+        TABLESPACE pg_default;
     COMMIT;"""
-    # CREATE INDEX IF NOT EXISTS "{2}"
-        # ON public."{0}" USING btree
-        # (id, fromgeoff, togeoff)
-        # TABLESPACE pg_default;"""
         
-for i in xrange(1,10):
-    TBL_TEMP_PAIRS = "temp_pairs_338_%d" % i
-    IDX_geom = "temp_pairs_338_%d_geom_idx" % i
-    IDX_value = "temp_pairs_338_%d_value_idx" % i
+for i in xrange(1,11):
+    TBL_TEMP_PAIRS = "temp_pairs_332_%d" % i
+    IDX_geom = "temp_pairs_332_%d_geom_idx" % i
+    IDX_value = "temp_pairs_332_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_PAIRS, IDX_geom, IDX_value))
 
-for i in xrange(101,111):
-    TBL_TEMP_PAIRS = "temp_pairs_338_%d" % i
-    IDX_geom = "temp_pairs_338_%d_geom_idx" % i
-    IDX_value = "temp_pairs_338_%d_value_idx" % i
+for i in xrange(101,112):
+    TBL_TEMP_PAIRS = "temp_pairs_332_%d" % i
+    IDX_geom = "temp_pairs_332_%d_geom_idx" % i
+    IDX_value = "temp_pairs_332_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_PAIRS, IDX_geom, IDX_value))
         
 
         
-for i in xrange(1,6):
-    TBL_TEMP_PAIRS = "temp_pairs_338_%d" % i
-    IDX_geom = "temp_pairs_338_%d_geom_idx" % i
-    IDX_value = "temp_pairs_338_%d_value_idx" % i
-    cur.execute(Q_IndexExisting.format(TBL_TEMP_PAIRS, IDX_geom, IDX_value))
-for i in xrange(1,6):
-    TBL_TEMP_NETWORK = "temp_network_338_%d" % i
-    IDX_geom = "temp_network_338_%d_geom_idx" % i
-    IDX_value = "temp_network_338_%d_value_idx" % i
-    cur.execute(Q_IndexExisting.format(TBL_TEMP_NETWORK, IDX_geom, IDX_value))
-    
+
 

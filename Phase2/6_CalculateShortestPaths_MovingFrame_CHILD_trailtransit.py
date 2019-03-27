@@ -11,7 +11,7 @@ logger = mp.log_to_stderr(logging.INFO)
 
 
 #need in this script
-TBL_SPATHS = "shortestpaths_%s" % str(sys.argv[1])
+TBL_SPATHS = "shortestpaths_%s_%s" % (str(sys.argv[1]), str(sys.argv[2]))
 TBL_MASTERLINKS_GROUPS ="master_links_grp"
 TBL_NODENOS = "nodenos"
 TBL_NODES_GEOFF = "nodes_geoff"
@@ -28,31 +28,42 @@ TBL_TRAILS = "trail_ints"
 TBL_TRAIL_NODE = "trail_node"
 TBL_NODE_TRAIL = "node_trail"
 
+TBL_TEMP_PAIRS = "temp_pairs_332_%s_%s" % (str(sys.argv[1]), str(sys.argv[2]))
+TBL_TEMP_NETWORK = "temp_network_332_%s_%s" % (str(sys.argv[1]), str(sys.argv[2]))
 
-
-VIEW = "links_grp_%s" % str(sys.argv[1])
 
 
 
 def worker(inqueue, output):
     result = []
+    nopath = []
     count = 0
     start_time = time.time()
     for pair in iter(inqueue.get, sentinel):
         source, target = pair
-        length, paths = nx.bidirectional_dijkstra(G, source = source, target = target, weight = 'weight')
-        result.append(paths)
+        try:
+            length, paths = nx.bidirectional_dijkstra(G, source = source, target = target, weight = 'weight')
+        except nx.NetworkXNoPath:
+            # logger.info('{t}: {m}'.format(t = time.ctime(), m = "No path for {0}, {1}".format(source, target)))
+            nopath.append(pair)
+        except nx.NetworkXError as nxe:
+            logger.info('{t}: {m}'.format(t = time.ctime(), m = "NetworkX Error: %s" % str(nxe)))
+        except Exception as e:
+            logger.info('{t}: {m}'.format(t = time.ctime(), m = "GENERAL ERROR: %s" % str(e)))
+        else:
+            result.append(paths)
         count += 1
         if (count % 100) == 0:
             logger.info('{t}: {s}'.format(t = time.ctime(), s = time.time() - start_time))
             start_time = time.time()
-    output.put(result)
+    output.put({'result': result, 'nopath': nopath})
 
 def test_workers(pairs):
     logger.info('test_workers() started')
     result = []
+    nopath = []
     inqueue = mp.Queue()
-    for source, target in pairs:
+    for id, source, target, geom in pairs:
         inqueue.put((source, target))
     # Build O-D pair list
     # for source, target in IT.product(sources, targets):
@@ -69,12 +80,14 @@ def test_workers(pairs):
     for proc in procs:    
         inqueue.put(sentinel)
     for proc in procs:
-        result.extend(output.get())
+        retval = output.get()
+        result.extend(retval['result'])
+        nopath.extend(retval['nopath'])
     for proc in procs:
         proc.join()
 
     logger.info('test_workers() finished')
-    return result
+    return result, nopath
 
 '''
 def test_single_worker():
@@ -101,7 +114,7 @@ Q_SelectMasterLinks = """
         togeoff,
         cost
     FROM public."{0}";
-    """.format(VIEW)
+    """.format(TBL_TEMP_NETWORK)
     
 con = psql.connect(database = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
@@ -170,30 +183,21 @@ if __name__ == '__main__':
     trail_node_list = cur.fetchall()
     trail_dict = dict(trail_node_list)
     
-    Q_GetGroupPairs = """
-        SELECT
-            fromgeoff AS fgeoff,
-            togeoff AS tgeoff,
-            groupnumber AS grp
-        FROM "{0}"
-        WHERE groupnumber = {1};
-        """.format(TBL_BLOCK_NODE_GEOFF, int(sys.argv[1]))
-    cur.execute(Q_GetGroupPairs)
-    group_pairs = cur.fetchall()
+    Q_GetPairs = """
+        SELECT * FROM "{0}";
+        """.format(TBL_TEMP_PAIRS)
+    cur.execute(Q_GetPairs)
+    pairs = cur.fetchall()
+
+    paths, nopaths = test_workers(pairs)
         
-    pairs = []
-    for i, (fgeoff, tgeoff, grp) in enumerate(group_pairs):
-        source = fgeoff
-        target = tgeoff
-        pairs.append((source, target))
-        
-    paths = test_workers(pairs)
-        
-    with open(r"D:\BikePedTransit\BikeStress\scripts\phase2_pickles\paths.cpickle", "wb") as io:
+    with open(r"D:\BikePedTransit\BikeStress\scripts\phase2_pickles\group332_MF_%s_%s.cpickle" % (sys.argv[1], sys.argv[2]), "wb") as io:
         cPickle.dump(paths, io)
+    with open(r"D:\BikePedTransit\BikeStress\scripts\phase2_pickles\group332_MF_%s_%s_nopaths.cpickle" % (sys.argv[1], sys.argv[2]), "wb") as io:
+        cPickle.dump(nopaths, io)
     
-    del pairs
-    
+    del pairs, nopaths
+
     con = psql.connect(database = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
     cur = con.cursor()
 
@@ -208,16 +212,16 @@ if __name__ == '__main__':
 
     edges = []
     for id, path in enumerate(paths):
-        oTID = node_trail[geoff_nodes[path[0]]]
+        oGID = nodes_gids[geoff_nodes[path[0]]]
         dGID = nodes_gids[geoff_nodes[path[-1]]]
         for seq, (o ,d) in enumerate(zip(path, path[1:])):
-            row = id, seq, oTID, dGID, node_pairs[(o,d)]
+            row = id, seq, oGID, dGID, node_pairs[(o,d)]
             edges.append(row)
     logger.info('number of records: %d' % len(edges))
     
     con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
     cur = con.cursor()
-
+    
     if (len(edges) > 0):
         Q_CreateOutputTable = """
             CREATE TABLE IF NOT EXISTS public."{0}"
@@ -237,13 +241,13 @@ if __name__ == '__main__':
             
             CREATE INDEX IF NOT EXISTS "{1}"
                 ON public."{0}" USING btree
-                (id, seq, otid, dgid, edge)
+                (id, seq, ogid, dgid, edge)
                 TABLESPACE pg_default;
             COMMIT;                
         """.format(TBL_SPATHS, IDX_nx_SPATHS_value)
         cur.execute(Q_CreateOutputTable)
 
-        logger.info('inserting paths')
+        logger.info('inserting records')
         str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edges[0]))))
         cur.execute("""BEGIN TRANSACTION;""")
         batch_size = 10000
@@ -251,7 +255,7 @@ if __name__ == '__main__':
             j = i + batch_size
             arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edges[i:j])
             #print arg_str
-            Q_Insert = """INSERT INTO public."{0}" (id, seq, otid, dgid, edge) VALUES {1}""".format(TBL_SPATHS, arg_str)
+            Q_Insert = """INSERT INTO public."{0}" (id, seq, ogid, dgid, edge) VALUES {1}""".format(TBL_SPATHS, arg_str)
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
         
@@ -281,7 +285,7 @@ if __name__ == '__main__':
                     edge_count_dict[edge] = 0
                 edge_count_dict[edge] += path_weight
                 
-        with open(r"D:\BikePedTransit\BikeStress\scripts\phase2_pickles\edge_count_dict.pickle", "wb") as io:
+        with open(r"D:\BikePedTransit\BikeStress\scripts\phase2_pickles\edge_count_dict_332.pickle", "wb") as io:
             cPickle.dump(edge_count_dict, io)
                 
         con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
@@ -321,6 +325,5 @@ if __name__ == '__main__':
     
     del edges
         
-    # with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done2.txt", "wb") as io:
-        # cPickle.dump("180 written to DB", io)
     logger.info('end_time: %s' % time.ctime())
+

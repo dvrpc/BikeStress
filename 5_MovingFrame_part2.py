@@ -19,8 +19,8 @@ import psycopg2 as psql
 TBL_GEOFF_GEOM = "geoffs_viageom"
 TBL_MASTERLINKS_GROUPS = "master_links_grp"
 TBL_GROUPS = "groups"
-TBL_GEOFF_PAIRS = "338_geoff_pairs"
-TBL_OD_LINES = "338_OD_lines"
+TBL_GEOFF_PAIRS = "332_geoff_pairs"
+TBL_OD_LINES = "332_OD_lines"
 TBL_NODENOS = "nodenos"
 # TBL_OD = "OandD"
 TBL_GEOFF_NODES = "geoff_nodes"
@@ -30,14 +30,14 @@ TBL_GEOFF_GEOM = "geoffs_viageom"
 TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
 TBL_GEOFF_GROUP = "geoff_group"
 
-VIEW = "links_l3_grp_338"
+VIEW = "links_grp_332"
 
-con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 #create cursor to execute querys
 cur = con.cursor()
 
-TBL_TEMP_NETWORK = "temp_network_338_%d"
-TBL_TEMP_PAIRS = "temp_pairs_338_%d"
+TBL_TEMP_NETWORK = "temp_network_332_%d"
+TBL_TEMP_PAIRS = "temp_pairs_332_%d"
 
 #select OD lines that intersect the break line
 Q_IntersectLines = """
@@ -113,109 +113,8 @@ Q_CreateTempNetwork = """
       
 Q_InsertTempNetwork = """INSERT INTO "{0}" (mixid, fromgeoff, togeoff, cost, geom) VALUES (%s, %s, %s, %s, ST_GeomFromGeoJSON('%s'));"""
 
-for c in xrange(101,111):
-    TBL_NETWORK = TBL_TEMP_NETWORK % c
-    TBL_PAIRS = TBL_TEMP_PAIRS % c
-
-    #find extents of bounding box around island
-    Q_ExtentCoords = """SELECT st_asgeojson(st_setsrid(st_extent(geom), 26918)) FROM public."{0}";""".format(TBL_NETWORK)
-    cur.execute(Q_ExtentCoords)
-    bbox_json = cur.fetchall()
-    bbox = json.loads(bbox_json[0][0])
-    xmin = min(zip(*bbox['coordinates'][0])[0])
-    xmax = max(zip(*bbox['coordinates'][0])[0])
-    ymin = min(zip(*bbox['coordinates'][0])[1])
-    ymax = max(zip(*bbox['coordinates'][0])[1])
-
-    iterations = int(math.ceil((xmax-xmin)/8046.72))
-
-    #OD LINES IN BETWEEN BREAK LINES
-
-    #starting y value of line
-    x_value_left = xmin
-    x_value_right = x_value_left + 8046.72
-    #newid starting at 100 is for between sections
-    newid = 101
-    #loop over break lines selecting OD lines that are between them
-    for z in xrange(1, iterations+1):
-
-        print c ,newid
-
-        TBL_TEMP_PAIRS_2 = "temp_pairs_338_%d_%d" % (c, newid)
-        TBL_TEMP_NETWORK_2 = "temp_network_338_%d_%d" % (c, newid)
-        cur.execute(Q_CreateTempODLinesTable.format(TBL_TEMP_PAIRS_2))
-        con.commit()
-        cur.execute(Q_CreateTempNetwork.format(TBL_TEMP_NETWORK_2))
-        con.commit()
-        
-        cur.execute(Q_LinesBetween.format(TBL_PAIRS) % (
-            x_value_left,
-            ymin,
-            x_value_left,
-            ymax,
-            x_value_right,
-            ymin,
-            x_value_right,
-            ymax
-        ))
-        
-        between_pairs = cur.fetchall()
-        
-        print "Inserting Pairs"
-        print len(between_pairs)
-
-        str_rpl = "(%s, %s, ST_GeomFromGeoJSON('%s'))"
-        cur.execute("""BEGIN TRANSACTION;""")
-        batch_size = 10000
-        for i in xrange(0, len(between_pairs), batch_size):
-            j = i + batch_size
-            arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in between_pairs[i:j])
-            #print arg_str
-            Q_Insert = """INSERT INTO "{0}" (fromgeoff, togeoff, geom) VALUES {1};""".format(TBL_TEMP_PAIRS_2, arg_str)
-            cur.execute(Q_Insert)
-        con.commit()
-        
-        print "Clipping Network"    
-        
-        #clip network with 1 mile buffer on top and bottom      
-        cur.execute(Q_ClipNetwork.format(TBL_NETWORK) % (
-            (x_value_left - 1609.34),
-            ymin,
-            (x_value_left - 1609.34),
-            ymax,
-            (x_value_right + 1609.34),
-            ymin,
-            (x_value_right + 1609.34),
-            ymax
-        ))
-        
-        clip_network = cur.fetchall()
-        
-        print "Inserting Network"
-        print len(clip_network)
-        
-        str_rpl = "(%s, %s, %s, %s, ST_GeomFromGeoJSON('%s'), %s)"
-        cur.execute("""BEGIN TRANSACTION;""")
-        batch_size = 10000
-        for i in xrange(0, len(clip_network), batch_size):
-            j = i + batch_size
-            arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in clip_network[i:j])
-            #print arg_str
-            Q_Insert = """INSERT INTO "{0}" (mixid, fromgeoff, togeoff, cost, geom, strong) VALUES {1};""".format(TBL_TEMP_NETWORK_2, arg_str)
-            cur.execute(Q_Insert)
-        con.commit()
-        
-        print "Updating SRID"
-        
-        cur.execute("""SELECT UpdateGeometrySRID('{0}', 'geom', 26918); """.format(TBL_TEMP_PAIRS_2))
-        cur.execute("""SELECT UpdateGeometrySRID('{0}', 'geom', 26918); """.format(TBL_TEMP_NETWORK_2))
-
-        x_value_left  += 8046.72
-        x_value_right     += 8046.72
-        newid        += 1
-        
-
-for c in xrange(101,111):
+#INTERSECT/INTERSECT
+for c in xrange(1,10):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
     
@@ -242,8 +141,8 @@ for c in xrange(101,111):
         
         print c, newid
         
-        TBL_TEMP_PAIRS_2 = "temp_pairs_338_%d_%d" % (c, newid)
-        TBL_TEMP_NETWORK_2 = "temp_network_338_%d_%d" % (c, newid)
+        TBL_TEMP_PAIRS_2 = "temp_pairs_332_%d_%d" % (c, newid)
+        TBL_TEMP_NETWORK_2 = "temp_network_332_%d_%d" % (c, newid)
         cur.execute(Q_CreateTempODLinesTable.format(TBL_TEMP_PAIRS_2))
         con.commit()
         cur.execute(Q_CreateTempNetwork.format(TBL_TEMP_NETWORK_2))
@@ -328,3 +227,325 @@ for c in xrange(101,111):
         #update values for next iteration
         x_value  += 8046.72
         newid    += 1
+
+#INTERSECT/BETWEEN
+for c in xrange(1,10):
+    TBL_NETWORK = TBL_TEMP_NETWORK % c
+    TBL_PAIRS = TBL_TEMP_PAIRS % c
+
+    #find extents of bounding box around island
+    Q_ExtentCoords = """SELECT st_asgeojson(st_setsrid(st_extent(geom), 26918)) FROM public."{0}";""".format(TBL_NETWORK)
+    cur.execute(Q_ExtentCoords)
+    bbox_json = cur.fetchall()
+    bbox = json.loads(bbox_json[0][0])
+    xmin = min(zip(*bbox['coordinates'][0])[0])
+    xmax = max(zip(*bbox['coordinates'][0])[0])
+    ymin = min(zip(*bbox['coordinates'][0])[1])
+    ymax = max(zip(*bbox['coordinates'][0])[1])
+
+    iterations = int(math.ceil((xmax-xmin)/8046.72))
+
+    #OD LINES IN BETWEEN BREAK LINES
+
+    #starting y value of line
+    x_value_left = xmin
+    x_value_right = x_value_left + 8046.72
+    #newid starting at 100 is for between sections
+    newid = 101
+    #loop over break lines selecting OD lines that are between them
+    for z in xrange(1, iterations+1):
+
+        print c ,newid
+
+        TBL_TEMP_PAIRS_2 = "temp_pairs_332_%d_%d" % (c, newid)
+        TBL_TEMP_NETWORK_2 = "temp_network_332_%d_%d" % (c, newid)
+        cur.execute(Q_CreateTempODLinesTable.format(TBL_TEMP_PAIRS_2))
+        con.commit()
+        cur.execute(Q_CreateTempNetwork.format(TBL_TEMP_NETWORK_2))
+        con.commit()
+        
+        cur.execute(Q_LinesBetween.format(TBL_PAIRS) % (
+            x_value_left,
+            ymin,
+            x_value_left,
+            ymax,
+            x_value_right,
+            ymin,
+            x_value_right,
+            ymax
+        ))
+        
+        between_pairs = cur.fetchall()
+        
+        print "Inserting Pairs"
+        print len(between_pairs)
+
+        str_rpl = "(%s, %s, ST_GeomFromGeoJSON('%s'))"
+        cur.execute("""BEGIN TRANSACTION;""")
+        batch_size = 10000
+        for i in xrange(0, len(between_pairs), batch_size):
+            j = i + batch_size
+            arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in between_pairs[i:j])
+            #print arg_str
+            Q_Insert = """INSERT INTO "{0}" (fromgeoff, togeoff, geom) VALUES {1};""".format(TBL_TEMP_PAIRS_2, arg_str)
+            cur.execute(Q_Insert)
+        con.commit()
+        
+        print "Clipping Network"    
+        
+        #clip network with 1 mile buffer on top and bottom      
+        cur.execute(Q_ClipNetwork.format(TBL_NETWORK) % (
+            (x_value_left - 1609.34),
+            ymin,
+            (x_value_left - 1609.34),
+            ymax,
+            (x_value_right + 1609.34),
+            ymin,
+            (x_value_right + 1609.34),
+            ymax
+        ))
+        
+        clip_network = cur.fetchall()
+        
+        print "Inserting Network"
+        print len(clip_network)
+        
+        str_rpl = "(%s, %s, %s, %s, ST_GeomFromGeoJSON('%s'), %s)"
+        cur.execute("""BEGIN TRANSACTION;""")
+        batch_size = 10000
+        for i in xrange(0, len(clip_network), batch_size):
+            j = i + batch_size
+            arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in clip_network[i:j])
+            #print arg_str
+            Q_Insert = """INSERT INTO "{0}" (mixid, fromgeoff, togeoff, cost, geom, strong) VALUES {1};""".format(TBL_TEMP_NETWORK_2, arg_str)
+            cur.execute(Q_Insert)
+        con.commit()
+        
+        print "Updating SRID"
+        
+        cur.execute("""SELECT UpdateGeometrySRID('{0}', 'geom', 26918); """.format(TBL_TEMP_PAIRS_2))
+        cur.execute("""SELECT UpdateGeometrySRID('{0}', 'geom', 26918); """.format(TBL_TEMP_NETWORK_2))
+
+        x_value_left  += 8046.72
+        x_value_right     += 8046.72
+        newid        += 1
+        
+
+#BETWEEN/INTERSECT
+for c in xrange(101,112):
+    TBL_NETWORK = TBL_TEMP_NETWORK % c
+    TBL_PAIRS = TBL_TEMP_PAIRS % c
+    
+    #find extents of bounding box around island
+    Q_ExtentCoords = """SELECT st_asgeojson(st_setsrid(st_extent(geom), 26918)) FROM public."{0}";""".format(TBL_NETWORK)
+    cur.execute(Q_ExtentCoords)
+    bbox_json = cur.fetchall()
+    bbox = json.loads(bbox_json[0][0])
+    xmin = min(zip(*bbox['coordinates'][0])[0])
+    xmax = max(zip(*bbox['coordinates'][0])[0])
+    ymin = min(zip(*bbox['coordinates'][0])[1])
+    ymax = max(zip(*bbox['coordinates'][0])[1])
+
+    iterations = int(math.ceil((xmax-xmin)/8046.72))
+    #OD LINES THAT INTERSECT BREAK LINES
+
+    #starting y value of line
+    #for intersecting OD lines, start at the second line
+    x_value = xmin + 8046.72
+    #newid starting at 1 is for intersection/overlap sections
+    newid = 1
+    #loop over break lines selecting OD lines that intersect them
+    for z in xrange(1,iterations):
+        
+        print c, newid
+        
+        TBL_TEMP_PAIRS_2 = "temp_pairs_332_%d_%d" % (c, newid)
+        TBL_TEMP_NETWORK_2 = "temp_network_332_%d_%d" % (c, newid)
+        cur.execute(Q_CreateTempODLinesTable.format(TBL_TEMP_PAIRS_2))
+        con.commit()
+        cur.execute(Q_CreateTempNetwork.format(TBL_TEMP_NETWORK_2))
+        con.commit()
+        
+        cur.execute(Q_IntersectLines.format(TBL_PAIRS) % (x_value, ymin, x_value, ymax))
+        intersect_pairs = cur.fetchall()
+        
+        print "Inserting Pairs"
+        print len(intersect_pairs)
+        
+        str_rpl = "(%s, %s, ST_GeomFromGeoJSON('%s'))"
+        cur.execute("""BEGIN TRANSACTION;""")
+        batch_size = 10000
+        for i in xrange(0, len(intersect_pairs), batch_size):
+            j = i + batch_size
+            arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in intersect_pairs[i:j])
+            #print arg_str
+            Q_Insert = """INSERT INTO "{0}" (fromgeoff, togeoff, geom) VALUES {1};""".format(TBL_TEMP_PAIRS_2, arg_str)
+            cur.execute(Q_Insert)
+        con.commit()
+        
+        print "Creating Extent"
+        
+        Q_CountPairs = ("""SELECT COUNT(*) FROM "{0}";""").format(TBL_TEMP_PAIRS_2)
+        cur.execute(Q_CountPairs)
+        NumPairs = cur.fetchall()
+        
+        #check to see if there are pairs to put a bounding box around
+        if int(NumPairs[0][0]) > 0:
+            # bounding box around OD lines that intersect the line with 1 mile buffer
+            cur.execute(Q_BBoxExtent.format(TBL_TEMP_PAIRS_2))
+            intersect_bbox_json = cur.fetchall()
+            intersect_bbox = json.loads(intersect_bbox_json[0][0])
+            inter_xmin = min(zip(*intersect_bbox['coordinates'][0])[0])
+            inter_xmax = max(zip(*intersect_bbox['coordinates'][0])[0])
+            inter_ymin = min(zip(*intersect_bbox['coordinates'][0])[1])
+            inter_ymax = max(zip(*intersect_bbox['coordinates'][0])[1])
+            
+            print "Clipping Network"
+            
+            cur.execute(Q_ClipNetwork.format(TBL_NETWORK) % (
+                (inter_xmin - 1609.34),
+                inter_ymin, 
+                (inter_xmin - 1609.34), 
+                inter_ymax, 
+                (inter_xmax + 1609.34), 
+                inter_ymin,
+                (inter_xmax + 1609.34), 
+                inter_ymax
+            ))
+            
+            clip_network = cur.fetchall()
+            
+            print "Inserting Network"
+            print len(clip_network)
+            
+            # str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(clip_network[0]))))
+            str_rpl = "(%s, %s, %s, %s, ST_GeomFromGeoJSON('%s'), %s)"
+            cur.execute("""BEGIN TRANSACTION;""")
+            batch_size = 10000
+            for i in xrange(0, len(clip_network), batch_size):
+                j = i + batch_size
+                arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in clip_network[i:j])
+                #print arg_str
+                Q_Insert = """INSERT INTO "{0}" (mixid, fromgeoff, togeoff, cost, geom, strong) VALUES {1};""".format(TBL_TEMP_NETWORK_2, arg_str)
+                cur.execute(Q_Insert)
+            con.commit()
+            
+            print "Updating SRID"
+            
+            cur.execute("""SELECT UpdateGeometrySRID('{0}', 'geom', 26918); """.format(TBL_TEMP_PAIRS_2))
+            cur.execute("""SELECT UpdateGeometrySRID('{0}', 'geom', 26918); """.format(TBL_TEMP_NETWORK_2))
+        
+        #if not, drop the tables for that chunk
+        else: 
+            print "No Pairs"
+            # cur.execute("""DROP TABLE public."{0}";""").format(TBL_TEMP_PAIRS_2)
+            # cur.execute("""DROP TABLE public."{0}";""").format(TBL_TEMP_NETWORK_2)
+
+        
+        #update values for next iteration
+        x_value  += 8046.72
+        newid    += 1
+
+#BETWEEN/BETWEEN
+for c in xrange(101,112):
+    TBL_NETWORK = TBL_TEMP_NETWORK % c
+    TBL_PAIRS = TBL_TEMP_PAIRS % c
+
+    #find extents of bounding box around island
+    Q_ExtentCoords = """SELECT st_asgeojson(st_setsrid(st_extent(geom), 26918)) FROM public."{0}";""".format(TBL_NETWORK)
+    cur.execute(Q_ExtentCoords)
+    bbox_json = cur.fetchall()
+    bbox = json.loads(bbox_json[0][0])
+    xmin = min(zip(*bbox['coordinates'][0])[0])
+    xmax = max(zip(*bbox['coordinates'][0])[0])
+    ymin = min(zip(*bbox['coordinates'][0])[1])
+    ymax = max(zip(*bbox['coordinates'][0])[1])
+
+    iterations = int(math.ceil((xmax-xmin)/8046.72))
+
+    #OD LINES IN BETWEEN BREAK LINES
+
+    #starting y value of line
+    x_value_left = xmin
+    x_value_right = x_value_left + 8046.72
+    #newid starting at 100 is for between sections
+    newid = 101
+    #loop over break lines selecting OD lines that are between them
+    for z in xrange(1, iterations+1):
+
+        print c ,newid
+
+        TBL_TEMP_PAIRS_2 = "temp_pairs_332_%d_%d" % (c, newid)
+        TBL_TEMP_NETWORK_2 = "temp_network_332_%d_%d" % (c, newid)
+        cur.execute(Q_CreateTempODLinesTable.format(TBL_TEMP_PAIRS_2))
+        con.commit()
+        cur.execute(Q_CreateTempNetwork.format(TBL_TEMP_NETWORK_2))
+        con.commit()
+        
+        cur.execute(Q_LinesBetween.format(TBL_PAIRS) % (
+            x_value_left,
+            ymin,
+            x_value_left,
+            ymax,
+            x_value_right,
+            ymin,
+            x_value_right,
+            ymax
+        ))
+        
+        between_pairs = cur.fetchall()
+        
+        print "Inserting Pairs"
+        print len(between_pairs)
+
+        str_rpl = "(%s, %s, ST_GeomFromGeoJSON('%s'))"
+        cur.execute("""BEGIN TRANSACTION;""")
+        batch_size = 10000
+        for i in xrange(0, len(between_pairs), batch_size):
+            j = i + batch_size
+            arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in between_pairs[i:j])
+            #print arg_str
+            Q_Insert = """INSERT INTO "{0}" (fromgeoff, togeoff, geom) VALUES {1};""".format(TBL_TEMP_PAIRS_2, arg_str)
+            cur.execute(Q_Insert)
+        con.commit()
+        
+        print "Clipping Network"    
+        
+        #clip network with 1 mile buffer on top and bottom      
+        cur.execute(Q_ClipNetwork.format(TBL_NETWORK) % (
+            (x_value_left - 1609.34),
+            ymin,
+            (x_value_left - 1609.34),
+            ymax,
+            (x_value_right + 1609.34),
+            ymin,
+            (x_value_right + 1609.34),
+            ymax
+        ))
+        
+        clip_network = cur.fetchall()
+        
+        print "Inserting Network"
+        print len(clip_network)
+        
+        str_rpl = "(%s, %s, %s, %s, ST_GeomFromGeoJSON('%s'), %s)"
+        cur.execute("""BEGIN TRANSACTION;""")
+        batch_size = 10000
+        for i in xrange(0, len(clip_network), batch_size):
+            j = i + batch_size
+            arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in clip_network[i:j])
+            #print arg_str
+            Q_Insert = """INSERT INTO "{0}" (mixid, fromgeoff, togeoff, cost, geom, strong) VALUES {1};""".format(TBL_TEMP_NETWORK_2, arg_str)
+            cur.execute(Q_Insert)
+        con.commit()
+        
+        print "Updating SRID"
+        
+        cur.execute("""SELECT UpdateGeometrySRID('{0}', 'geom', 26918); """.format(TBL_TEMP_PAIRS_2))
+        cur.execute("""SELECT UpdateGeometrySRID('{0}', 'geom', 26918); """.format(TBL_TEMP_NETWORK_2))
+
+        x_value_left  += 8046.72
+        x_value_right     += 8046.72
+        newid        += 1
+        
+

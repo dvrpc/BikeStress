@@ -1,14 +1,16 @@
 #copy to run in cmd
-#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\6_CalculateShortestPaths_PARENT.py
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\6_CalculateShortestPaths_PARENT_trailtransit.py
 
 import psycopg2 as psql
 import subprocess
 import time
 import sys
+import CalculateShortestPaths_CLEANUP as cleanup
+
 
 PYEXE = r"C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe "
 script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\6_CalculateShortestPaths_CHILD_trailtransit.py"
-cleanup_script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\6_CalculateShortestPaths_CLEANUP.py"
+# import 6_CalculateShortestPaths_CLEANUP as cleanup
 
 con = psql.connect(database = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
@@ -17,7 +19,7 @@ TBL_TEMP_NETWORK = "links_grp_%s"
 # TBL_TEMP_NETWORK = "temp_network_196_%s"
 # TBL_TEMP_PAIRS = "temp_pairs_196_%s"
 # TBL_TEMP_NETWORK = "temp_network_180_%s" % str(sys.argv[1])
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff_testarea"
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
 
 Q_GeoffCount = """
 SELECT 
@@ -57,15 +59,17 @@ for i in xrange(a, c):
         if geoffCount > 0:
             cur.execute("SELECT ")
             print TBL_TEMP_NETWORK % i
-            with open("temp_processing.txt", "ab") as io:
-                io.write("{0}: {1}\r\n".format(time.ctime(), i))
+            #with open("temp_processing.txt", "ab") as io:
+            #    io.write("{0}: {1}\r\n".format(time.ctime(), i))
             p = subprocess.Popen([PYEXE, script, '%d' % i], stdout = subprocess.PIPE)#call script to calculate shortest paths
             p.communicate()
-            _p = subprocess.Popen([PYEXE, cleanup_script, '%d' % i], stdout = subprocess.PIPE) #call script to dump and delete tables
-            dumpers.append(_p)
+            
+            cleanup.dumpndrop(i)
+            # _p = subprocess.Popen([PYEXE, cleanup_script, '%d' % i], stdout = subprocess.PIPE) #call script to dump and delete tables
+            # dumpers.append(_p)
 
-for p in dumpers:
-    p.communicate()
+# for p in dumpers:
+    # p.communicate()
 
 a = 333 #min island number
 b = 7880 #max island number
@@ -80,14 +84,16 @@ for i in xrange(a, c):
         if geoffCount > 0:
             cur.execute("SELECT ")
             print TBL_TEMP_NETWORK % i
-            with open("temp_processing.txt", "ab") as io:
-                io.write("{0}: {1}\r\n".format(time.ctime(), i))
+            #with open("temp_processing.txt", "ab") as io:
+            #    io.write("{0}: {1}\r\n".format(time.ctime(), i))
             p = subprocess.Popen([PYEXE, script, '%d' % i], stdout = subprocess.PIPE)#call script to calculate shortest paths
             p.communicate()
-            _p = subprocess.Popen([PYEXE, cleanup_script, '%d' % i], stdout = subprocess.PIPE) #call script to dump and delete tables
-            dumpers.append(_p)
+            
+            cleanup.dumpndrop(i)
+            # _p = subprocess.Popen([PYEXE, cleanup_script, '%d' % i], stdout = subprocess.PIPE) #call script to dump and delete tables
+            # dumpers.append(_p)
 
-for p in dumpers:
-    p.communicate()
+# for p in dumpers:
+    # p.communicate()
 
 
