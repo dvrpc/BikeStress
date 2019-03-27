@@ -141,21 +141,36 @@ if __name__ == '__main__':
         """.format(TBL_NODES_GID)
     cur.execute(Q_GetList)
     nodes_gids_list = cur.fetchall()
-    nodes_gids = dict(nodes_gids_list)
+    nodes_gids = {}
+    for nodes, gids in nodes_gids_list:
+        key = nodes
+        if not key in nodes_gids:
+            nodes_gids[key] = []
+        nodes_gids[key].append(gids)
     
     Q_GetList = """
         SELECT * FROM "{0}";
         """.format(TBL_GEOFF_NODES)
     cur.execute(Q_GetList)
     geoff_nodes_list = cur.fetchall()
-    geoff_nodes = dict(geoff_nodes_list)
+    geoff_nodes = {}
+    for geoff, node in geoff_nodes_list:
+        key = geoff
+        if not key in geoff_nodes:
+            geoff_nodes[key] = []
+        geoff_nodes[key].append(node)
     
     Q_GetList = """
     SELECT * FROM "{0}";
     """.format(TBL_GID_NODES)
     cur.execute(Q_GetList)
     gid_node_list = cur.fetchall()
-    gid_node = dict(gid_node_list)
+    gid_node = {}
+    for gid, node in gid_node_list:
+        key = gid
+        if not key in gid_node:
+            gid_node[key] = []
+        gid_node[key].append(node)
     
     Q_GetList = """
     SELECT * FROM "{0}";
@@ -174,14 +189,24 @@ if __name__ == '__main__':
     """.format(TBL_NODE_TRAIL)
     cur.execute(Q_GetList)
     node_trail_list = cur.fetchall()
-    node_trail = dict(node_trail_list)
+    node_trail = {}
+    for node, trail in node_trail_list:
+        key = node
+        if not key in node_trail:
+            node_trail[key] = []
+        node_trail[key].append(trail)
     
     Q_GetList = """
     SELECT * FROM "{0}";
     """.format(TBL_TRAIL_NODE)
     cur.execute(Q_GetList)
     trail_node_list = cur.fetchall()
-    trail_dict = dict(trail_node_list)
+    trail_dict = {}
+    for trail, node in trail_node_list:
+        key = trail
+        if not key in trail_dict:
+            trail_dict[key] = []
+        trail_dict[key].append(node)
     
     Q_GetPairs = """
         SELECT * FROM "{0}";
@@ -212,10 +237,10 @@ if __name__ == '__main__':
 
     edges = []
     for id, path in enumerate(paths):
-        oGID = nodes_gids[geoff_nodes[path[0]]]
-        dGID = nodes_gids[geoff_nodes[path[-1]]]
+        oTID = node_trail[geoff_nodes[path[0]][0]][0]
+        dGID = nodes_gids[geoff_nodes[path[-1]][0]][0]
         for seq, (o ,d) in enumerate(zip(path, path[1:])):
-            row = id, seq, oGID, dGID, node_pairs[(o,d)]
+            row = id, seq, oTID, dGID, node_pairs[(o,d)]
             edges.append(row)
     logger.info('number of records: %d' % len(edges))
     
@@ -241,7 +266,7 @@ if __name__ == '__main__':
             
             CREATE INDEX IF NOT EXISTS "{1}"
                 ON public."{0}" USING btree
-                (id, seq, ogid, dgid, edge)
+                (id, seq, otid, dgid, edge)
                 TABLESPACE pg_default;
             COMMIT;                
         """.format(TBL_SPATHS, IDX_nx_SPATHS_value)
@@ -255,7 +280,7 @@ if __name__ == '__main__':
             j = i + batch_size
             arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edges[i:j])
             #print arg_str
-            Q_Insert = """INSERT INTO public."{0}" (id, seq, ogid, dgid, edge) VALUES {1}""".format(TBL_SPATHS, arg_str)
+            Q_Insert = """INSERT INTO public."{0}" (id, seq, otid, dgid, edge) VALUES {1}""".format(TBL_SPATHS, arg_str)
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
         
@@ -274,7 +299,7 @@ if __name__ == '__main__':
         weight_by_od = {}
         for oTID, dGID in dict_all_paths.iterkeys():
             onode = trail_dict[oTID]
-            dnode = gid_node[dGID]
+            dnode = gid_node[dGID][0]
             weight_by_od[(oTID, dGID)] = len(node_gid[dnode])
 
         edge_count_dict = {}

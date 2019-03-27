@@ -7,9 +7,9 @@ import time
 import sys
 import CalculateShortestPaths_CLEANUP as cleanup
 
-PYEXE = r"C:\Users\model-ws.DVRPC_PRIMARY\AppData\Local\Continuum\Anaconda2\python.exe"
+PYEXE = r"C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe "
 # script = r"D:\Modeling\BikeStress\scripts\test.py"
-script = r"D:\Modeling\BikeStress\scripts\Phase2\6_CalculateShortestPaths_MovingFrame_CHILD_trailtransit.py"
+script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\6_CalculateShortestPaths_MovingFrame_CHILD_trailtransit.py"
 
 
 con = psql.connect(database = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")

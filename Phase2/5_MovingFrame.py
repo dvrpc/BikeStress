@@ -172,7 +172,8 @@ Q_IntersectLines = """
     FROM public."{0}"
     WHERE geom && ST_SetSRID(ST_MakeLine(ST_Point(%d, %d),ST_Point(%d, %d)), 26918);
     """.format(TBL_OD_LINES)
-    
+
+#select OD lines that fall between the break lines
 Q_LinesBetween = """
     SELECT 
         fromgeoff,
