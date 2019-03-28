@@ -1,5 +1,5 @@
 #copy to run in cmd
-#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\6_CalculateShortestPaths_MovingFrame_PARENT_trailtransit.py
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\TrailAnalysis\7_CalculateShortestPaths_PARENT_MovingFrame_trailtransit.py
 
 import psycopg2 as psql
 import subprocess
@@ -9,7 +9,7 @@ import CalculateShortestPaths_CLEANUP as cleanup
 
 PYEXE = r"C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe "
 # script = r"D:\Modeling\BikeStress\scripts\test.py"
-script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\6_CalculateShortestPaths_MovingFrame_CHILD_trailtransit.py"
+script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\TrailAnalysis\7_CalculateShortestPaths_CHILD_MovingFrame_trailtransit.py"
 
 
 con = psql.connect(database = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
@@ -19,7 +19,7 @@ TBL_WORK_NETWORK = "temp_network_332_%d_%d"
 
 
 ###for split islands/moving frame
-for i in xrange(1, 11):
+for i in xrange(1, 10):
     for j in xrange(1, 13):
         cur.execute("""SELECT EXISTS (SELECT 1 AS result FROM pg_tables WHERE schemaname = 'public' AND tablename = '{0}');""".format(TBL_WORK_NETWORK %(i, j)))
         table_exists = cur.fetchone()[0]

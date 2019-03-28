@@ -66,7 +66,7 @@ cur = con.cursor()
 # cur.execute(Q_GetList)
 # geoff_nodes_list = cur.fetchall()
 # geoff_nodes = dict(geoff_nodes_list)
-'''
+
 print "Getting and writing pairs"
 
 Q_GetGroupPairs = """
@@ -502,7 +502,7 @@ for i in xrange(101,112):
     IDX_geom = "temp_pairs_332_%d_geom_idx" % i
     IDX_value = "temp_pairs_332_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_PAIRS, IDX_geom, IDX_value))
-'''        
+        
 
 ######################## PART 2 ###########################
 ####################VERTICAL LINES#########################
