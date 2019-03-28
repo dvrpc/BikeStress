@@ -1,3 +1,7 @@
+#to run thru cmd (don't have to)
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\6_MovingFrame.py
+
+
 #only run for largest island
 import logging
 import csv
@@ -62,6 +66,8 @@ cur = con.cursor()
 # cur.execute(Q_GetList)
 # geoff_nodes_list = cur.fetchall()
 # geoff_nodes = dict(geoff_nodes_list)
+'''
+print "Getting and writing pairs"
 
 Q_GetGroupPairs = """
     SELECT
@@ -110,7 +116,8 @@ for i in xrange(0, len(pairs), batch_size):
 cur.execute("COMMIT;")
 
 
-#
+print "Creating OD Lines"
+
 Q_ODLines = """
     CREATE TABLE "{0}" AS(
         WITH unique_geoms AS (
@@ -134,9 +141,9 @@ Q_ODLines = """
             ON p.togeoff = g2.geoffid
         ) AS pair_f
     );
-    CREATE SEQUENCE "{0}_id_seq2";
+    CREATE SEQUENCE "{0}_id_seq";
     SELECT setval(
-        '"{0}_id_seq2"',
+        '"{0}_id_seq"',
         (
             SELECT id
             FROM "{0}"
@@ -145,7 +152,7 @@ Q_ODLines = """
         )
     );
     ALTER TABLE "{0}" ALTER COLUMN id SET NOT NULL;
-    ALTER TABLE "{0}" ALTER COLUMN id SET DEFAULT nextval('"{0}_id_seq2"'::regclass);
+    ALTER TABLE "{0}" ALTER COLUMN id SET DEFAULT nextval('"{0}_id_seq"'::regclass);
     ALTER TABLE "{0}" ADD CONSTRAINT "{0}_pk" PRIMARY KEY (id);
 """.format(TBL_OD_LINES, TBL_GEOFF_PAIRS, TBL_GEOFF_GEOM)
 cur.execute(Q_ODLines)
@@ -197,7 +204,7 @@ Q_ClipNetwork = """
     FROM public."{0}"
     WHERE geom |&> ST_SetSRID(ST_MakeLine(ST_Point(%d, %d),ST_Point(%d, %d)), 26918)
         AND geom &<| ST_SetSRID(ST_MakeLine(ST_Point(%d, %d),ST_Point(%d, %d)), 26918);
-""".format(VIEW)
+"""
 
 Q_BBoxExtent =   """SELECT st_asgeojson(st_setsrid(st_extent(geom), 26918)) FROM public."{0}";"""
 
@@ -242,6 +249,7 @@ Q_InsertTempNetwork = """INSERT INTO "{0}" (mixid, fromgeoff, togeoff, cost, geo
 
 ########################## PART 1 #####################
 ######################HORIZONTAL LINES ################
+print "Horizontal Lines - Intersect"
 
 iterations = int(math.ceil((ymax-ymin)/8046.72))
 
@@ -302,7 +310,7 @@ for i in xrange(1,iterations):
     
     print "Clipping Network"
     
-    cur.execute(Q_ClipNetwork % (
+    cur.execute(Q_ClipNetwork.format(VIEW) % (
         inter_xmin, 
         (inter_ymin - 1609.34), 
         inter_xmax, 
@@ -345,7 +353,7 @@ for i in xrange(1,iterations):
 
 
 #OD LINES IN BETWEEN BREAK LINES
-
+print "Horizontal Lines - Between"
 #starting y value of line
 #starting y value of line
 y_value_bottom = ymin
@@ -401,7 +409,7 @@ for i in xrange(1, iterations+1):
     print "Clipping Network"    
     
     #clip network with 1 mile buffer on top and bottom      
-    cur.execute(Q_ClipNetwork % (
+    cur.execute(Q_ClipNetwork.format(VIEW) % (
         xmin, 
         (y_value_bottom - 1609.34),
         xmax,
@@ -442,6 +450,7 @@ for i in xrange(1, iterations+1):
 
 
 
+print "Indexing"
 
 Q_IndexExisting = """
     CREATE INDEX IF NOT EXISTS "{1}"
@@ -493,15 +502,92 @@ for i in xrange(101,112):
     IDX_geom = "temp_pairs_332_%d_geom_idx" % i
     IDX_value = "temp_pairs_332_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_PAIRS, IDX_geom, IDX_value))
-        
+'''        
 
 ######################## PART 2 ###########################
 ####################VERTICAL LINES#########################
+print "Part 2 Vertical Lines"
+#select OD lines that intersect the break line
+Q_IntersectLines = """
+    SELECT
+        fromgeoff,
+        togeoff,
+        ST_AsGeoJSON(geom)
+    FROM public."{0}"
+    WHERE geom && ST_SetSRID(ST_MakeLine(ST_Point(%f, %f),ST_Point(%f, %f)), 26918);
+    """
+    
+Q_LinesBetween = """
+    SELECT 
+        fromgeoff,
+        togeoff,
+        ST_AsGeoJSON(geom)
+    FROM public."{0}"
+    WHERE geom >> ST_SetSRID(ST_MakeLine(ST_Point(%f, %f),ST_Point(%f, %f)), 26918)
+        AND geom << ST_SetSRID(ST_MakeLine(ST_Point(%f, %f),ST_Point(%f, %f)), 26918);
+    """
+
+
+#use 1 mile buffer when clipping network to capture full paths
+Q_ClipNetwork = """
+    SELECT 
+        mixid,
+        fromgeoff,
+        togeoff,
+        cost,
+        ST_AsGeoJSON(geom),
+        strong
+    FROM public."{0}"
+    WHERE geom &> ST_SetSRID(ST_MakeLine(ST_Point(%f, %f),ST_Point(%f, %f)), 26918)
+        AND geom &< ST_SetSRID(ST_MakeLine(ST_Point(%f, %f),ST_Point(%f, %f)), 26918);
+"""
+
+Q_BBoxExtent =   """SELECT st_asgeojson(st_setsrid(st_extent(geom), 26918)) FROM public."{0}";"""
+
+#create table in DB to hold subset of pairs
+Q_CreateTempODLinesTable = """
+    CREATE TABLE public."{0}"
+    (
+      id BIGSERIAL PRIMARY KEY,
+      fromgeoff integer,
+      togeoff integer,
+      geom geometry
+    )
+    WITH (
+      OIDS=FALSE
+    );
+    ALTER TABLE public."{0}"
+      OWNER TO postgres;"""
+
+
+Q_InsertTempPairs = """INSERT INTO "{0}" (fromgeoff, togeoff, geom) VALUES (%s, %s, ST_GeomFromGeoJSON('%s'));"""
+
+Q_CreateTempNetwork = """
+    CREATE TABLE public."{0}"
+    (
+      id BIGSERIAL PRIMARY KEY, 
+      mixid integer,
+      fromgeoff integer,
+      togeoff integer,
+      cost float,
+      geom geometry,
+      strong integer
+    )
+    WITH (
+      OIDS=FALSE
+    );
+    ALTER TABLE public."{0}"
+      OWNER TO postgres;""" 
+      
+Q_InsertTempNetwork = """INSERT INTO "{0}" (mixid, fromgeoff, togeoff, cost, geom) VALUES (%s, %s, %s, %s, ST_GeomFromGeoJSON('%s'));"""
+
+print "Vertical Lines - Intersect/Intersect"
+
 TBL_TEMP_NETWORK = "temp_network_332_%d"
 TBL_TEMP_PAIRS = "temp_pairs_332_%d"
 
 #INTERSECT/INTERSECT
-for c in xrange(1,11):
+for c in xrange(1,10):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
     
@@ -616,7 +702,8 @@ for c in xrange(1,11):
         newid    += 1
 
 #INTERSECT/BETWEEN
-for c in xrange(1,11):
+print "Vertical Lines - Intersect/Between"
+for c in xrange(1,10):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
 
@@ -719,6 +806,7 @@ for c in xrange(1,11):
         
 
 #BETWEEN/INTERSECT
+print "Vertical Lines - Between/Intersect"
 for c in xrange(101,112):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
@@ -834,6 +922,7 @@ for c in xrange(101,112):
         newid    += 1
 
 #BETWEEN/BETWEEN
+print "Vertical Lines - Between/Between"
 for c in xrange(101,112):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c

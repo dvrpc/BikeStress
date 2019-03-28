@@ -1,5 +1,5 @@
 #run thru cmd
-#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\5_ODpairs_TrailTransit.py
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\TrailAnalysis\5_ODpairs_TrailTransit.py
 
 import psycopg2 as psql
 import csv
