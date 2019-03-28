@@ -19,7 +19,7 @@ TBL_WORK_NETWORK = "temp_network_332_%d_%d"
 
 
 ###for split islands/moving frame
-for i in xrange(1, 10):
+for i in xrange(1, 11):
     for j in xrange(1, 13):
         cur.execute("""SELECT EXISTS (SELECT 1 AS result FROM pg_tables WHERE schemaname = 'public' AND tablename = '{0}');""".format(TBL_WORK_NETWORK %(i, j)))
         table_exists = cur.fetchone()[0]

@@ -468,6 +468,17 @@ for gid, state in states:
     if not gid in state_lookup:
         state_lookup[gid] = []
     state_lookup[gid].append(state)
+    
+#repeat to create lookup for trail states
+SQL_GetTrailState = """SELECT gid, statenum FROM "{0}";""".format(TBL_TRAILS)
+cur.execute(SQL_GetTrailState)
+trailstates = cur.fetchall()
+
+trail_state_lookup = {}
+for tid, state in trailstates:
+    if not tid in trail_state_lookup:
+        trail_state_lookup[tid] = []
+    trail_state_lookup[tid].append(state)
 
 #grab list of block centroid gids that are within 5 miles of a delaware river bridge
 Q_BridgeList = """SELECT gid, statefp10 FROM "{0}";""".format(TBL_BRIDGECENTS)
@@ -488,7 +499,7 @@ for i, (tid, gid) in enumerate(trailpairs):
             #are the from/to nodes of the OD pair the same point?
             if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
                 #are they in the same state? if so, calculate
-                if state_lookup[tid] == state_lookup[gid]:
+                if trail_state_lookup[tid] == state_lookup[gid]:
                     # if geoff_grp[nodes_geoff[fromnodeno]] == int(sys.argv[1]):
                     CloseEnough.append([
                         tid,    # FromGID
