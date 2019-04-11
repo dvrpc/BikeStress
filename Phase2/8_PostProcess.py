@@ -49,6 +49,30 @@ con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, us
 #create cursor to execute querys
 cur = con.cursor()
 
+#to use in QGIS to take a quick look at the results
+"""
+WITH tblA AS(
+    SELECT 
+        edge, 
+        SUM(count) AS total
+    FROM edgecounts
+    GROUP BY edge
+    ),
+tblB AS(
+SELECT
+    a.*,
+    m.cost,
+    m.geom
+    FROM tblA a
+    INNER JOIN master_links_grp m
+    ON m.mixid = a.edge)
+SELECT use.edge, use.total, links.linklts, links.length, links.totnumla_1, links.bike_fac_2, links.speedtouse, use.geom
+FROM tblB use
+INNER JOIN links
+ON use.edge = links.gid
+    ;
+"""
+
 #sum the counts of unique edges in the edge count table that was built upon by each run of 7_CountEdges.py on the subsets of the shortest path results
 Q_UniqueEdgeSum = """
     CREATE TABLE "{0}" AS

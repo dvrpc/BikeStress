@@ -23,9 +23,17 @@ TBL_NODE_GID = "node_gid_post"
 TBL_EDGE = "edgecounts"
 IDX_nx_SPATHS_value = "spaths_nx_value_idx"
 
+####CHANGE FOR EACH TRANSIT MODE####
 TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
 
+TBL_TRANSIT_NODE = "transit_node"
+TBL_NODE_TRANSIT = "node_transit"
+
+
+
 VIEW = "links_grp_%s" % str(sys.argv[1])
+
+
 
 def worker(inqueue, output):
     result = []
@@ -148,6 +156,20 @@ if __name__ == '__main__':
         if not key in node_gid:
             node_gid[key] = []
         node_gid[key].append(gid)
+        
+    Q_GetList = """
+    SELECT * FROM "{0}";
+    """.format(TBL_NODE_TRANSIT)
+    cur.execute(Q_GetList)
+    node_transit_list = cur.fetchall()
+    node_transit = dict(node_transit_list)
+    
+    Q_GetList = """
+    SELECT * FROM "{0}";
+    """.format(TBL_TRANSIT_NODE)
+    cur.execute(Q_GetList)
+    transit_node_list = cur.fetchall()
+    transit_dict = dict(transit_node_list)
     
     Q_GetGroupPairs = """
         SELECT
@@ -187,10 +209,10 @@ if __name__ == '__main__':
 
     edges = []
     for id, path in enumerate(paths):
-        oGID = nodes_gids[geoff_nodes[path[0]]]
+        oTID = node_transit[geoff_nodes[path[0]]]
         dGID = nodes_gids[geoff_nodes[path[-1]]]
         for seq, (o ,d) in enumerate(zip(path, path[1:])):
-            row = id, seq, oGID, dGID, node_pairs[(o,d)]
+            row = id, seq, oTID, dGID, node_pairs[(o,d)]
             edges.append(row)
     logger.info('number of records: %d' % len(edges))
     
@@ -203,7 +225,7 @@ if __name__ == '__main__':
             (
               id integer,
               seq integer,
-              ogid integer,
+              otid integer,
               dgid integer,
               edge bigint,
               rowno BIGSERIAL PRIMARY KEY
@@ -216,13 +238,13 @@ if __name__ == '__main__':
             
             CREATE INDEX IF NOT EXISTS "{1}"
                 ON public."{0}" USING btree
-                (id, seq, ogid, dgid, edge)
+                (id, seq, otid, dgid, edge)
                 TABLESPACE pg_default;
             COMMIT;                
         """.format(TBL_SPATHS, IDX_nx_SPATHS_value)
         cur.execute(Q_CreateOutputTable)
 
-        logger.info('inserting records')
+        logger.info('inserting paths')
         str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edges[0]))))
         cur.execute("""BEGIN TRANSACTION;""")
         batch_size = 10000
@@ -230,27 +252,27 @@ if __name__ == '__main__':
             j = i + batch_size
             arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edges[i:j])
             #print arg_str
-            Q_Insert = """INSERT INTO public."{0}" (id, seq, ogid, dgid, edge) VALUES {1}""".format(TBL_SPATHS, arg_str)
+            Q_Insert = """INSERT INTO public."{0}" (id, seq, otid, dgid, edge) VALUES {1}""".format(TBL_SPATHS, arg_str)
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
         
         
         dict_all_paths = {}    
         #convert edges to dictionary
-        for id, seq, ogid, dgid, edge in edges:
+        for id, seq, otid, dgid, edge in edges:
             #only count links, not turns
             if edge > 0:
-                key = (ogid, dgid)
+                key = (otid, dgid)
                 if not key in dict_all_paths:
                     dict_all_paths[key] = []
                 dict_all_paths[key].append(edge)
 
         #how many times each OD geoff pair should be counted if used at all
         weight_by_od = {}
-        for oGID, dGID in dict_all_paths.iterkeys():
-            onode = gid_node[oGID]
+        for oTID, dGID in dict_all_paths.iterkeys():
+            onode = transit_dict[oTID]
             dnode = gid_node[dGID]
-            weight_by_od[(oGID, dGID)] = len(node_gid[onode]) * len(node_gid[dnode])
+            weight_by_od[(oTID, dGID)] = len(node_gid[dnode])
 
         edge_count_dict = {}
         for key, paths in dict_all_paths.iteritems():
@@ -299,5 +321,5 @@ if __name__ == '__main__':
     del paths, nodes_gids, geoff_nodes, node_pairs
     
     del edges
-        
+
     logger.info('end_time: %s' % time.ctime())

@@ -1,5 +1,5 @@
 #copy to run in cmd
-#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\TrailAnalysis\7_CalculateShortestPaths_PARENT_trailtransit.py
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\TransitAnalysis\7_CalculateShortestPaths_PARENT_transit.py
 
 import psycopg2 as psql
 import subprocess
@@ -9,13 +9,14 @@ import CalculateShortestPaths_CLEANUP as cleanup
 
 
 PYEXE = r"C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe "
-script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\TrailAnalysis\7_CalculateShortestPaths_CHILD_trailtransit.py"
+script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\TransitAnalysis\7_CalculateShortestPaths_CHILD_transit.py"
 
 con = psql.connect(database = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
 
 TBL_TEMP_NETWORK = "links_grp_%s"
 
+####CHANGE FOR EACH TRANSIT MODE####
 TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
 
 Q_GeoffCount = """
