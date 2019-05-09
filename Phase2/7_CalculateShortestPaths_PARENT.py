@@ -5,10 +5,11 @@ import psycopg2 as psql
 import subprocess
 import time
 import sys
+import CalculateShortestPaths_CLEANUP as cleanup
+
 
 PYEXE = r"C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe "
 script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\7_CalculateShortestPaths_CHILD.py"
-cleanup_script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\CalculateShortestPaths_CLEANUP.py"
 
 con = psql.connect(database = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()

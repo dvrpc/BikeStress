@@ -9,34 +9,24 @@ import sys
 import cPickle
 logger = mp.log_to_stderr(logging.INFO)
 
-#don't actually need
-# TBL_ALL_LINKS = "montco_lts_links"
-# TBL_CENTS = "montco_blockcent"
-# TBL_LINKS = "montco__L3_tolerablelinks"
-# TBL_NODES = "montco_nodes"
-# TBL_TOLNODES = "montco__L3_tol_nodes"
-# TBL_GEOFF_LOOKUP = "montco_L3_geoffs"
-# TBL_GEOFF_GEOM = "montco_L3_geoffs_viageom"
-# TBL_MASTERLINKS = "montco_L3_master_links"
-# TBL_MASTERLINKS_GEO = "montco_L3_master_links_geo"
-# TBL_GROUPS = "montco_L3_groups"
-
 #need in this script
-TBL_SPATHS = "shortestpaths_338"
-TBL_MASTERLINKS_GROUPS = "master_links_grp"
-TBL_OD = "OandD"
+TBL_SPATHS = "shortestpaths_%s_%s" % (str(sys.argv[1]), str(sys.argv[2]))
+TBL_MASTERLINKS_GROUPS ="master_links_grp"
 TBL_NODENOS = "nodenos"
 TBL_NODES_GEOFF = "nodes_geoff"
 TBL_NODES_GID = "nodes_gid"
 TBL_GEOFF_NODES = "geoff_nodes"
+TBL_GEOFF_GROUP = "geoff_group"
+TBL_GID_NODES = "gid_nodes"
+TBL_NODE_GID = "node_gid_post"
+TBL_EDGE = "edgecounts"
+IDX_nx_SPATHS_value = "spaths_nx_value_idx"
 
-# VIEW = "links_l3_grp_%s" % str(sys.argv[1])
+####CHANGE FOR EACH TRANSIT MODE####
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
 
-TBL_TEMP_PAIRS = "temp_pairs_338_%s_%s" % (str(sys.argv[1]), str(sys.argv[2]))
-TBL_TEMP_NETWORK = "temp_network_338_%s_%s" % (str(sys.argv[1]), str(sys.argv[2]))
-
-
-IDX_nx_SPATHS_value = "spaths_338_value_idx"
+TBL_TEMP_PAIRS = "temp_pairs_332_%s_%s" % (str(sys.argv[1]), str(sys.argv[2]))
+TBL_TEMP_NETWORK = "temp_network_332_%s_%s" % (str(sys.argv[1]), str(sys.argv[2]))
 
 
 def worker(inqueue, output):
@@ -122,7 +112,7 @@ Q_SelectMasterLinks = """
     FROM public."{0}";
     """.format(TBL_TEMP_NETWORK)
     
-con = psql.connect(database = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+con = psql.connect(database = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
 
 #create graph
@@ -155,6 +145,26 @@ if __name__ == '__main__':
     cur.execute(Q_GetList)
     geoff_nodes_list = cur.fetchall()
     geoff_nodes = dict(geoff_nodes_list)
+        
+    Q_GetList = """
+    SELECT * FROM "{0}";
+    """.format(TBL_GID_NODES)
+    cur.execute(Q_GetList)
+    gid_node_list = cur.fetchall()
+    gid_node = dict(gid_node_list)
+    
+    
+    Q_GetList = """
+    SELECT * FROM "{0}";
+    """.format(TBL_NODE_GID)
+    cur.execute(Q_GetList)
+    node_gid_list = cur.fetchall()
+    node_gid = {}
+    for node, gid in node_gid_list:
+        key = node
+        if not key in node_gid:
+            node_gid[key] = []
+        node_gid[key].append(gid)
     
     Q_GetPairs = """
         SELECT * FROM "{0}";
@@ -164,17 +174,14 @@ if __name__ == '__main__':
 
     paths, nopaths = test_workers(pairs)
         
-    with open(r"D:\Modeling\BikeStress\scripts\group338_MF_%s_%s.cpickle" % (sys.argv[1], sys.argv[2]), "wb") as io:
+    with open(r"D:\BikePedTransit\BikeStress\scripts\phase2_pickles\group332_MF_%s_%s.cpickle" % (sys.argv[1], sys.argv[2]), "wb") as io:
         cPickle.dump(paths, io)
-    with open(r"D:\Modeling\BikeStress\scripts\group338_MF_%s_%s_nopaths.cpickle" % (sys.argv[1], sys.argv[2]), "wb") as io:
+    with open(r"D:\BikePedTransit\BikeStress\scripts\phase2_pickles\group332_MF_%s_%s_nopaths.cpickle" % (sys.argv[1], sys.argv[2]), "wb") as io:
         cPickle.dump(nopaths, io)
     
     del pairs, nopaths
     
-    # with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done.txt", "ab") as io:
-        # cPickle.dump("180 calculated", io)
-    
-    con = psql.connect(database = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+    con = psql.connect(database = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
     cur = con.cursor()
 
     cur.execute(Q_SelectMasterLinks)
@@ -195,7 +202,8 @@ if __name__ == '__main__':
             edges.append(row)
     logger.info('number of records: %d' % len(edges))
     
-    del paths, nodes_gids, geoff_nodes, node_pairs
+    con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+    cur = con.cursor()
     
     if (len(edges) > 0):
         Q_CreateOutputTable = """
@@ -235,8 +243,73 @@ if __name__ == '__main__':
         cur.execute("COMMIT;")
         logger.info('end_time: %s' % time.ctime())
         
+        
+        dict_all_paths = {}    
+        #convert edges to dictionary
+        for id, seq, ogid, dgid, edge in edges:
+            #only count links, not turns
+            if edge > 0:
+                key = (ogid, dgid)
+                if not key in dict_all_paths:
+                    dict_all_paths[key] = []
+                dict_all_paths[key].append(edge)
+
+        #how many times each OD geoff pair should be counted if used at all
+        weight_by_od = {}
+        for oGID, dGID in dict_all_paths.iterkeys():
+            onode = gid_node[oGID]
+            dnode = gid_node[dGID]
+            weight_by_od[(oGID, dGID)] = len(node_gid[onode]) * len(node_gid[dnode])
+
+        edge_count_dict = {}
+        for key, paths in dict_all_paths.iteritems():
+            path_weight = weight_by_od[key]
+            for edge in paths:
+                if not edge in edge_count_dict:
+                    edge_count_dict[edge] = 0
+                edge_count_dict[edge] += path_weight
+                
+        with open(r"D:\BikePedTransit\BikeStress\scripts\phase2_pickles\edge_count_dict_332.pickle", "wb") as io:
+            cPickle.dump(edge_count_dict, io)
+                
+        con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+        cur = con.cursor()
+        
+        edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]
+        
+        logger.info('inserting counts')
+        
+        Q_CreateOutputTable2 = """
+            CREATE TABLE IF NOT EXISTS public."{0}"
+            (
+              edge integer,
+              count integer
+            )
+            WITH (
+                OIDS = FALSE
+            )
+            TABLESPACE pg_default;
+
+            COMMIT;                
+        """.format(TBL_EDGE)
+        cur.execute(Q_CreateOutputTable2)
+        
+        str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edge_count_list[0]))))
+        cur.execute("""BEGIN TRANSACTION;""")
+        batch_size = 10000
+        for i in xrange(0, len(edge_count_list), batch_size):
+            j = i + batch_size
+            arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edge_count_list[i:j])
+            Q_Insert = """INSERT INTO "{0}" VALUES {1};""".format(TBL_EDGE, arg_str)
+            cur.execute(Q_Insert)
+        cur.execute("COMMIT;")
+        con.commit()
+
+    del paths, nodes_gids, geoff_nodes, node_pairs
+    
     del edges
         
-    # with open(r"C:\Users\model-ws.DVRPC_PRIMARY\Google Drive\done2.txt", "wb") as io:
-        # cPickle.dump("180 written to DB", io)
+    logger.info('end_time: %s' % time.ctime())
+
+
 

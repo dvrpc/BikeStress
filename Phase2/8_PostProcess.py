@@ -14,28 +14,28 @@ import scipy.spatial
 import networkx as nx
 
 ####table names to modify in subsequent runs###
-TBL_EDGE = "edgecounts_testarea"
-TBL_EDGETOTAL = "edgetotals_testarea"
-TBL_USE = "linkuse_testarea"
-TBL_COUNTLTS = "linkuse_lts_testarea"
-TBL_LTS3 = "LTS3only_linkuse_testarea"
-TBL_CON_ISLANDS = "connected_islands_testarea"
+TBL_EDGE = "edgecounts"
+TBL_EDGETOTAL = "edgetotals"
+TBL_USE = "linkuse"
+TBL_COUNTLTS = "linkuse_lts"
+TBL_LTS3 = "LTS3only_linkuse"
+TBL_CON_ISLANDS = "connected_islands"
 
 #most of these are geared towards L2 for island visualization unless otherwise noted
-TBL_ALL_LINKS = "testarea_links"
-TBL_LINKS = "l2_tolerablelinks_testarea"
-TBL_NODES = "testarea_nodes"
-TBL_TOLNODES = "l2_tol_nodes_testarea"
-TBL_GEOFF_LOOKUP = "l2_geoffs_testarea"
-TBL_GEOFF_LOOKUP_GEOM = "l2_geoffs_viageom_testarea"
-TBL_MASTERLINKS = "l2_master_links_testarea"
-TBL_MASTERLINKS_GEO = "l2_master_links_geo_testarea"
-TBL_MASTERLINKS_GROUPS = "l2_master_links_grp_testarea"
-TBL_MASTERLINKS_GROUPS_L3 = "master_links_grp_testarea"
-TBL_GROUPS = "l2_groups_testarea"
+TBL_ALL_LINKS = "links"
+TBL_LINKS = "l2_tolerablelinks"
+TBL_NODES = "nodes"
+TBL_TOLNODES = "l2_tol_nodes"
+TBL_GEOFF_LOOKUP = "l2_geoffs"
+TBL_GEOFF_LOOKUP_GEOM = "l2_geoffs_viageom"
+TBL_MASTERLINKS = "l2_master_links"
+TBL_MASTERLINKS_GEO = "l2_master_links_geo"
+TBL_MASTERLINKS_GROUPS = "l2_master_links_grp"
+TBL_MASTERLINKS_GROUPS_L3 = "master_links_grp"
+TBL_GROUPS = "l2_groups"
 TBL_TURNS = "all_turns"
-TBL_SUBTURNS = "l2_tolerableturns_testarea"
-TBL_RESULTS = "l3_island_results_testarea"
+TBL_SUBTURNS = "l2_tolerableturns"
+TBL_RESULTS = "l3_island_results"
 
 #index names
 IDX_LINKS_geom = "l2tol_links_geom_idx_ta"
@@ -72,6 +72,16 @@ INNER JOIN links
 ON use.edge = links.gid
     ;
 """
+#find percentile breaks for edgecount results
+#assign values in new field (in arcmap?)
+select
+  percentile_cont(0.90) within group (order by count asc) as top10,
+  percentile_cont(0.80) within group (order by count asc) as top20,
+  percentile_cont(0.70) within group (order by count asc) as top30,
+  percentile_cont(0.60) within group (order by count asc) as top40,
+  percentile_cont(0.50) within group (order by count asc) as top50
+FROM edgecounts_trails
+
 
 #sum the counts of unique edges in the edge count table that was built upon by each run of 7_CountEdges.py on the subsets of the shortest path results
 Q_UniqueEdgeSum = """
@@ -99,7 +109,7 @@ cur.execute(Q_GeomJoin)
 #join results to LTS assigned links
 Q_JoinLTS = """
     CREATE TABLE "{0}" AS
-        SELECT use.edge, use.total, links.linklts, links.length, links.numlanes, links.bike_fac_1, links.speedtouse, use.geom
+        SELECT use.edge, use.total, links.linklts, links.length, links.totnumla_1, links.bike_fac_2, links.speedtouse, use.geom
         FROM "{1}" AS use
         INNER JOIN "{2}" as links
         ON use.edge = links.gid;
@@ -213,17 +223,12 @@ Q_TurnCost = """
 
     UPDATE "{0}"
     SET cost = (0.005*(1 + "turnlts"))
-    WHERE turndirection = 2;
+    WHERE "turnlts">= 0;
     COMMIT;
-
+    
     UPDATE "{0}"
-    SET cost = (0.005*(1 + 1 + "turnlts"))
-    WHERE turndirection = 1;
-    COMMIT;
-
-    UPDATE "{0}"
-    SET cost = (0.005*(1 + 2 + "turnlts"))
-    WHERE turndirection = 3;
+    SET cost = (0.005*(1 + abs("turnlts")))
+    WHERE "turnlts"< 0;
     COMMIT;
 """.format(TBL_SUBTURNS)
 cur.execute(Q_TurnCost)
@@ -439,7 +444,7 @@ con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, us
 #create cursor to execute querys
 cur = con.cursor()
 
-###NEED TO BREAK UP INTO COUNTY TABLES FIRST###
+###NEED TO BREAK UP INTO COUNTY TABLES FIRST and read into DB from shapefile###
 #select top 10 percent from county lts result tables to identify priority links to work with
 TBL_bucks        = "bucks_linkuse"
 TBL_chester      = "chesco_linkuse"
@@ -470,7 +475,7 @@ for i in xrange(0, len(county_tbls)):
 priorities = zip(priority_edges, edge_county)
 
 
-###which L1&2 islands would be connected by LTS 3 prioritiy segments (top 10% only)
+###which L1&2 islands would be connected by LTS 3 priority segments (top 10% only)
 
 ##SELECT ALL THE LINKS THAT ARE PART OF EACH ISLAND
 Q_BUFFER_INTERSECT = """
