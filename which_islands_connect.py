@@ -32,7 +32,7 @@ ON ST_Intersects(link.geom, blobs.st_concavehull)
 
 -- REAL ONE
 
--- PYTHON?
+-- PYTHON
 import psycopg2 as psql # PostgreSQL connector
 import csv
 import itertools
@@ -239,10 +239,11 @@ TBL_CON_ISLANDS = "connected_islands"
     # cur.execute(Q_Insert.format(TBL_BLOBS, edge, island, blob))
 
 
+    
+#create table of 
+TBL_LINKS_GRP = "master_links_grp_L2" 
 
-    
-    
-    
+TBL_CON_ISLANDS = "connected_islands"
     
 # OR SELECT ALL THE LINKS THAT ARE PART OF THAT ISLAND
 Q_BUFFER_INTERSECT = """

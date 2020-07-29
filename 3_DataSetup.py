@@ -10,43 +10,49 @@ import pickle
 import sqlite3
 from collections import Counter
 
-###ITEMS NEEDED IN DB###
-#links with LTS assigned (polyline)
-#block centroids with weights if desired (points)
-#nodes from model(points)
+###ITEMS NEEDED IN DB### read in using postgis shapefile importer
+###SRID = 26918
+#links with LTS assigned (polyline); link length units = feet
+    #when exporting directed links from Visum, iclude the following fields: 
+        #No, Fromnodeno, Tonodeno, length, numlanes, bike_facility, speedtouse, typeno, linklts, circuit flag
+        #turn off all units; link length should be in miles
+#block centroids with weights if desired (points) 
+#nodes from model(points) - only those with >0 legs
+#points of delaware river bridge locations
 
 #table names
-TBL_ALL_LINKS = "uc_testlinks"
-TBL_CENTS = "uc_testcentroids"
-TBL_LINKS = "ucity_tolerablelinks"
-TBL_NODES = "sa_nodes"
-# TBL_SPATHS = "montco_L3_shortestpaths"
-TBL_TOLNODES = "ucity_tol_nodes"
-TBL_GEOFF_LOOKUP = "geoffs_uc"
-TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom_uc"
-TBL_MASTERLINKS = "master_links_uc"
-TBL_MASTERLINKS_GEO = "master_links_geo_uc"
-TBL_MASTERLINKS_GROUPS = "master_links_grp_uc"
-TBL_GROUPS = "groups_uc"
+TBL_ALL_LINKS = "links"
+TBL_CENTS = "block_centroids"
+TBL_LINKS = "tolerablelinks"
+TBL_NODES = "nodes"
+TBL_TOLNODES = "tol_nodes"
+TBL_GEOFF_LOOKUP = "geoffs"
+TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom"
+TBL_MASTERLINKS = "master_links"
+TBL_MASTERLINKS_GEO = "master_links_geo"
+TBL_MASTERLINKS_GROUPS = "master_links_grp"
+TBL_GROUPS = "groups"
 TBL_TURNS = "all_turns"
-TBL_SUBTURNS = "ucity_tolerableturns"
+TBL_SUBTURNS = "tolerableturns"
+TBL_BRIDGES = "delawareriverbridges"
+TBL_BRIDGEBUF = "bridges_5mibuf"
+TBL_BRIDGECENTS = "bridge_buffer_cents"
 
 #index names
 IDX_ALL_LINKS_geom = "links_geom_idx"
 IDX_ALL_LINKS_value = "links_value_idx"
 IDX_CENTS_geom = "centroids_geom_idx"
 IDX_CENTS_value = "centroids_value_idx"
-IDX_LINKS_geom = "tol_links_geom_idx_uc"
-IDX_LINKS_value = "tol_links_value_idx_uc"
-# IDX_SPATHS_value = "spaths_value_idx"
+IDX_LINKS_geom = "tol_links_geom_idx"
+IDX_LINKS_value = "tol_links_value_idx"
 IDX_NODES_geom = "nodes_geom_idx"
 IDX_NODES_value = "nodes_value_idx"
-IDX_TOL_NODES_geom = "tolnodes_geom_idx_uc"
-IDX_TOL_NODES_value = "tolnodes_value_idx_uc"
+IDX_TOL_NODES_geom = "tolnodes_geom_idx"
+IDX_TOL_NODES_value = "tolnodes_value_idx"
 IDX_ALL_TURNS_values = "All_Turns_values_idx"
 
 #connect to SQL DB in python
-con = psql.connect(dbname = "BikeStress", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 #create cursor to execute querys
 cur = con.cursor()
 
@@ -101,7 +107,7 @@ cur.execute(Q_IndexExisting)
 
 Q_LinkSubset = """
     CREATE TABLE "{0}" AS
-        SELECT * FROM "{1}" WHERE linklts <= 0.6 AND linklts > 0;
+        SELECT * FROM "{1}" WHERE linklts <= 0.6 AND linklts >= 0;
     COMMIT;
     CREATE INDEX IF NOT EXISTS "{2}"
         ON public."{0}" USING gist
@@ -167,7 +173,7 @@ CREATE INDEX IF NOT EXISTS "{1}"
 cur.execute(Q_CreateTurnTable)
 con.commit()
 
-tbl_path = r"D:/Modeling/BikeStress/TurnLTS_output_072517.csv"
+tbl_path = r"U:/FY2019/Transportation/TransitBikePed/BikeStressPhase2/data/IntermediateOutputs/TurnLTS_output_031819.csv"
 
 #query to insert turns from csv into turn table
 Q_INSERT = """
@@ -175,7 +181,6 @@ INSERT INTO public."{0}" VALUES (%s, %s, %s, %s, %s, %s)
 """.format(TBL_TURNS)
 
 #open table
-
 data = []
 with open(tbl_path, "rb") as io:
     r = csv.reader(io)
@@ -198,9 +203,10 @@ con.commit()
 ############################################################################################
 
 #query to select turns that share a node with the links in the subset of links being used
+#and turnlts is positive!
 Q_SubsetTurns = """
-CREATE TABLE "{2}" AS
-    SELECT * FROM(
+CREATE TABLE "{2}" AS(
+     SELECT * FROM(
         SELECT tblB.fromnode, tblB.vianode, tblB.tonode, tblB.maxapproach, tblB.turndirection, tblB.turnlts FROM (
             SELECT * FROM(
                 SELECT DISTINCT(fromnodeno) FROM "{1}"
@@ -224,7 +230,8 @@ CREATE TABLE "{2}" AS
                 SELECT DISTINCT(tonodeno) FROM "{1}") AS tblA
             INNER JOIN public."{0}"
             ON public."{0}".tonode = tblA.fromnodeno) AS tblD
-        ) AS t0;
+        )AS t0
+        );
 """.format(TBL_TURNS, TBL_LINKS, TBL_SUBTURNS)
 cur.execute(Q_SubsetTurns)
 con.commit()
@@ -241,24 +248,19 @@ cur.execute(Q_AddID)
 con.commit()
 
 #calcualte turn cost and add to new row in table
-#1 = right, 2 = straight, 3 = left
+#use cost constant from 0.005 for link length in miles
 Q_TurnCost = """    
     ALTER TABLE "{0}" ADD COLUMN cost numeric;
     COMMIT;
 
     UPDATE "{0}"
     SET cost = (0.005*(1 + "turnlts"))
-    WHERE turndirection = 2;
+    WHERE "turnlts">= 0;
     COMMIT;
-
+    
     UPDATE "{0}"
-    SET cost = (0.005*(1 + 1 + "turnlts"))
-    WHERE turndirection = 1;
-    COMMIT;
-
-    UPDATE "{0}"
-    SET cost = (0.005*(1 + 2 + "turnlts"))
-    WHERE turndirection = 3;
+    SET cost = (0.005*(1 + abs("turnlts")))
+    WHERE "turnlts"< 0;
     COMMIT;
 """.format(TBL_SUBTURNS)
 cur.execute(Q_TurnCost)
@@ -292,7 +294,7 @@ cur.execute(Q_GeomGeoffTable)
 #turns will have negative ID and links will have positive ID
 Q_CreateMasterLinks = """
     CREATE TABLE "{0}" AS(
-    SELECT tblA.gid AS mixID, tblA.fromgeoff, tblA.togeoff, CAST(trim(trailing 'mi' FROM "length") AS float)* (1 + "linklts") AS cost FROM(
+    SELECT tblA.gid AS mixID, tblA.fromgeoff, tblA.togeoff, (length*(1 + linklts)) AS cost FROM(
         SELECT
             t.*,
             g1.geoffid AS fromgeoff,
@@ -339,9 +341,13 @@ CREATE TABLE "{0}" AS(
             FROM (
                 SELECT
                     no,
-                    ST_SetSRID(ST_Multi(ST_MakeLine(geom, geom)), 26918) AS geom
-                FROM "{3}"
-                WHERE geom IS NOT NULL
+                    ST_SetSRID(ST_Multi(ST_MakeLine(pointgeom, pointgeom)), 26918) AS geom
+                FROM (
+                    SELECT
+                        no,
+                        (ST_Dump(geom)).geom AS pointgeom
+                    FROM "{3}") foo
+                WHERE pointgeom IS NOT NULL
                 GROUP BY no, geom
             ) AS tblA
             INNER JOIN "{4}" AS tblB
@@ -364,29 +370,18 @@ COMMIT;
 """.format(TBL_MASTERLINKS_GEO, TBL_MASTERLINKS, TBL_ALL_LINKS, TBL_TOLNODES, TBL_SUBTURNS)
 cur.execute(Q_Master_Geom)
 
+#create table to hold list of block centroids within 5 miles of the delaware river bridges
+#run once on full study area block centroids - do not need to re-run for each test itteration
+Q_BridgeBuffer = """
+    CREATE TABLE "{2}" AS(
+        SELECT c.gid, c.statefp10, c.geom
+        FROM block_centroids c, "{1}" b
+        WHERE ST_Intersects(
+            c.geom,
+            ST_Transform(b.geom, 26918)
+        ));
+    COMMIT;
+    """.format(TBL_CENTS, TBL_BRIDGEBUF, TBL_BRIDGECENTS)
+cur.execute(Q_BridgeBuffer)
 
 
-#query to create table to hold shortest paths
-# Q_CreatePathTable = """
-    # CREATE TABLE IF NOT EXISTS public."{0}"
-    # (
-      # id integer,
-      # seq integer,
-      # ogid integer,
-      # dgid integer,
-      # edge bigint,
-      # rowno bigint NOT NULL DEFAULT nextval('"montco_L3_shortestpaths_rowno_seq"'::regclass),
-      # CONSTRAINT "montco_L3_shortestpaths_pkey" PRIMARY KEY (rowno)
-    # )
-    # WITH (
-        # OIDS = FALSE
-    # )
-    # TABLESPACE pg_default;
-    # COMMIT;
-    
-    # CREATE INDEX IF NOT EXISTS "{1}"
-        # ON public."{0}" USING btree
-        # (id, seq, ogid, dgid, edge, rowno)
-        # TABLESPACE pg_default;    
-# """.format(TBL_SPATHS, IDX_SPATHS_value)
-# cur.execute(Q_CreatePathTable)
