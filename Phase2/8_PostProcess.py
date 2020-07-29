@@ -478,6 +478,10 @@ priorities = zip(priority_edges, edge_county)
 ###which L1&2 islands would be connected by LTS 3 priority segments (top 10% only)
 
 ##SELECT ALL THE LINKS THAT ARE PART OF EACH ISLAND
+TBL_CON_ISLANDS = "con_islands_trails"
+TBL_LTS3 = "lts3_trails_results"
+TBL_MASTERLINKS_GROUPS = "l2_master_links_grp"
+
 Q_BUFFER_INTERSECT = """
     CREATE TABLE {2} AS(
         WITH buf AS(
@@ -509,7 +513,7 @@ Q_BUFFER_INTERSECT = """
             g.geom
         FROM tblA
         INNER JOIN "{0}" g
-        ON tblA.edge = g.edge
+        ON tblA.edge = g.link
         GROUP BY tblA.edge, g.geom
 );
 """
