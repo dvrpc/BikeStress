@@ -12,11 +12,11 @@ from collections import Counter
 
 ###ITEMS NEEDED IN DB### read in using postgis shapefile importer
 ###SRID = 26918
-#links with LTS assigned (polyline); link length units = feet
+#links with LTS assigned (polyline); 
     #when exporting directed links from Visum, iclude the following fields: 
-        #No, Fromnodeno, Tonodeno, length, numlanes, bike_facility, speedtouse, typeno, linklts, circuit flag
+        #No, Fromnodeno, Tonodeno, length, TotNumLanes, bike_facility, SPEED_LTS, typeno, LinkLTS, SLOPE_PERC, SlopeFactor
         #turn off all units; link length should be in miles
-#block centroids with weights if desired (points) 
+#block centroids with weights if desired (points)
 #nodes from model(points) - only those with >0 legs
 #points of delaware river bridge locations
 
@@ -25,6 +25,7 @@ TBL_ALL_LINKS = "links"
 TBL_CENTS = "block_centroids"
 TBL_LINKS = "tolerablelinks"
 TBL_NODES = "nodes"
+
 TBL_TOLNODES = "tol_nodes"
 TBL_GEOFF_LOOKUP = "geoffs"
 TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom"
@@ -35,7 +36,6 @@ TBL_GROUPS = "groups"
 TBL_TURNS = "all_turns"
 TBL_SUBTURNS = "tolerableturns"
 TBL_BRIDGES = "delawareriverbridges"
-TBL_BRIDGEBUF = "bridges_5mibuf"
 TBL_BRIDGECENTS = "bridge_buffer_cents"
 
 #index names
@@ -52,7 +52,7 @@ IDX_TOL_NODES_value = "tolnodes_value_idx"
 IDX_ALL_TURNS_values = "All_Turns_values_idx"
 
 #connect to SQL DB in python
-con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 #create cursor to execute querys
 cur = con.cursor()
 
@@ -80,6 +80,49 @@ cur.execute(Q_ModifyLinkLTS)
 #SELECT * FROM lts_assigned_link WHERE gid = 248 OR gid = 249 OR gid = 250 OR gid = 251;
 '''
 
+#update block centroids table to assign score to IPD class
+Q_add_score = """
+    ALTER TABLE "{0}"
+    ADD COLUMN ipdscore integer;
+    COMMIT;
+    """.format(TBL_CENTS)
+cur.execute(Q_add_score)
+
+Q_update_score = """
+    UPDATE "{0}"
+    SET ipdscore = %d
+    WHERE ipd_class = '%s';
+    COMMIT;
+""".format(TBL_CENTS)
+classes = ['Well Above Average', 'Above Average', 'Average', 'Below Average', 'Well Below Average']
+scores = [5, 4, 3, 2, 1]
+for i in xrange(len(classes)):
+    cur.execute(Q_update_score % (scores[i], classes[i]))
+    
+#update nulls
+Q_update_nulls = """
+    UPDATE "{0}"
+    SET ipdscore = 0
+    WHERE ipd_class IS NULL;
+    COMMIT;
+""".format(TBL_CENTS)
+cur.execute(Q_update_nulls)
+
+#rename columns in links table to avoid quotes
+Q_renamecol = """
+    ALTER TABlE links
+    RENAME "totnumla~1" TO totlane;
+    
+    ALTER TABLE links
+    RENAME "bike_fac~2" TO bikefac;
+    
+    ALTER TABLE links
+    RENAME "slopefac~3" TO slopefac;
+    
+    COMMIT;
+"""
+cur.execute(Q_renamecol)
+
 #index existing data to speed up processing
 Q_IndexExisting = """
     CREATE INDEX IF NOT EXISTS "{2}"
@@ -88,7 +131,7 @@ Q_IndexExisting = """
         TABLESPACE pg_default;
     CREATE INDEX IF NOT EXISTS "{3}"
         ON public."{0}" USING btree
-        (gid, countyfp10)
+        (gid, countyfp10, ipd_class, ipdscore)
         TABLESPACE pg_default;
     CREATE INDEX IF NOT EXISTS "{4}"
         ON public."{1}" USING gist
@@ -96,7 +139,7 @@ Q_IndexExisting = """
         TABLESPACE pg_default;
     CREATE INDEX IF NOT EXISTS "{5}"
         ON public."{1}" USING btree
-        (gid, no, fromnodeno, tonodeno, length, linklts)
+        (gid, no, fromnodeno, tonodeno, length, linklts, slopefac)
         TABLESPACE pg_default;
         """.format(TBL_CENTS, TBL_ALL_LINKS, IDX_CENTS_geom, IDX_CENTS_value, IDX_ALL_LINKS_geom, IDX_ALL_LINKS_value)
 cur.execute(Q_IndexExisting)
@@ -115,7 +158,7 @@ Q_LinkSubset = """
         TABLESPACE pg_default; 
     CREATE INDEX IF NOT EXISTS "{3}"
         ON public."{0}" USING btree
-        (gid, no, fromnodeno, tonodeno, length, linklts)
+        (gid, no, fromnodeno, tonodeno, length, linklts, slopefac)
         TABLESPACE pg_default;    
 """.format(TBL_LINKS, TBL_ALL_LINKS, IDX_LINKS_geom, IDX_LINKS_value)
 cur.execute(Q_LinkSubset)
@@ -173,7 +216,7 @@ CREATE INDEX IF NOT EXISTS "{1}"
 cur.execute(Q_CreateTurnTable)
 con.commit()
 
-tbl_path = r"U:/FY2019/Transportation/TransitBikePed/BikeStressPhase2/data/IntermediateOutputs/TurnLTS_output_031819.csv"
+tbl_path = r"U:\FY2017\Transportation\BikeStress\Phase3\IntermediateOutputs/TurnLTS_output_081720.csv"
 
 #query to insert turns from csv into turn table
 Q_INSERT = """
@@ -292,9 +335,10 @@ cur.execute(Q_GeomGeoffTable)
 #this table will be used by djikstra for routing
 #must have ID
 #turns will have negative ID and links will have positive ID
+#AUGUST 14, 2020 - Updated to incorporate slope factor in link cost
 Q_CreateMasterLinks = """
     CREATE TABLE "{0}" AS(
-    SELECT tblA.gid AS mixID, tblA.fromgeoff, tblA.togeoff, (length*(1 + linklts)) AS cost FROM(
+    SELECT tblA.gid AS mixID, tblA.fromgeoff, tblA.togeoff, (length*(1 + linklts + slopefac)) AS cost FROM(
         SELECT
             t.*,
             g1.geoffid AS fromgeoff,
@@ -372,16 +416,27 @@ cur.execute(Q_Master_Geom)
 
 #create table to hold list of block centroids within 5 miles of the delaware river bridges
 #run once on full study area block centroids - do not need to re-run for each test itteration
+
+#for reference: transform SRID for bridge points
+ALTER TABLE delawareriverbridges
+ALTER COLUMN geom TYPE geometry (MultiPoint, 26918)
+USING ST_Transform(ST_SetSRID(geom, 4326), 26918);
+
+
 Q_BridgeBuffer = """
-    CREATE TABLE "{2}" AS(
-        SELECT c.gid, c.statefp10, c.geom
-        FROM block_centroids c, "{1}" b
+    CREATE TABLE "{1}" AS(
+        WITH tblA As(
+        SELECT *, st_buffer(geom, 8046) AS buff
+        FROM delawareriverbridges
+        )
+        SELECT c.gid, c.statefp10, c.cent
+        FROM "{0}" c, tblA b
         WHERE ST_Intersects(
-            c.geom,
-            ST_Transform(b.geom, 26918)
+            c.cent,
+            b.buff
         ));
     COMMIT;
-    """.format(TBL_CENTS, TBL_BRIDGEBUF, TBL_BRIDGECENTS)
+    """.format(TBL_CENTS, TBL_BRIDGECENTS)
 cur.execute(Q_BridgeBuffer)
 
 

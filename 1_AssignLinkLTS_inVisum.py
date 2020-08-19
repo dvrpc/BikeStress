@@ -5,9 +5,12 @@ import csv
 import os
 import pandas as pd
 
-Visum = h.CreateVisum(15)
+Visum = h.CreateVisum(18)
 # drag in version file
-#D:\BikePedTransit\BikeStress\versionfiles\Phase2_NJEdits\2015_Base_Tim_2x_18Mar2019_sm.ver
+#D:\BikePedTransit\BikeStress\versionfiles\Phase3\TIM23_2020_forAnalysis_072920.ver
+
+#create UDA "TotNumLanes" Integer type
+#Formula: [NUMLANES]+[REVERSELINK\NUMLANES]
 
 # grab Link attributes
 ### make sure all these link attributes are populated, especially in newly added trail links
@@ -16,10 +19,10 @@ ToNode           = h.GetMulti(Visum.Net.Links, r"ToNodeNo")
 Length           = h.GetMulti(Visum.Net.Links, r"Length")
 TotLanes         = h.GetMulti(Visum.Net.Links, r"TotNumLanes")
 BikeFac          = h.GetMulti(Visum.Net.Links, r"Bike_Facility")
-Speed            = h.GetMulti(Visum.Net.Links, r"SPEEDTOUSE")
+Speed            = h.GetMulti(Visum.Net.Links, r"SPEED_LTS")
 #OneWay           = h.GetMulti(Visum.Net.Links, r"ISONEWAY")#imported from edited GIS file
 LinkType         = h.GetMulti(Visum.Net.Links, r"TypeNo")
-
+Slope            = h.GetMulti(Visum.Net.Links, r"SLOPE_PERC")
 
 #create lookup for lanes and speed columns in Figure 1 in paper
 #second residential line modified to include speed up to 65 to make sure all fit into that category
@@ -96,6 +99,29 @@ for i in xrange(0, len(FromNode)):
 #create UDA 'LinkLTS'; float, 2 decimal places
 #write into UDA field in Visum
 h.SetMulti(Visum.Net.Links, "LinkLTS", LinkStress)
+
+#SLOPE factor lookup (commute based factors from Broach 2012)
+#downslopes/negative slope is zeroed out
+
+SlopeFactors = [0]*len(FromNode)
+
+for i in xrange(0, len(FromNode)):
+    if Slope[i] < 0.02:
+        SlopeFactors[i] = 0
+    elif Slope[i] < 0.04:
+        SlopeFactors[i] = 0.37
+    elif Slope[i] < 0.06:
+        SlopeFactors[i] = 1.20
+    else:
+        SlopeFactors[i] = 3.24
+
+#create UDA 'SlopeFactor'; float, 2 decimal places
+#write into UDA field in Visum
+h.SetMulti(Visum.Net.Links,"SlopeFactor", SlopeFactors)
+
+
 #save version file
-#Export directed links as shapefile
+#Export directed links as shapefile with the following attributes:
+    #No, Fromnodeno, Tonodeno, length, TotNumLanes, bike_facility, SPEED_LTS, typeno, LinkLTS, SLOPE_PERC, SlopeFactor
+        #turn off all units; link length should be in miles
 #Use PostGIS shapefile importer to import into DB
