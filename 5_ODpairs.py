@@ -1,5 +1,5 @@
-#run thru cmd
-#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\5_ODpairs.py
+#run thru conda cmd
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\5_ODpairs.py
 
 import psycopg2 as psql
 import csv
@@ -15,7 +15,7 @@ import networkx as nx
 TBL_ALL_LINKS = "links"
 TBL_CENTS = "block_centroids"
 TBL_LINKS = "tolerablelinks"
-TBL_NODES = "testarea_nodes"
+TBL_NODES = "nodes"
 TBL_TOLNODES = "tol_nodes"
 TBL_GEOFF_LOOKUP = "geoffs"
 TBL_GEOFF_LOOKUP_GEOM = "geoffs_viageom"
@@ -47,12 +47,12 @@ IDX_GID_NODES = "gid_nodes_idx"
 IDX_OD_value = "od_value_idx"
 IDX_NODE_GID = "node_gid_post"
 
-con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
 
 ##FIND PAIRS TO CALCULATE PATHS FOR
 SQL_GetGeoffs = """SELECT geoffid, vianode, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_GEOFF_LOOKUP_GEOM)
-SQL_GetBlocks = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_CENTS)
+SQL_GetBlocks = """SELECT gid, Null AS dummy, ST_AsGeoJSON(cent) FROM "{0}";""".format(TBL_CENTS)
 
 def GetCoords(record):
     id, vianode, geojson = record

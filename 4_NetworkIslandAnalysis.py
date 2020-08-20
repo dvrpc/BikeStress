@@ -1,5 +1,5 @@
-#run thru cmd
-#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\4_NetworkIslandAnalysis.py
+#run thru conda cmd
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\4_NetworkIslandAnalysis.py
 
 import psycopg2 as psql
 import csv
@@ -47,7 +47,7 @@ IDX_GID_NODES = "gid_nodes_idx"
 IDX_OD_value = "od_value_idx"
 IDX_NODE_GID = "node_gid_post"
 
-con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
 
 
@@ -166,7 +166,7 @@ Q_StrongSelect = """
 cur.execute(Q_StrongSelect)
 strong_grps = cur.fetchall()
 
-print time.ctime(), "Create Group Views"
+#print time.ctime(), "Create Group Views"
 ##iterate over groups
 #Q_CreateView = """CREATE VIEW %s AS(
 #                    SELECT * FROM "{0}"
@@ -178,13 +178,13 @@ print time.ctime(), "Create Group Views"
 #    cur.execute(Q_CreateView % (tblname, grpNo))
 
 #for level 3 analysis
-Q_CreateView = """CREATE VIEW %s AS(
-    SELECT * FROM "{0}"
-    WHERE strong = %d)
-""".format(TBL_MASTERLINKS_GROUPS)
-for grpNo in xrange(min(strong_grps)[0], (max(strong_grps)[0]+1)):
-    tblname = "links_grp_%d" % grpNo
+#Q_CreateView = """CREATE VIEW %s AS(
+#    SELECT * FROM "{0}"
+#    WHERE strong = %d)
+#""".format(TBL_MASTERLINKS_GROUPS)
+#for grpNo in xrange(min(strong_grps)[0], (max(strong_grps)[0]+1)):
+#    tblname = "links_grp_%d" % grpNo
     #cur.execute("""DROP VIEW IF EXISTS %s;""" % tblname)
     #create view for each group
-    cur.execute(Q_CreateView % (tblname, grpNo))
+#    cur.execute(Q_CreateView % (tblname, grpNo))
    

@@ -23,8 +23,8 @@ import psycopg2 as psql
 TBL_GEOFF_GEOM = "geoffs_viageom"
 TBL_MASTERLINKS_GROUPS = "master_links_grp"
 TBL_GROUPS = "groups"
-TBL_GEOFF_PAIRS = "332_geoff_pairs"
-TBL_OD_LINES = "332_OD_lines"
+TBL_GEOFF_PAIRS = "1438_geoff_pairs"
+TBL_OD_LINES = "1438_OD_lines"
 TBL_NODENOS = "nodenos"
 # TBL_OD = "OandD"
 TBL_GEOFF_NODES = "geoff_nodes"
@@ -34,9 +34,9 @@ TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
 TBL_GEOFF_GROUP = "geoff_group"
 
 
-VIEW = "links_grp_332"
+VIEW = "links_grp_1438"
 
-con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 #create cursor to execute querys
 cur = con.cursor()
 
@@ -119,8 +119,8 @@ Q_InsertTempNetwork = """INSERT INTO "{0}" (mixid, fromgeoff, togeoff, cost, geo
 
 print "Vertical Lines - Intersect/Intersect"
 
-TBL_TEMP_NETWORK = "temp_network_332_%d"
-TBL_TEMP_PAIRS = "temp_pairs_332_%d"
+TBL_TEMP_NETWORK = "temp_network_1438_%d"
+TBL_TEMP_PAIRS = "temp_pairs_1438_%d"
 
 #INTERSECT/INTERSECT
 for c in xrange(1,11):
@@ -150,8 +150,8 @@ for c in xrange(1,11):
         
         print c, newid
         
-        TBL_TEMP_PAIRS_2 = "temp_pairs_332_%d_%d" % (c, newid)
-        TBL_TEMP_NETWORK_2 = "temp_network_332_%d_%d" % (c, newid)
+        TBL_TEMP_PAIRS_2 = "temp_pairs_1438_%d_%d" % (c, newid)
+        TBL_TEMP_NETWORK_2 = "temp_network_1438_%d_%d" % (c, newid)
 
         
         cur.execute(Q_IntersectLines.format(TBL_PAIRS) % (x_value, ymin, x_value, ymax))
@@ -270,8 +270,8 @@ for c in xrange(1,11):
 
         print c ,newid
 
-        TBL_TEMP_PAIRS_2 = "temp_pairs_332_%d_%d" % (c, newid)
-        TBL_TEMP_NETWORK_2 = "temp_network_332_%d_%d" % (c, newid)
+        TBL_TEMP_PAIRS_2 = "temp_pairs_1438_%d_%d" % (c, newid)
+        TBL_TEMP_NETWORK_2 = "temp_network_1438_%d_%d" % (c, newid)
 
         
         cur.execute(Q_LinesBetween.format(TBL_PAIRS) % (
@@ -380,8 +380,8 @@ for c in xrange(101,112):
         
         print c, newid
         
-        TBL_TEMP_PAIRS_2 = "temp_pairs_332_%d_%d" % (c, newid)
-        TBL_TEMP_NETWORK_2 = "temp_network_332_%d_%d" % (c, newid)
+        TBL_TEMP_PAIRS_2 = "temp_pairs_1438_%d_%d" % (c, newid)
+        TBL_TEMP_NETWORK_2 = "temp_network_1438_%d_%d" % (c, newid)
 
         
         cur.execute(Q_IntersectLines.format(TBL_PAIRS) % (x_value, ymin, x_value, ymax))
@@ -500,8 +500,8 @@ for c in xrange(101,112):
 
         print c ,newid
 
-        TBL_TEMP_PAIRS_2 = "temp_pairs_332_%d_%d" % (c, newid)
-        TBL_TEMP_NETWORK_2 = "temp_network_332_%d_%d" % (c, newid)
+        TBL_TEMP_PAIRS_2 = "temp_pairs_1438_%d_%d" % (c, newid)
+        TBL_TEMP_NETWORK_2 = "temp_network_1438_%d_%d" % (c, newid)
 
         
         cur.execute(Q_LinesBetween.format(TBL_PAIRS) % (
