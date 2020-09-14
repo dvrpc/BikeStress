@@ -22,25 +22,11 @@ TBL_GID_NODES = "gid_nodes"
 TBL_NODE_GID = "node_gid_post"
 TBL_EDGE = "edgecounts"
 TBL_EDGE_IPD = "edges_ipd"
+TBL_CENTS = "block_centroids"
 IDX_nx_SPATHS_value = "spaths_nx_value_idx"
 
 TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
 
-VIEW = "links_grp_%s" % str(sys.argv[1])
-
-Q = """SELECT * FROM master_links_grp WHERE strong = %d """ % sys.argv[1]
-cur.execute(Q)
-VIEW = cur.fetchall()
-
-Q_CreateView = """CREATE VIEW %s AS(
-    SELECT * FROM "{0}"
-    WHERE strong = %d)
-""".format(TBL_MASTERLINKS_GROUPS)
-for grpNo in xrange(min(strong_grps)[0], (max(strong_grps)[0]+1)):
-    tblname = "links_grp_%d" % grpNo
-    #cur.execute("""DROP VIEW IF EXISTS %s;""" % tblname)
-    #create view for each group
-    cur.execute(Q_CreateView % (tblname, grpNo))
 
 def worker(inqueue, output):
     result = []
@@ -101,6 +87,9 @@ print
 
 num_cores = 64 # mp.cpu_count()
 
+#select query to create what used to be Views of each island individually
+selectisland = """(SELECT * FROM master_links_grp WHERE strong = %d)""" % int(sys.argv[1])
+
 #grab master links to make graph with networkx
 Q_SelectMasterLinks = """
     SELECT
@@ -108,8 +97,8 @@ Q_SelectMasterLinks = """
         fromgeoff,
         togeoff,
         cost
-    FROM public."{0}";
-    """.format(VIEW)
+    FROM {0} view;
+    """.format(selectisland)
     
 con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()

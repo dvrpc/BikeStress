@@ -1,5 +1,5 @@
 #to run thru cmd (don't have to)
-#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\6b_MovingFrame.py
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\6b_MovingFrame.py
 
 
 #only run for largest island
@@ -34,11 +34,11 @@ TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
 TBL_GEOFF_GROUP = "geoff_group"
 
 
-VIEW = "links_grp_1438"
-
 con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 #create cursor to execute querys
 cur = con.cursor()
+
+
 
 ######################## PART 2 ###########################
 ####################VERTICAL LINES#########################

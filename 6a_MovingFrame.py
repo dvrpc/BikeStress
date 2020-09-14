@@ -1,5 +1,5 @@
 #to run thru cmd (don't have to)
-#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\6a_MovingFrame.py
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\6a_MovingFrame.py
 
 
 #only run for largest island
@@ -34,132 +34,21 @@ TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
 TBL_GEOFF_GROUP = "geoff_group"
 
 
-VIEW = "links_grp_1438"
+
+
+#VIEW = "links_grp_1438"
 
 con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 #create cursor to execute querys
 cur = con.cursor()
 
-# Q_GetList = """
-    # SELECT * FROM "{0}";
-    # """.format(TBL_NODENOS)
-# cur.execute(Q_GetList)
-# nodenos = cur.fetchall()
 
-# Q_GetList = """
-    # SELECT * FROM "{0}";
-    # """.format(TBL_NODES_GEOFF)
-# cur.execute(Q_GetList)
-# nodes_geoff_list = cur.fetchall()
-# nodes_geoff = dict(nodes_geoff_list)
+#select query to create what used to be Views of each island individually
+selectisland = """(SELECT * FROM {0} WHERE strong = 1438)""".format(TBL_MASTERLINKS_GROUPS)
 
-# Q_GetList = """
-    # SELECT * FROM "{0}";
-    # """.format(TBL_NODES_GID)
-# cur.execute(Q_GetList)
-# nodes_gids_list = cur.fetchall()
-# nodes_gids = dict(nodes_gids_list)
-
-# Q_GetList = """
-    # SELECT * FROM "{0}";
-    # """.format(TBL_GEOFF_NODES)
-# cur.execute(Q_GetList)
-# geoff_nodes_list = cur.fetchall()
-# geoff_nodes = dict(geoff_nodes_list)
-
-#print "Getting and writing pairs"
-#
-#Q_GetGroupPairs = """
-#    SELECT
-#        fromgeoff AS fgeoff,
-#        togeoff AS tgeoff,
-#        groupnumber AS grp
-#    FROM "{0}"
-#    WHERE groupnumber = 1438;
-#    """.format(TBL_BLOCK_NODE_GEOFF)
-#cur.execute(Q_GetGroupPairs)
-#group_pairs = cur.fetchall()
-#    
-#pairs = []
-#for i, (fgeoff, tgeoff, grp) in enumerate(group_pairs):
-#    source = fgeoff
-#    target = tgeoff
-#    pairs.append((source, target))
-#
-## create table in DB to hold pairs
-#Q_Pairs = """
-#    CREATE TABLE public."{0}"
-#    (
-#      id BIGSERIAL PRIMARY KEY,
-#      fromgeoff integer,
-#      togeoff integer
-#    )
-#    WITH (
-#      OIDS=FALSE
-#    );
-#    ALTER TABLE public."{0}"
-#      OWNER TO postgres;""".format(TBL_GEOFF_PAIRS)
-#cur.execute(Q_Pairs)
-#con.commit()
-#
-## Q_Insert = """INSERT INTO "{0}" (fromgeoff, togeoff) VALUES (%s, #%s);""".format(TBL_GEOFF_PAIRS)
-#
-#str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(pairs[0]))))
-#cur.execute("""BEGIN TRANSACTION;""")
-#batch_size = 10000
-#for i in xrange(0, len(pairs), batch_size):
-#    j = i + batch_size
-#    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in pairs[i:j])
-#    # print arg_str
-#    Q_Insert = """INSERT INTO "{0}" (fromgeoff, togeoff) VALUES {1}""".format(TBL_GEOFF_PAIRS, arg_str)
-#    cur.execute(Q_Insert)
-#cur.execute("COMMIT;")
-#
-#
-#print "Creating OD Lines"
-#
-#Q_ODLines = """
-#    CREATE TABLE "{0}" AS(
-#        WITH unique_geoms AS (
-#            SELECT
-#                geoffid,
-#                geom
-#            FROM "{2}"
-#            GROUP BY geoffid, geom
-#        )
-#        SELECT *
-#        FROM(
-#            SELECT
-#                (row_number() over())::bigint AS id,
-#                p.fromgeoff AS fromgeoff,
-#                p.togeoff AS togeoff,
-#                ST_MakeLine(g1.geom, g2.geom) AS geom
-#            FROM "{1}" as p
-#            INNER JOIN unique_geoms AS g1
-#            ON p.fromgeoff = g1.geoffid
-#            INNER JOIN unique_geoms AS g2
-#            ON p.togeoff = g2.geoffid
-#        ) AS pair_f
-#    );
-#    CREATE SEQUENCE "{0}_id_seq";
-#    SELECT setval(
-#        '"{0}_id_seq"',
-#        (
-#            SELECT id
-#            FROM "{0}"
-#            ORDER BY 1 DESC
-#            LIMIT 1
-#        )
-#    );
-#    ALTER TABLE "{0}" ALTER COLUMN id SET NOT NULL;
-#    ALTER TABLE "{0}" ALTER COLUMN id SET DEFAULT nextval('"{0}_id_seq"'::regclass);
-#    ALTER TABLE "{0}" ADD CONSTRAINT "{0}_pk" PRIMARY KEY (id);
-#""".format(TBL_OD_LINES, TBL_GEOFF_PAIRS, TBL_GEOFF_GEOM)
-#cur.execute(Q_ODLines)
-#con.commit()
 
 #find extents of bounding box around island
-Q_ExtentCoords = """SELECT st_asgeojson(st_setsrid(st_extent(geom), 26918)) FROM public."{0}";""".format(VIEW)
+Q_ExtentCoords = """SELECT st_asgeojson(st_setsrid(st_extent(geom), 26918)) FROM {0} view;""".format(selectisland)
 cur.execute(Q_ExtentCoords)
 bbox_json = cur.fetchall()
 bbox = json.loads(bbox_json[0][0])
@@ -314,7 +203,7 @@ for i in xrange(1,iterations):
         
         print "Clipping Network"
         
-        cur.execute(Q_ClipNetwork.format(VIEW) % (
+        cur.execute(Q_ClipNetwork.format(selectisland) % (
             inter_xmin, 
             (inter_ymin - 1609.34), 
             inter_xmax, 
@@ -417,7 +306,7 @@ for i in xrange(1, iterations+1):
         print "Clipping Network"    
         
         #clip network with 1 mile buffer on top and bottom      
-        cur.execute(Q_ClipNetwork.format(VIEW) % (
+        cur.execute(Q_ClipNetwork.format(selectisland) % (
             xmin, 
             (y_value_bottom - 1609.34),
             xmax,
