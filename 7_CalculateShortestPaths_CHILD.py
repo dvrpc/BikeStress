@@ -144,15 +144,9 @@ if __name__ == '__main__':
     #grab list of block centroids ipdscores to create a lookup to be referenced later when weighting for equity
     SQL_GetBlockIPD = """SELECT gid, ipdscore FROM "{0}";""".format(TBL_CENTS)
     cur.execute(SQL_GetBlockIPD)
-    ipd = cur.fetchall()
 
-    ipd_lookup = {}
-    for gid, ipdscore in ipd:
-        if not gid in ipd_lookup:
-            ipd_lookup[gid] = []
-        ipd_lookup[gid].append(ipdscore)
-        
-    del ipd
+    ipd_lookup = ipd_lookup = dict(cur.fetchall())
+
     
     Q_GetList = """
     SELECT * FROM "{0}";
@@ -283,7 +277,11 @@ if __name__ == '__main__':
                 edge_count_dict[edge] += path_weight
                 if not edge in edge_ipd_weight:
                     edge_ipd_weight[edge] = 0
-                edge_ipd_weight[edge] += ipd_weight
+                try:
+                    edge_ipd_weight[edge] += ipd_weight
+                except TypeError:
+                    print edge_ipd_weight[edge], ipd_weight
+                #edge_ipd_weight[edge] += ipd_weight
                 
         with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_count_dict.pickle", "wb") as io:
             cPickle.dump(edge_count_dict, io)
