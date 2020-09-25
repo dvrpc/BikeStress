@@ -6,6 +6,12 @@
 import logging
 import csv
 import itertools
+import math
+import psycopg2 as psql
+# logger = multiprocessing.log_to_stderr(logging.INFO)
+
+TBL_GEOFF_GEOM = "geoffs_viageom"
+TBL_MASTERLINKS_GROUPS = "
 import numpy
 import time
 import sys
@@ -15,13 +21,7 @@ import sqlite3
 from collections import Counter
 import json
 import scipy.spatial
-import networkx as nx
-import math
-import psycopg2 as psql
-# logger = multiprocessing.log_to_stderr(logging.INFO)
-
-TBL_GEOFF_GEOM = "geoffs_viageom"
-TBL_MASTERLINKS_GROUPS = "master_links_grp"
+import networkx as nxmaster_links_grp"
 TBL_GROUPS = "groups"
 TBL_GEOFF_PAIRS = "1438_geoff_pairs"
 TBL_OD_LINES = "1438_OD_lines"
@@ -39,6 +39,8 @@ con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, us
 cur = con.cursor()
 
 
+#select query to create what used to be Views of each island individually
+selectisland = """(SELECT * FROM {0} WHERE strong = 1438)""".format(TBL_MASTERLINKS_GROUPS)
 
 ######################## PART 2 ###########################
 ####################VERTICAL LINES#########################
@@ -74,8 +76,8 @@ Q_ClipNetwork = """
         ST_AsGeoJSON(geom),
         strong
     FROM public."{0}"
-    WHERE geom &> ST_SetSRID(ST_MakeLine(ST_Point(%f, %f),ST_Point(%f, %f)), 26918)
-        AND geom &< ST_SetSRID(ST_MakeLine(ST_Point(%f, %f),ST_Point(%f, %f)), 26918);
+    WHERE geom &> ST_SetSRID(ST_MakeLine(ST_Point(%d, %f),ST_Point(%d, %f)), 26918)
+        AND geom &< ST_SetSRID(ST_MakeLine(ST_Point(%d, %f),ST_Point(%d, %f)), 26918);
 """
 
 Q_BBoxExtent =   """SELECT st_asgeojson(st_setsrid(st_extent(geom), 26918)) FROM public."{0}";"""
@@ -123,7 +125,7 @@ TBL_TEMP_NETWORK = "temp_network_1438_%d"
 TBL_TEMP_PAIRS = "temp_pairs_1438_%d"
 
 #INTERSECT/INTERSECT
-for c in xrange(1,11):
+for c in xrange(1,20):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
     
@@ -242,7 +244,7 @@ for c in xrange(1,11):
 
 #INTERSECT/BETWEEN
 print "Vertical Lines - Intersect/Between"
-for c in xrange(1,11):
+for c in xrange(1,20):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
 
@@ -353,7 +355,7 @@ for c in xrange(1,11):
 
 #BETWEEN/INTERSECT
 print "Vertical Lines - Between/Intersect"
-for c in xrange(101,112):
+for c in xrange(101,120):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
     
@@ -472,7 +474,7 @@ for c in xrange(101,112):
 
 #BETWEEN/BETWEEN
 print "Vertical Lines - Between/Between"
-for c in xrange(101,112):
+for c in xrange(101,120):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
 

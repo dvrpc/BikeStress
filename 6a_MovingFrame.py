@@ -176,7 +176,7 @@ Q_ClipNetwork = """
         cost,
         ST_AsGeoJSON(geom),
         strong
-    FROM public."{0}" view
+    FROM {0} view
     WHERE geom |&> ST_SetSRID(ST_MakeLine(ST_Point(%d, %f),ST_Point(%d, %f)), 26918)
         AND geom &<| ST_SetSRID(ST_MakeLine(ST_Point(%d, %f),ST_Point(%d, %f)), 26918);
 """.format(selectisland)
@@ -237,7 +237,8 @@ print iterations
 y_value = ymin + 8046.72
 #chunk_id starting at 1 is for intersection/overlap sections
 chunk_id = 1
-#loop over break lines selecting OD lines that intersect them
+'''
+# loop over break lines selecting OD lines that intersect them
 for i in xrange(1,iterations):
     
     print chunk_id
@@ -267,7 +268,7 @@ for i in xrange(1,iterations):
         for i in xrange(0, len(intersect_pairs), batch_size):
             j = i + batch_size
             arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in intersect_pairs[i:j])
-            #print arg_str
+            # print arg_str
             Q_Insert = """INSERT INTO "{0}" (fromgeoff, togeoff, geom) VALUES {1};""".format(TBL_TEMP_PAIRS, arg_str)
             cur.execute(Q_Insert)
         con.commit()
@@ -312,7 +313,7 @@ for i in xrange(1,iterations):
         for i in xrange(0, len(clip_network), batch_size):
             j = i + batch_size
             arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in clip_network[i:j])
-            #print arg_str
+            # print arg_str
             Q_Insert = """INSERT INTO "{0}" (mixid, fromgeoff, togeoff, cost, geom, strong) VALUES {1};""".format(TBL_TEMP_NETWORK, arg_str)
             cur.execute(Q_Insert)
         con.commit()
@@ -328,9 +329,10 @@ for i in xrange(1,iterations):
     else:
         print "No pairs in chunk"
     
-    #update values for next iteration
+    # update values for next iteration
     y_value        += 8046.72
     chunk_id       += 1
+    '''
 
 
 #OD LINES IN BETWEEN BREAK LINES
@@ -392,7 +394,7 @@ for i in xrange(1, iterations+1):
         print "Clipping Network"    
         
         #clip network with 1 mile buffer on top and bottom      
-        cur.execute % (Q_ClipNetwork % (
+        cur.execute(Q_ClipNetwork % (
             xmin, 
             (y_value_bottom - 1609.34),
             xmax,
