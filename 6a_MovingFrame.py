@@ -334,7 +334,7 @@ for i in xrange(1,iterations):
     chunk_id       += 1
     '''
 
-
+'''
 #OD LINES IN BETWEEN BREAK LINES
 print "Horizontal Lines - Between"
 #starting y value of line
@@ -437,7 +437,7 @@ for i in xrange(1, iterations+1):
     chunk_id        += 1
 
 print iterations
-
+'''
 
 print "Indexing"
 
@@ -454,13 +454,13 @@ Q_IndexExisting = """
         TABLESPACE pg_default;
     COMMIT;"""
 
-for i in xrange(1,20):
+for i in xrange(4,18):
     TBL_TEMP_NETWORK = "temp_network_1438_%d" % i
     IDX_geom = "temp_network_1438_%d_geom_idx" % i
     IDX_value = "temp_network_1438_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_NETWORK, IDX_geom, IDX_value))
     
-for i in xrange(101,120):
+for i in xrange(104,119):
     TBL_TEMP_NETWORK = "temp_network_1438_%d" % i
     IDX_geom = "temp_network_1438_%d_geom_idx" % i
     IDX_value = "temp_network_1438_%d_value_idx" % i
@@ -480,13 +480,13 @@ Q_IndexExisting = """
         TABLESPACE pg_default;
     COMMIT;"""
         
-for i in xrange(1,20):
+for i in xrange(4,18):
     TBL_TEMP_PAIRS = "temp_pairs_1438_%d" % i
     IDX_geom = "temp_pairs_1438_%d_geom_idx" % i
     IDX_value = "temp_pairs_1438_%d_value_idx" % i
     cur.execute(Q_IndexExisting.format(TBL_TEMP_PAIRS, IDX_geom, IDX_value))
 
-for i in xrange(101,120):
+for i in xrange(104,119):
     TBL_TEMP_PAIRS = "temp_pairs_1438_%d" % i
     IDX_geom = "temp_pairs_1438_%d_geom_idx" % i
     IDX_value = "temp_pairs_1438_%d_value_idx" % i

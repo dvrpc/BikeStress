@@ -351,8 +351,7 @@ if __name__ == '__main__':
         cur.execute("COMMIT;")
         con.commit()
         
-        
-        
+
 
     del paths, nodes_gids, geoff_nodes, node_pairs
     

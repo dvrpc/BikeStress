@@ -11,7 +11,7 @@ import psycopg2 as psql
 # logger = multiprocessing.log_to_stderr(logging.INFO)
 
 TBL_GEOFF_GEOM = "geoffs_viageom"
-TBL_MASTERLINKS_GROUPS = "
+TBL_MASTERLINKS_GROUPS =  "master_links_grp"
 import numpy
 import time
 import sys
@@ -21,7 +21,7 @@ import sqlite3
 from collections import Counter
 import json
 import scipy.spatial
-import networkx as nxmaster_links_grp"
+import networkx as nx
 TBL_GROUPS = "groups"
 TBL_GEOFF_PAIRS = "1438_geoff_pairs"
 TBL_OD_LINES = "1438_OD_lines"
@@ -125,7 +125,7 @@ TBL_TEMP_NETWORK = "temp_network_1438_%d"
 TBL_TEMP_PAIRS = "temp_pairs_1438_%d"
 
 #INTERSECT/INTERSECT
-for c in xrange(1,20):
+for c in xrange(4,18):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
     
@@ -244,7 +244,7 @@ for c in xrange(1,20):
 
 #INTERSECT/BETWEEN
 print "Vertical Lines - Intersect/Between"
-for c in xrange(1,20):
+for c in xrange(4,18):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
 
@@ -355,7 +355,7 @@ for c in xrange(1,20):
 
 #BETWEEN/INTERSECT
 print "Vertical Lines - Between/Intersect"
-for c in xrange(101,120):
+for c in xrange(104,119):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
     
@@ -474,7 +474,7 @@ for c in xrange(101,120):
 
 #BETWEEN/BETWEEN
 print "Vertical Lines - Between/Between"
-for c in xrange(101,120):
+for c in xrange(104,119):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
 
