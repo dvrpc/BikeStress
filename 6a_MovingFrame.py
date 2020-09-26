@@ -46,92 +46,92 @@ cur = con.cursor()
 #select query to create what used to be Views of each island individually
 selectisland = """(SELECT * FROM {0} WHERE strong = 1438)""".format(TBL_MASTERLINKS_GROUPS)
 
-# print "Getting and writing pairs"
-# Q_GetGroupPairs = """
-    # SELECT
-        # fromgeoff AS fgeoff,
-        # togeoff AS tgeoff,
-        # groupnumber AS grp
-    # FROM "{0}"
-    # WHERE groupnumber = 1438;
-    # """.format(TBL_BLOCK_NODE_GEOFF)
-# cur.execute(Q_GetGroupPairs)
-# group_pairs = cur.fetchall()
+print "Getting and writing pairs"
+Q_GetGroupPairs = """
+    SELECT
+        fromgeoff AS fgeoff,
+        togeoff AS tgeoff,
+        groupnumber AS grp
+    FROM "{0}"
+    WHERE groupnumber = 1438;
+    """.format(TBL_BLOCK_NODE_GEOFF)
+cur.execute(Q_GetGroupPairs)
+group_pairs = cur.fetchall()
     
-# pairs = []
-# for i, (fgeoff, tgeoff, grp) in enumerate(group_pairs):
-    # source = fgeoff
-    # target = tgeoff
-    # pairs.append((source, target))
+pairs = []
+for i, (fgeoff, tgeoff, grp) in enumerate(group_pairs):
+    source = fgeoff
+    target = tgeoff
+    pairs.append((source, target))
     
-##create table in DB to hold pairs
-# Q_Pairs = """
-    # CREATE TABLE public."{0}"
-    # (
-      # id BIGSERIAL PRIMARY KEY,
-      # fromgeoff integer,
-      # togeoff integer
-    # )
-    # WITH (
-      # OIDS=FALSE
-    # );
-    # ALTER TABLE public."{0}"
-      # OWNER TO postgres;""".format(TBL_GEOFF_PAIRS)
-# cur.execute(Q_Pairs)
-# con.commit()
+#create table in DB to hold pairs
+Q_Pairs = """
+    CREATE TABLE public."{0}"
+    (
+      id BIGSERIAL PRIMARY KEY,
+      fromgeoff integer,
+      togeoff integer
+    )
+    WITH (
+      OIDS=FALSE
+    );
+    ALTER TABLE public."{0}"
+      OWNER TO postgres;""".format(TBL_GEOFF_PAIRS)
+cur.execute(Q_Pairs)
+con.commit()
 
-# str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(pairs[0]))))
-# cur.execute("""BEGIN TRANSACTION;""")
-# batch_size = 10000
-# for i in xrange(0, len(pairs), batch_size):
-    # j = i + batch_size
-    # arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in pairs[i:j])
-    ##print arg_str
-    # Q_Insert = """INSERT INTO "{0}" (fromgeoff, togeoff) VALUES {1}""".format(TBL_GEOFF_PAIRS, arg_str)
-    # cur.execute(Q_Insert)
-# cur.execute("COMMIT;")
+str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(pairs[0]))))
+cur.execute("""BEGIN TRANSACTION;""")
+batch_size = 10000
+for i in xrange(0, len(pairs), batch_size):
+    j = i + batch_size
+    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in pairs[i:j])
+    #print arg_str
+    Q_Insert = """INSERT INTO "{0}" (fromgeoff, togeoff) VALUES {1}""".format(TBL_GEOFF_PAIRS, arg_str)
+    cur.execute(Q_Insert)
+cur.execute("COMMIT;")
 
-# print "Creating OD Lines"
+print "Creating OD Lines"
 
-# Q_ODLines = """
-    # CREATE TABLE "{0}" AS(
-        # WITH unique_geoms AS (
-            # SELECT
-                # geoffid,
-                # geom
-            # FROM "{2}"
-            # GROUP BY geoffid, geom
-        # )
-        # SELECT *
-        # FROM(
-            # SELECT
-                # (row_number() over())::bigint AS id,
-                # p.fromgeoff AS fromgeoff,
-                # p.togeoff AS togeoff,
-                # ST_MakeLine(g1.geom, g2.geom) AS geom
-            # FROM "{1}" as p
-            # INNER JOIN unique_geoms AS g1
-            # ON p.fromgeoff = g1.geoffid
-            # INNER JOIN unique_geoms AS g2
-            # ON p.togeoff = g2.geoffid
-        # ) AS pair_f
-    # );
-    # CREATE SEQUENCE "{0}_id_seq";
-    # SELECT setval(
-        # '"{0}_id_seq"',
-        # (
-            # SELECT id
-            # FROM "{0}"
-            # ORDER BY 1 DESC
-            # LIMIT 1
-        # )
-    # );
-    # ALTER TABLE "{0}" ALTER COLUMN id SET NOT NULL;
-    # ALTER TABLE "{0}" ALTER COLUMN id SET DEFAULT nextval('"{0}_id_seq"'::regclass);
-    # ALTER TABLE "{0}" ADD CONSTRAINT "{0}_pk" PRIMARY KEY (id);
-# """.format(TBL_OD_LINES, TBL_GEOFF_PAIRS, TBL_GEOFF_GEOM)
-# cur.execute(Q_ODLines)
-# con.commit()
+Q_ODLines = """
+    CREATE TABLE "{0}" AS(
+        WITH unique_geoms AS (
+            SELECT
+                geoffid,
+                geom
+            FROM "{2}"
+            GROUP BY geoffid, geom
+        )
+        SELECT *
+        FROM(
+            SELECT
+                (row_number() over())::bigint AS id,
+                p.fromgeoff AS fromgeoff,
+                p.togeoff AS togeoff,
+                ST_MakeLine(g1.geom, g2.geom) AS geom
+            FROM "{1}" as p
+            INNER JOIN unique_geoms AS g1
+            ON p.fromgeoff = g1.geoffid
+            INNER JOIN unique_geoms AS g2
+            ON p.togeoff = g2.geoffid
+        ) AS pair_f
+    );
+    CREATE SEQUENCE "{0}_id_seq";
+    SELECT setval(
+        '"{0}_id_seq"',
+        (
+            SELECT id
+            FROM "{0}"
+            ORDER BY 1 DESC
+            LIMIT 1
+        )
+    );
+    ALTER TABLE "{0}" ALTER COLUMN id SET NOT NULL;
+    ALTER TABLE "{0}" ALTER COLUMN id SET DEFAULT nextval('"{0}_id_seq"'::regclass);
+    ALTER TABLE "{0}" ADD CONSTRAINT "{0}_pk" PRIMARY KEY (id);
+""".format(TBL_OD_LINES, TBL_GEOFF_PAIRS, TBL_GEOFF_GEOM)
+cur.execute(Q_ODLines)
+con.commit()
 
 #find extents of bounding box around island
 Q_ExtentCoords = """SELECT st_asgeojson(st_setsrid(st_extent(geom), 26918)) FROM {0} view;""".format(selectisland)
@@ -237,7 +237,7 @@ print iterations
 y_value = ymin + 8046.72
 #chunk_id starting at 1 is for intersection/overlap sections
 chunk_id = 1
-'''
+
 # loop over break lines selecting OD lines that intersect them
 for i in xrange(1,iterations):
     
@@ -332,9 +332,9 @@ for i in xrange(1,iterations):
     # update values for next iteration
     y_value        += 8046.72
     chunk_id       += 1
-    '''
 
-'''
+
+
 #OD LINES IN BETWEEN BREAK LINES
 print "Horizontal Lines - Between"
 #starting y value of line
@@ -437,7 +437,7 @@ for i in xrange(1, iterations+1):
     chunk_id        += 1
 
 print iterations
-'''
+
 
 print "Indexing"
 
