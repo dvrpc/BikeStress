@@ -8,7 +8,7 @@ def dumpndrop(num):
 
     TBL_SPATHS = "shortestpaths_%s" % num
     
-    con = psql.connect(database = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+    con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
     cur = con.cursor()
 
     #does the table exist?
@@ -35,9 +35,9 @@ def dumpndrop(num):
                     "--no-password", 
                     "--format", "tar", 
                     "--verbose", 
-                    "--file", r"M:\Modeling\Projects\BikeStress_p2\%s.backup" % TBL_SPATHS, 
+                    "--file", r"D:\BikePedTransit\BikeStress\phase3\backups\%s.backup" % TBL_SPATHS, 
                     "--table", "public.%s" % TBL_SPATHS,
-                    "BikeStress_p2"],
+                    "BikeStress_p3"],
                 stdout = subprocess.PIPE, 
                 stderr = subprocess.PIPE) 
 
@@ -62,7 +62,7 @@ def dumpndrop_MF(num1, num2):
 
     TBL_SPATHS = "shortestpaths_%s_%s" % (num1, num2)
     
-    con = psql.connect(database = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+    con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
     cur = con.cursor()
 
     #does the table exist?
@@ -89,9 +89,9 @@ def dumpndrop_MF(num1, num2):
                     "--no-password", 
                     "--format", "tar", 
                     "--verbose", 
-                    "--file", r"M:\Modeling\Projects\BikeStress_p2\%s.backup" % TBL_SPATHS, 
+                    "--file", r"D:\BikePedTransit\BikeStress\phase3\backups\%s.backup" % TBL_SPATHS, 
                     "--table", "public.%s" % TBL_SPATHS,
-                    "BikeStress_p2"],
+                    "BikeStress_p3"],
                 stdout = subprocess.PIPE, 
                 stderr = subprocess.PIPE) 
 

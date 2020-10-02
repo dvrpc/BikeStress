@@ -21,6 +21,8 @@ TBL_GID_NODES = "gid_nodes"
 TBL_NODE_GID = "node_gid_post"
 TBL_EDGE = "edgecounts"
 TBL_EDGE_IPD = "edges_ipd"
+TBL_ALL_LINKS = "links"
+TBL_CENTS = "block_centroids"
 IDX_nx_SPATHS_value = "spaths_nx_value_idx"
 
 ####CHANGE FOR EACH TRANSIT MODE####

@@ -70,4 +70,4 @@ for i in xrange(a, c):
             p = subprocess.Popen([PYEXE, script, '%d' % i], stdout = subprocess.PIPE)#call script to calculate shortest paths
             p.communicate()
             
-            # cleanup.dumpndrop(i)
+            cleanup.dumpndrop(i)

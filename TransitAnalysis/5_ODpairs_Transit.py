@@ -1,5 +1,5 @@
 #run thru cmd
-#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\TransitAnalysis\5_ODpairs_Transit.py
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\TransitAnalysis\5_ODpairs_Transit.py
 
 import psycopg2 as psql
 import csv
@@ -29,36 +29,37 @@ TBL_SUBTURNS = "tolerableturns"
 TBL_BRIDGECENTS = "bridge_buffer_cents"
 
 ####CHANGE FOR EACH TRANSIT MODE####
+#point shapefile with gid and geom
 TBL_TRANSIT = "bus_region"
 
 
 #DELETE between each transit mode run#
 TBL_TRANSIT_NODE = "transit_node"
 TBL_NODE_TRANSIT = "node_transit"
-TBL_NODENOS = "nodenos"
-TBL_NODES_GEOFF = "nodes_geoff"
-TBL_NODES_GID = "nodes_gid"
-TBL_GEOFF_NODES = "geoff_nodes"
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
-TBL_GEOFF_GROUP = "geoff_group"
-TBL_GID_NODES = "gid_nodes"
-TBL_NODE_GID = "node_gid_post"
+TBL_NODENOS = "nodenos_transit"
+TBL_NODES_GEOFF = "nodes_geoff_transit"
+TBL_NODES_GID = "nodes_gid_transit"
+TBL_GEOFF_NODES = "geoff_nodes_transit"
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff_transit"
+TBL_GEOFF_GROUP = "geoff_group_transit"
+TBL_GID_NODES = "gid_nodes_transit"
+TBL_NODE_GID = "node_gid_post_transit"
 
 
-IDX_GEOFF_GROUP = "geoff_group_value_idx"
-IDX_BLOCK_NODE_GEOFF = "block_node_geoff_value_idx"
-IDX_NODENOS = "nodeno_idx"
-IDX_NODES_GEOFF = "nodes_geoff_idx"
-IDX_NODES_GID = "nodes_gid_idx"
-IDX_GEOFF_NODES = "geoff_nodes_idx"
-IDX_GID_NODES = "gid_nodes_idx"
-IDX_OD_value = "od_value_idx"
-IDX_NODE_GID = "node_gid_post_idx"
-IDX_TRANSIT_NODE = "transit_node_idx"
-IDX_NODE_TRANSIT = "node_transit_idx"
+IDX_GEOFF_GROUP = "geoff_group_value_idx_transit"
+IDX_BLOCK_NODE_GEOFF = "block_node_geoff_value_idx_transit"
+IDX_NODENOS = "nodeno_idx_transit"
+IDX_NODES_GEOFF = "nodes_geoff_idx_transit"
+IDX_NODES_GID = "nodes_gid_idx_transit"
+IDX_GEOFF_NODES = "geoff_nodes_idx_transit"
+IDX_GID_NODES = "gid_nodes_idx_transit"
+IDX_OD_value = "od_value_idx_transit"
+IDX_NODE_GID = "node_gid_post_idx_transit"
+IDX_TRANSIT_NODE = "transit_node_idx_transit"
+IDX_NODE_TRANSIT = "node_transit_idx_transit"
 
 #connect to DB
-con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
     
 #grab info on geoffs, blocks, and transit intersections

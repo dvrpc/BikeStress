@@ -9,15 +9,14 @@ import CalculateShortestPaths_CLEANUP as cleanup
 
 
 PYEXE = r"C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe "
-script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\TransitAnalysis\7_CalculateShortestPaths_CHILD_transit.py"
+script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\TransitAnalysis\7_CalculateShortestPaths_CHILD_transit.py"
 
-con = psql.connect(database = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
 
-TBL_TEMP_NETWORK = "links_grp_%s"
-
+TBL_MASTERLINKS_GROUPS = "master_links_grp"
 ####CHANGE FOR EACH TRANSIT MODE####
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff_transit"
 
 Q_GeoffCount = """
 SELECT 
@@ -35,11 +34,12 @@ FROM (
 
 
 a = 0 #min island number
-b = 331 #max island number  
+b = 1438 #max island number  
 c= b+1 #this number is not calcualted (this is the big island in this case)
 dumpers = []
 for i in xrange(a, c):
-    cur.execute("SELECT COUNT(*) FROM %s WHERE MIXID > 0" % (TBL_TEMP_NETWORK % i))
+	selectisland = """(SELECT * FROM {0} WHERE strong = {1})""".format(TBL_MASTERLINKS_GROUPS, i)
+    cur.execute("SELECT COUNT(*) FROM %s WHERE MIXID > 0" % (selectisland))
     cnt, = cur.fetchone()
     if cnt > 0:
         cur.execute(Q_GeoffCount % i)
@@ -53,12 +53,13 @@ for i in xrange(a, c):
             cleanup.dumpndrop(i)
 
 
-a = 333 #min island number
-b = 7880 #max island number
+a = 1439 #min island number
+b = 14216 #max island number
 c= b+1
 dumpers = []
 for i in xrange(a, c):
-    cur.execute("SELECT COUNT(*) FROM %s WHERE MIXID > 0" % (TBL_TEMP_NETWORK % i))
+    selectisland = """(SELECT * FROM {0} WHERE strong = {1})""".format(TBL_MASTERLINKS_GROUPS, i)
+    cur.execute("SELECT COUNT(*) FROM {0} view WHERE MIXID > 0".format(selectisland))
     cnt, = cur.fetchone()
     if cnt > 0:
         cur.execute(Q_GeoffCount % i)
