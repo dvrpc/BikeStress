@@ -7,102 +7,49 @@ import time
 import sys
 import CalculateShortestPaths_CLEANUP as cleanup
 
-PYEXE = r"C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe"
-# script = r"D:\Modeling\BikeStress\scripts\test.py"
-script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\7_CalculateShortestPaths_CHILD_MovingFrame.py"
-
+from child_movingframe_shortestpath import run_child_moving_frame
 
 con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
 
 TBL_WORK_NETWORK = "temp_network_1438_%d_%d"
 
+def run_child_script(i, j):
+
+    this_table = TBL_WORK_NETWORK %(i, j)
+
+    cur.execute("""SELECT EXISTS (SELECT 1 AS result FROM pg_tables WHERE schemaname = 'public' AND tablename = '{0}');""".format(this_table))
+    table_exists = cur.fetchone()[0]
+    if table_exists:
+        cur.execute("""SELECT COUNT(*) FROM %s WHERE MIXID > 0""" % (this_table)
+        cnt, _ = cur.fetchone()
+        if cnt > 0:
+            run_child_moving_frame(i, j, log=True)
+            cleanup.dumpndrop_MF(i, j)
+
 #to capture those missed with previous upper limits
 for i in xrange(6, 8):
     for j in xrange(119, 120):
-        cur.execute("""SELECT EXISTS (SELECT 1 AS result FROM pg_tables WHERE schemaname = 'public' AND tablename = '{0}');""".format(TBL_WORK_NETWORK %(i, j)))
-        table_exists = cur.fetchone()[0]
-        # print TBL_WORK_NETWORK % (i, j), table_exists
-        if table_exists == True:
-            cur.execute("""SELECT COUNT(*) FROM %s WHERE MIXID > 0""" % (TBL_WORK_NETWORK %(i, j)))
-            cnt, = cur.fetchone()
-            if cnt > 0:
-                print TBL_WORK_NETWORK % (i, j)
-                p = subprocess.Popen([PYEXE, script, '%d' % i, '%d' % j], stdout = subprocess.PIPE)
-                p.communicate()
-                
-                cleanup.dumpndrop_MF(i, j)
+        run_child_script(i, j)
+
 #to finish up section #8
 for i in xrange(8, 9):
     for j in xrange(113, 122):
-        cur.execute("""SELECT EXISTS (SELECT 1 AS result FROM pg_tables WHERE schemaname = 'public' AND tablename = '{0}');""".format(TBL_WORK_NETWORK %(i, j)))
-        table_exists = cur.fetchone()[0]
-        # print TBL_WORK_NETWORK % (i, j), table_exists
-        if table_exists == True:
-            cur.execute("""SELECT COUNT(*) FROM %s WHERE MIXID > 0""" % (TBL_WORK_NETWORK %(i, j)))
-            cnt, = cur.fetchone()
-            if cnt > 0:
-                print TBL_WORK_NETWORK % (i, j)
-                p = subprocess.Popen([PYEXE, script, '%d' % i, '%d' % j], stdout = subprocess.PIPE)
-                p.communicate()
-                
-                cleanup.dumpndrop_MF(i, j)
-                
+        run_child_script(i, j)
+
 #to finish from section 9 and above
 for i in xrange(9, 22):
     for j in xrange(1, 22):
-        cur.execute("""SELECT EXISTS (SELECT 1 AS result FROM pg_tables WHERE schemaname = 'public' AND tablename = '{0}');""".format(TBL_WORK_NETWORK %(i, j)))
-        table_exists = cur.fetchone()[0]
-        # print TBL_WORK_NETWORK % (i, j), table_exists
-        if table_exists == True:
-            cur.execute("""SELECT COUNT(*) FROM %s WHERE MIXID > 0""" % (TBL_WORK_NETWORK %(i, j)))
-            cnt, = cur.fetchone()
-            if cnt > 0:
-                print TBL_WORK_NETWORK % (i, j)
-                p = subprocess.Popen([PYEXE, script, '%d' % i, '%d' % j], stdout = subprocess.PIPE)
-                p.communicate()
-                
-                cleanup.dumpndrop_MF(i, j)
-                
+        run_child_script(i, j)
+
     for j in xrange(101, 122):
-        cur.execute("""SELECT EXISTS (SELECT 1 AS result FROM pg_tables WHERE schemaname = 'public' AND tablename = '{0}');""".format(TBL_WORK_NETWORK %(i, j)))
-        table_exists = cur.fetchone()[0]
-        # print TBL_WORK_NETWORK % (i, j), table_exists
-        if table_exists == True:
-            cur.execute("""SELECT COUNT(*) FROM %s WHERE MIXID > 0""" % (TBL_WORK_NETWORK %(i, j)))
-            cnt, = cur.fetchone()
-            if cnt > 0:
-                print TBL_WORK_NETWORK % (i, j)
-                p = subprocess.Popen([PYEXE, script, '%d' % i, '%d' % j], stdout = subprocess.PIPE)
-                p.communicate()
-                
-                cleanup.dumpndrop_MF(i, j)
+        run_child_script(i, j)
+
         
 for i in xrange(101, 122):
     for j in xrange(1, 22):
-        cur.execute("""SELECT EXISTS (SELECT 1 AS result FROM pg_tables WHERE schemaname = 'public' AND tablename = '{0}');""".format(TBL_WORK_NETWORK %(i, j)))
-        table_exists = cur.fetchone()[0]
-        # print TBL_WORK_NETWORK % (i, j), table_exists
-        if table_exists == True:
-            cur.execute("""SELECT COUNT(*) FROM %s WHERE MIXID > 0""" % (TBL_WORK_NETWORK %(i, j)))
-            cnt, = cur.fetchone()
-            if cnt > 0:
-                print TBL_WORK_NETWORK % (i, j)
-                p = subprocess.Popen([PYEXE, script, '%d' % i, '%d' % j], stdout = subprocess.PIPE)
-                p.communicate()
-                
-                cleanup.dumpndrop_MF(i, j)
+        run_child_script(i, j)
+
                 
     for j in xrange(101, 122):
-        cur.execute("""SELECT EXISTS (SELECT 1 AS result FROM pg_tables WHERE schemaname = 'public' AND tablename = '{0}');""".format(TBL_WORK_NETWORK %(i, j)))
-        table_exists = cur.fetchone()[0]
-        # print TBL_WORK_NETWORK % (i, j), table_exists
-        if table_exists == True:
-            cur.execute("""SELECT COUNT(*) FROM %s WHERE MIXID > 0""" % (TBL_WORK_NETWORK %(i, j)))
-            cnt, = cur.fetchone()
-            if cnt > 0:
-                print TBL_WORK_NETWORK % (i, j)
-                p = subprocess.Popen([PYEXE, script, '%d' % i, '%d' % j], stdout = subprocess.PIPE)
-                p.communicate()
-                
-                cleanup.dumpndrop_MF(i, j)
+        run_child_script(i, j)
