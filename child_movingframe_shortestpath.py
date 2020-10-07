@@ -1,12 +1,14 @@
 import networkx as nx
 import multiprocessing as mp
-import psycopg2 as psql
 import json
 import scipy.spatial
 import time
 import logging
 import sys
 import cPickle
+
+from database import connection
+
 logger = mp.log_to_stderr(logging.INFO)
 
 
@@ -106,8 +108,7 @@ def run_child_moving_frame(i, j, log=False):
         FROM public."{0}";
         """.format(TBL_TEMP_NETWORK)
         
-    con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-    cur = con.cursor()
+    cur = connection.cursor()
 
     #create graph
     cur.execute(Q_SelectMasterLinks)
@@ -181,8 +182,7 @@ def run_child_moving_frame(i, j, log=False):
     
     del pairs, nopaths
     
-    con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-    cur = con.cursor()
+    cur = connection.cursor()
 
     cur.execute(Q_SelectMasterLinks)
     MasterLinks = cur.fetchall()
@@ -203,8 +203,7 @@ def run_child_moving_frame(i, j, log=False):
     if log:
         logger.info('number of records: %d' % len(edges))
     
-    con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-    cur = con.cursor()
+    cur = connection.cursor()
     
     if (len(edges) > 0):
         Q_CreateOutputTable = """
@@ -290,8 +289,7 @@ def run_child_moving_frame(i, j, log=False):
         with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_ipd_weight.pickle", "wb") as io:
             cPickle.dump(edge_ipd_weight, io)
                 
-        con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-        cur = con.cursor()
+        cur = connection.cursor()
 
         edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]
         edge_ipd_list = [(k, v) for k, v in edge_ipd_weight.iteritems()]

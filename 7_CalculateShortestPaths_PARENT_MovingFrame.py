@@ -8,9 +8,9 @@ import sys
 import CalculateShortestPaths_CLEANUP as cleanup
 
 from child_movingframe_shortestpath import run_child_moving_frame
+from database import connection
 
-con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-cur = con.cursor()
+cur = connection.cursor()
 
 TBL_WORK_NETWORK = "temp_network_1438_%d_%d"
 
