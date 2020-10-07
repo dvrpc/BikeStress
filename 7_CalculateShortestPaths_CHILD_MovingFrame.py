@@ -9,28 +9,6 @@ import sys
 import cPickle
 logger = mp.log_to_stderr(logging.INFO)
 
-#need in this script
-TBL_SPATHS = "shortestpaths_%s_%s" % (str(sys.argv[1]), str(sys.argv[2]))
-TBL_MASTERLINKS_GROUPS ="master_links_grp"
-TBL_NODENOS = "nodenos"
-TBL_NODES_GEOFF = "nodes_geoff"
-TBL_NODES_GID = "nodes_gid"
-TBL_GEOFF_NODES = "geoff_nodes"
-TBL_GEOFF_GROUP = "geoff_group"
-TBL_GID_NODES = "gid_nodes"
-TBL_NODE_GID = "node_gid_post"
-TBL_EDGE = "edgecounts"
-TBL_EDGE_IPD = "edges_ipd"
-TBL_ALL_LINKS = "links"
-TBL_CENTS = "block_centroids"
-IDX_nx_SPATHS_value = "spaths_nx_value_idx"
-
-####CHANGE FOR EACH TRANSIT MODE####
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
-
-TBL_TEMP_PAIRS = "temp_pairs_1438_%s_%s" % (str(sys.argv[1]), str(sys.argv[2]))
-TBL_TEMP_NETWORK = "temp_network_1438_%s_%s" % (str(sys.argv[1]), str(sys.argv[2]))
-
 
 def worker(inqueue, output):
     result = []
@@ -87,52 +65,65 @@ def test_workers(pairs):
     logger.info('test_workers() finished')
     return result, nopath
 
-'''
-def test_single_worker():
-    result = []
-    count = 0
-    for source, target in IT.product(sources, targets):
-        for path in nx.all_simple_paths(G, source = source, target = target,
-                                        cutoff = None):
-            result.append(path)
-            count += 1
-            if count % 10 == 0:
-                logger.info('{c}'.format(c = count))
-print 
-    return result
-'''
+def run_child_moving_frame(i, j, log=False):
+    """
+        This function is imported and executed by:
+            '7_CalculateShortestPaths_PARENT_MovingFrame.py'
+    """
 
-num_cores = 64 # mp.cpu_count()
+    #need in this script
+    TBL_SPATHS = "shortestpaths_%s_%s" % (str(i), str(j))
+    TBL_MASTERLINKS_GROUPS ="master_links_grp"
+    TBL_NODENOS = "nodenos"
+    TBL_NODES_GEOFF = "nodes_geoff"
+    TBL_NODES_GID = "nodes_gid"
+    TBL_GEOFF_NODES = "geoff_nodes"
+    TBL_GEOFF_GROUP = "geoff_group"
+    TBL_GID_NODES = "gid_nodes"
+    TBL_NODE_GID = "node_gid_post"
+    TBL_EDGE = "edgecounts"
+    TBL_EDGE_IPD = "edges_ipd"
+    TBL_ALL_LINKS = "links"
+    TBL_CENTS = "block_centroids"
+    IDX_nx_SPATHS_value = "spaths_nx_value_idx"
 
-#grab master links to make graph with networkx
+    ####CHANGE FOR EACH TRANSIT MODE####
+    TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
 
-Q_SelectMasterLinks = """
-    SELECT
-        mixid,
-        fromgeoff,
-        togeoff,
-        cost
-    FROM public."{0}";
-    """.format(TBL_TEMP_NETWORK)
-    
-con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-cur = con.cursor()
+    TBL_TEMP_PAIRS = "temp_pairs_1438_%s_%s" % (str(i), str(j))
+    TBL_TEMP_NETWORK = "temp_network_1438_%s_%s" % (str(i), str(j))
 
-#create graph
-cur.execute(Q_SelectMasterLinks)
-G = nx.MultiDiGraph()
-node_pairs = {}
-for id, fg, tg, cost in cur.fetchall():
-    G.add_edge(fg, tg, id = id, weight = cost)
-    node_pairs[(fg, tg)] = id
+    num_cores = 64 # mp.cpu_count()
 
-# PID 4156
-pairs = []
-sentinel = None
-output = mp.Queue()
+    #grab master links to make graph with networkx
 
-if __name__ == '__main__':
-    logger.info('start_time: %s' % time.ctime())
+    Q_SelectMasterLinks = """
+        SELECT
+            mixid,
+            fromgeoff,
+            togeoff,
+            cost
+        FROM public."{0}";
+        """.format(TBL_TEMP_NETWORK)
+        
+    con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+    cur = con.cursor()
+
+    #create graph
+    cur.execute(Q_SelectMasterLinks)
+    G = nx.MultiDiGraph()
+    node_pairs = {}
+    for id, fg, tg, cost in cur.fetchall():
+        G.add_edge(fg, tg, id = id, weight = cost)
+        node_pairs[(fg, tg)] = id
+
+    # PID 4156
+    pairs = []
+    sentinel = None
+    output = mp.Queue()
+
+    if log:
+        logger.info('start_time: %s' % time.ctime())
     
     #grab necessary lists and turn them into dictionaries
     Q_GetList = """
@@ -183,9 +174,9 @@ if __name__ == '__main__':
 
     paths, nopaths = test_workers(pairs)
         
-    with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\group1438_MF_%s_%s.cpickle" % (sys.argv[1], sys.argv[2]), "wb") as io:
+    with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\group1438_MF_%s_%s.cpickle" % (i, j), "wb") as io:
         cPickle.dump(paths, io)
-    with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\group1438_MF_%s_%s_nopaths.cpickle" % (sys.argv[1], sys.argv[2]), "wb") as io:
+    with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\group1438_MF_%s_%s_nopaths.cpickle" % (i, j), "wb") as io:
         cPickle.dump(nopaths, io)
     
     del pairs, nopaths
@@ -209,7 +200,8 @@ if __name__ == '__main__':
         for seq, (o ,d) in enumerate(zip(path, path[1:])):
             row = id, seq, oGID, dGID, node_pairs[(o,d)]
             edges.append(row)
-    logger.info('number of records: %d' % len(edges))
+    if log:
+        logger.info('number of records: %d' % len(edges))
     
     con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
     cur = con.cursor()
@@ -239,7 +231,8 @@ if __name__ == '__main__':
         """.format(TBL_SPATHS, IDX_nx_SPATHS_value)
         cur.execute(Q_CreateOutputTable)
 
-        logger.info('inserting records')
+        if log:
+            logger.info('inserting records')
         str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edges[0]))))
         cur.execute("""BEGIN TRANSACTION;""")
         batch_size = 10000
@@ -250,7 +243,9 @@ if __name__ == '__main__':
             Q_Insert = """INSERT INTO public."{0}" (id, seq, ogid, dgid, edge) VALUES {1}""".format(TBL_SPATHS, arg_str)
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
-        logger.info('end_time: %s' % time.ctime())
+
+        if log:
+            logger.info('end_time: %s' % time.ctime())
         
         
         dict_all_paths = {}    
@@ -301,7 +296,8 @@ if __name__ == '__main__':
         edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]
         edge_ipd_list = [(k, v) for k, v in edge_ipd_weight.iteritems()]
 
-        logger.info('inserting counts')
+        if log:
+            logger.info('inserting counts')
 
         Q_CreateOutputTable2 = """
             CREATE TABLE IF NOT EXISTS public."{0}"
@@ -329,7 +325,8 @@ if __name__ == '__main__':
         cur.execute("COMMIT;")
         con.commit()
 
-        logger.info('inserting ipd weights')
+        if log:
+            logger.info('inserting ipd weights')
 
         Q_CreateOutputTable3 = """
             CREATE TABLE IF NOT EXISTS public."{0}"
@@ -361,7 +358,5 @@ if __name__ == '__main__':
     
     del edges
         
-    logger.info('end_time: %s' % time.ctime())
-
-
-
+    if log:
+        logger.info('end_time: %s' % time.ctime())
