@@ -25,21 +25,11 @@ def run_child_script(i, j):
         cnt, _ = cur.fetchone()
         if cnt > 0:
             run_child_moving_frame(i, j, log=True)
-            cleanup.dumpndrop_MF(i, j)
+            #cleanup.dumpndrop_MF(i, j)
 
-#to capture those missed with previous upper limits
-for i in xrange(6, 8):
-    for j in xrange(119, 120):
-        run_child_script(i, j)
-
-#to finish up section #8
-for i in xrange(8, 9):
-    for j in xrange(113, 122):
-        run_child_script(i, j)
-
-#to finish from section 9 and above
-for i in xrange(9, 22):
-    for j in xrange(1, 22):
+#to finish from section 10-16 and above
+for i in xrange(10, 22):
+    for j in xrange(16, 22):
         run_child_script(i, j)
 
     for j in xrange(101, 122):
