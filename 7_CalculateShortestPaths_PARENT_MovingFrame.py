@@ -22,7 +22,7 @@ def run_child_script(i, j):
     table_exists = cur.fetchone()[0]
     if table_exists:
         cur.execute("""SELECT COUNT(*) FROM %s WHERE MIXID > 0""" % (this_table)
-        cnt, _ = cur.fetchone()
+        cnt, = cur.fetchone()
         if cnt > 0:
             run_child_moving_frame(i, j, log=True)
             #cleanup.dumpndrop_MF(i, j)
