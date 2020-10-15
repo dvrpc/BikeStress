@@ -16,6 +16,7 @@ def worker(inqueue, output):
     result = []
     nopath = []
     count = 0
+    sentinel = None
     start_time = time.time()
     for pair in iter(inqueue.get, sentinel):
         source, target = pair
@@ -42,6 +43,7 @@ def test_workers(pairs):
     nopath = []
     inqueue = mp.Queue()
     output = mp.Queue()
+    sentinel = None
     for id, source, target, geom in pairs:
         inqueue.put((source, target))
     # Build O-D pair list

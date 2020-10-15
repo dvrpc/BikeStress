@@ -30,18 +30,19 @@ def run_child_script(i, j):
             #cleanup.dumpndrop_MF(i, j)
 
 #to finish from section 10-16 and above
-for i in xrange(10, 22):
-    for j in xrange(16, 22):
-        run_child_script(i, j)
+if __name__ == "__main__":
+    for i in xrange(10, 22):
+        for j in xrange(16, 22):
+            run_child_script(i, j)
 
-    for j in xrange(101, 122):
-        run_child_script(i, j)
+        for j in xrange(101, 122):
+            run_child_script(i, j)
 
-        
-for i in xrange(101, 122):
-    for j in xrange(1, 22):
-        run_child_script(i, j)
+            
+    for i in xrange(101, 122):
+        for j in xrange(1, 22):
+            run_child_script(i, j)
 
-                
-    for j in xrange(101, 122):
-        run_child_script(i, j)
+                    
+        for j in xrange(101, 122):
+            run_child_script(i, j)
