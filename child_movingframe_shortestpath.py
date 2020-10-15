@@ -74,7 +74,6 @@ def run_child_moving_frame(i, j, log=False):
     """
 
     #need in this script
-    TBL_SPATHS = "shortestpaths_%s_%s" % (str(i), str(j))
     TBL_MASTERLINKS_GROUPS ="master_links_grp"
     TBL_NODENOS = "nodenos"
     TBL_NODES_GEOFF = "nodes_geoff"
@@ -87,7 +86,6 @@ def run_child_moving_frame(i, j, log=False):
     TBL_EDGE_IPD = "edges_ipd"
     TBL_ALL_LINKS = "links"
     TBL_CENTS = "block_centroids"
-    IDX_nx_SPATHS_value = "spaths_nx_value_idx"
 
     ####CHANGE FOR EACH TRANSIT MODE####
     TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
@@ -206,47 +204,6 @@ def run_child_moving_frame(i, j, log=False):
     cur = connection.cursor()
     
     if (len(edges) > 0):
-        Q_CreateOutputTable = """
-            CREATE TABLE IF NOT EXISTS public."{0}"
-            (
-              id integer,
-              seq integer,
-              ogid integer,
-              dgid integer,
-              edge bigint,
-              rowno BIGSERIAL PRIMARY KEY
-            )
-            WITH (
-                OIDS = FALSE
-            )
-            TABLESPACE pg_default;
-
-            
-            CREATE INDEX IF NOT EXISTS "{1}"
-                ON public."{0}" USING btree
-                (id, seq, ogid, dgid, edge)
-                TABLESPACE pg_default;
-            COMMIT;                
-        """.format(TBL_SPATHS, IDX_nx_SPATHS_value)
-        cur.execute(Q_CreateOutputTable)
-
-        if log:
-            logger.info('inserting records')
-        str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edges[0]))))
-        cur.execute("""BEGIN TRANSACTION;""")
-        batch_size = 10000
-        for i in xrange(0, len(edges), batch_size):
-            j = i + batch_size
-            arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edges[i:j])
-            #print arg_str
-            Q_Insert = """INSERT INTO public."{0}" (id, seq, ogid, dgid, edge) VALUES {1}""".format(TBL_SPATHS, arg_str)
-            cur.execute(Q_Insert)
-        cur.execute("COMMIT;")
-
-        if log:
-            logger.info('end_time: %s' % time.ctime())
-        
-        
         dict_all_paths = {}    
         #convert edges to dictionary
         for id, seq, ogid, dgid, edge in edges:
