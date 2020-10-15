@@ -41,6 +41,7 @@ def test_workers(pairs):
     result = []
     nopath = []
     inqueue = mp.Queue()
+    output = mp.Queue()
     for id, source, target, geom in pairs:
         inqueue.put((source, target))
     # Build O-D pair list
