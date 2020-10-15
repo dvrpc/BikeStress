@@ -46,7 +46,8 @@ def test_workers(pairs):
     # Build O-D pair list
     # for source, target in IT.product(sources, targets):
         # inqueue.put((source, target))
-
+    
+    num_cores = 64 # mp.cpu_count()
     procs = []
     for i in xrange(num_cores):
         procs.append(mp.Process(target = worker, args = (inqueue, output)))

@@ -8,6 +8,8 @@ import sys
 import CalculateShortestPaths_CLEANUP as cleanup
 
 from child_movingframe_shortestpath import run_child_moving_frame
+from child_movingframe_shortestpath import worker
+from child_movingframe_shortestpath import test_workers
 from database import connection
 
 cur = connection.cursor()
@@ -21,7 +23,7 @@ def run_child_script(i, j):
     cur.execute("""SELECT EXISTS (SELECT 1 AS result FROM pg_tables WHERE schemaname = 'public' AND tablename = '{0}');""".format(this_table))
     table_exists = cur.fetchone()[0]
     if table_exists:
-        cur.execute("""SELECT COUNT(*) FROM %s WHERE MIXID > 0""" % (this_table)
+        cur.execute("""SELECT COUNT(*) FROM %s WHERE MIXID > 0""" % (this_table))
         cnt, = cur.fetchone()
         if cnt > 0:
             run_child_moving_frame(i, j, log=True)
