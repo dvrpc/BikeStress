@@ -12,7 +12,7 @@ from database import connection
 logger = mp.log_to_stderr(logging.INFO)
 
 
-def worker(inqueue, output):
+def worker(inqueue, output, G):
     result = []
     nopath = []
     count = 0
@@ -53,7 +53,7 @@ def test_workers(pairs):
     num_cores = 64 # mp.cpu_count()
     procs = []
     for i in xrange(num_cores):
-        procs.append(mp.Process(target = worker, args = (inqueue, output)))
+        procs.append(mp.Process(target = worker, args = (inqueue, output, G)))
     # procs = [mp.Process(target = worker, args = (inqueue, output)) for i in range(mp.cpu_count())]
 
     for proc in procs:
