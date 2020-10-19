@@ -37,7 +37,7 @@ def worker(inqueue, output, G):
             start_time = time.time()
     output.put({'result': result, 'nopath': nopath})
 
-def test_workers(pairs):
+def test_workers(pairs, G):
     logger.info('test_workers() started')
     result = []
     nopath = []
@@ -175,7 +175,7 @@ def run_child_moving_frame(i, j, log=False):
     cur.execute(Q_GetPairs)
     pairs = cur.fetchall()
 
-    paths, nopaths = test_workers(pairs)
+    paths, nopaths = test_workers(pairs, G)
         
     with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\group1438_MF_%s_%s.cpickle" % (i, j), "wb") as io:
         cPickle.dump(paths, io)
