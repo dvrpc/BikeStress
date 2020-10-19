@@ -30,10 +30,11 @@ def worker(inqueue, output, G):
         except Exception as e:
             logger.info('{t}: {m}'.format(t = time.ctime(), m = "GENERAL ERROR: %s" % str(e)))
         else:
+            logger.info('{t}: {m}'.format(t = time.ctime(), m = "path cnt: %d" % len(paths)))
             result.append(paths)
         count += 1
         if (count % 100) == 0:
-            logger.info('{t}: {s}'.format(t = time.ctime(), s = time.time() - start_time))
+            logger.info('{t}: {c} - {s}'.format(t = time.ctime(), c = count, s = time.time() - start_time))
             start_time = time.time()
     output.put({'result': result, 'nopath': nopath})
 
@@ -50,7 +51,7 @@ def test_workers(pairs):
     # for source, target in IT.product(sources, targets):
         # inqueue.put((source, target))
     
-    num_cores = 64 # mp.cpu_count()
+    num_cores = 1 # mp.cpu_count()
     procs = []
     for i in xrange(num_cores):
         procs.append(mp.Process(target = worker, args = (inqueue, output, G)))
