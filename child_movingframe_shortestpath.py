@@ -9,10 +9,8 @@ import cPickle
 
 from database import connection
 
-logger = mp.log_to_stderr(logging.INFO)
-
-
 def worker(inqueue, output, G):
+    logger = logging.getLogger()
     result = []
     nopath = []
     count = 0
@@ -39,6 +37,7 @@ def worker(inqueue, output, G):
     output.put({'result': result, 'nopath': nopath})
 
 def test_workers(pairs, G):
+    logger = logging.getLogger()
     logger.info('test_workers() started')
     result = []
     nopath = []
@@ -81,6 +80,8 @@ def run_child_moving_frame(i, j, log=False):
         This function is imported and executed by:
             '7_CalculateShortestPaths_PARENT_MovingFrame.py'
     """
+
+    logger = mp.log_to_stderr(logging.INFO)
 
     #need in this script
     TBL_MASTERLINKS_GROUPS ="master_links_grp"
