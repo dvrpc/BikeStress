@@ -38,7 +38,7 @@ def worker(inqueue, output, G):
             start_time = time.time()
     output.put({'result': result, 'nopath': nopath})
 
-def test_workers(pairs):
+def test_workers(pairs, G):
     logger.info('test_workers() started')
     result = []
     nopath = []
@@ -55,17 +55,21 @@ def test_workers(pairs):
     procs = []
     for i in xrange(num_cores):
         procs.append(mp.Process(target = worker, args = (inqueue, output, G)))
+    logger.info('test_workers() created %d workers' % len(procs))
     # procs = [mp.Process(target = worker, args = (inqueue, output)) for i in range(mp.cpu_count())]
 
+    logger.info('test_workers() starting workers')
     for proc in procs:
         proc.daemon = True
         proc.start()
-    for proc in procs:    
+    for proc in procs:
         inqueue.put(sentinel)
+    logger.info('test_workers() result aggregation')
     for proc in procs:
         retval = output.get()
         result.extend(retval['result'])
         nopath.extend(retval['nopath'])
+    logger.info('test_workers() joining')
     for proc in procs:
         proc.join()
 
@@ -176,7 +180,7 @@ def run_child_moving_frame(i, j, log=False):
     cur.execute(Q_GetPairs)
     pairs = cur.fetchall()
 
-    paths, nopaths = test_workers(pairs)
+    paths, nopaths = test_workers(pairs, G)
         
     with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\group1438_MF_%s_%s.cpickle" % (i, j), "wb") as io:
         cPickle.dump(paths, io)
