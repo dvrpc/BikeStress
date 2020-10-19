@@ -10,7 +10,7 @@ import cPickle
 from database import connection
 
 def worker(inqueue, output, G):
-    logger = logging.getLogger()
+    logger = mp.get_logger()
     result = []
     nopath = []
     count = 0
@@ -37,7 +37,7 @@ def worker(inqueue, output, G):
     output.put({'result': result, 'nopath': nopath})
 
 def test_workers(pairs, G):
-    logger = logging.getLogger()
+    logger = mp.get_logger()
     logger.info('test_workers() started')
     result = []
     nopath = []
@@ -50,7 +50,7 @@ def test_workers(pairs, G):
     # for source, target in IT.product(sources, targets):
         # inqueue.put((source, target))
     
-    num_cores = 1 # mp.cpu_count()
+    num_cores = 32 # mp.cpu_count()
     procs = []
     for i in xrange(num_cores):
         procs.append(mp.Process(target = worker, args = (inqueue, output, G)))
