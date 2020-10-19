@@ -288,7 +288,7 @@ def run_child_moving_frame(i, j, log=False):
             Q_Insert = """INSERT INTO "{0}" VALUES {1};""".format(TBL_EDGE, arg_str)
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
-        con.commit()
+        connection.commit()
 
         if log:
             logger.info('inserting ipd weights')
@@ -317,7 +317,7 @@ def run_child_moving_frame(i, j, log=False):
             Q_Insert = """INSERT INTO "{0}" VALUES {1};""".format(TBL_EDGE_IPD, arg_str)
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
-        con.commit()
+        connection.commit()
 
     del paths, nodes_gids, geoff_nodes, node_pairs
     
