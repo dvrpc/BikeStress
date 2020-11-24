@@ -11,8 +11,9 @@ logger = mp.log_to_stderr(logging.INFO)
 
 
 #need in this script
-TBL_SPATHS = "shortestpaths_%s_transit" % str(sys.argv[1])
+#TBL_SPATHS = "shortestpaths_%s_transit" % str(sys.argv[1])
 TBL_MASTERLINKS_GROUPS ="master_links_grp"
+TBL_CENTS = "block_centroids"
 TBL_NODENOS = "nodenos_transit"
 TBL_NODES_GEOFF = "nodes_geoff_transit"
 TBL_NODES_GID = "nodes_gid_transit"
@@ -22,13 +23,12 @@ TBL_GID_NODES = "gid_nodes_transit"
 TBL_NODE_GID = "node_gid_post_transit"
 TBL_EDGE = "edgecounts_transit"
 TBL_EDGE_IPD = "edges_ipd_transit"
-IDX_nx_SPATHS_value = "spaths_nx_value_idx_transit"
+#IDX_nx_SPATHS_value = "spaths_nx_value_idx_transit"
 
 ####CHANGE FOR EACH TRANSIT MODE####
 TBL_BLOCK_NODE_GEOFF = "block_node_geoff_transit"
 TBL_TRANSIT_NODE = "transit_node"
 TBL_NODE_TRANSIT = "node_transit"
-
 
 def worker(inqueue, output):
     result = []
@@ -99,7 +99,7 @@ Q_SelectMasterLinks = """
         fromgeoff,
         togeoff,
         cost
-    FROM public."{0}";
+    FROM {0} s;
     """.format(selectisland)
     
 con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
@@ -224,41 +224,41 @@ if __name__ == '__main__':
     cur = con.cursor()
 
     if (len(edges) > 0):
-        Q_CreateOutputTable = """
-            CREATE TABLE IF NOT EXISTS public."{0}"
-            (
-              id integer,
-              seq integer,
-              otid integer,
-              dgid integer,
-              edge bigint,
-              rowno BIGSERIAL PRIMARY KEY
-            )
-            WITH (
-                OIDS = FALSE
-            )
-            TABLESPACE pg_default;
+        # Q_CreateOutputTable = """
+            # CREATE TABLE IF NOT EXISTS public."{0}"
+            # (
+              # id integer,
+              # seq integer,
+              # otid integer,
+              # dgid integer,
+              # edge bigint,
+              # rowno BIGSERIAL PRIMARY KEY
+            # )
+            # WITH (
+                # OIDS = FALSE
+            # )
+            # TABLESPACE pg_default;
 
             
-            CREATE INDEX IF NOT EXISTS "{1}"
-                ON public."{0}" USING btree
-                (id, seq, otid, dgid, edge)
-                TABLESPACE pg_default;
-            COMMIT;                
-        """.format(TBL_SPATHS, IDX_nx_SPATHS_value)
-        cur.execute(Q_CreateOutputTable)
+            # CREATE INDEX IF NOT EXISTS "{1}"
+                # ON public."{0}" USING btree
+                # (id, seq, otid, dgid, edge)
+                # TABLESPACE pg_default;
+            # COMMIT;                
+        # """.format(TBL_SPATHS, IDX_nx_SPATHS_value)
+        # cur.execute(Q_CreateOutputTable)
 
-        logger.info('inserting paths')
-        str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edges[0]))))
-        cur.execute("""BEGIN TRANSACTION;""")
-        batch_size = 10000
-        for i in xrange(0, len(edges), batch_size):
-            j = i + batch_size
-            arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edges[i:j])
-            #print arg_str
-            Q_Insert = """INSERT INTO public."{0}" (id, seq, otid, dgid, edge) VALUES {1}""".format(TBL_SPATHS, arg_str)
-            cur.execute(Q_Insert)
-        cur.execute("COMMIT;")
+        # logger.info('inserting paths')
+        # str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edges[0]))))
+        # cur.execute("""BEGIN TRANSACTION;""")
+        # batch_size = 10000
+        # for i in xrange(0, len(edges), batch_size):
+            # j = i + batch_size
+            # arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edges[i:j])
+            ##print arg_str
+            # Q_Insert = """INSERT INTO public."{0}" (id, seq, otid, dgid, edge) VALUES {1}""".format(TBL_SPATHS, arg_str)
+            # cur.execute(Q_Insert)
+        # cur.execute("COMMIT;")
         
         
         dict_all_paths = {}    
@@ -272,17 +272,17 @@ if __name__ == '__main__':
                 dict_all_paths[key].append(edge)
 
         #how many times each OD geoff pair should be counted if used at all
-		#what is ipd weight of each path based on score of just origin census blocks for transit analysis
+        #what is ipd weight of each path based on score of just origin census blocks for transit analysis
         weight_by_od = {}
-		ipd_od = {}
+        ipd_od = {}
         for oTID, dGID in dict_all_paths.iterkeys():
             onode = transit_dict[oTID]
             dnode = gid_node[dGID]
             weight_by_od[(oTID, dGID)] = len(node_gid[dnode])
-			ipd_od[(oGID, dGID)] = ipd_lookup[oGID]
+            ipd_od[(oTID, dGID)] = ipd_lookup[dGID]
 
         edge_count_dict = {}
-		edge_ipd_weight = {}
+        edge_ipd_weight = {}
         for key, paths in dict_all_paths.iteritems():
             path_weight = weight_by_od[key]
             ipd_weight = ipd_od[key]
@@ -299,15 +299,15 @@ if __name__ == '__main__':
                 
         with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_count_dict_transit.pickle", "wb") as io:
             cPickle.dump(edge_count_dict, io)
-		
-		with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_ipd_weight_transit.pickle", "wb") as io:
+        
+        with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_ipd_weight_transit.pickle", "wb") as io:
             cPickle.dump(edge_ipd_weight, io)
                 
         con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
         cur = con.cursor()
         
         edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]
-		edge_ipd_list = [(k, v) for k, v in edge_ipd_weight.iteritems()]
+        edge_ipd_list = [(k, v) for k, v in edge_ipd_weight.iteritems()]
         
         logger.info('inserting counts')
         
@@ -336,8 +336,8 @@ if __name__ == '__main__':
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
         con.commit()
-		
-		logger.info('inserting ipd weights')
+        
+        logger.info('inserting ipd weights')
 
         Q_CreateOutputTable3 = """
             CREATE TABLE IF NOT EXISTS public."{0}"

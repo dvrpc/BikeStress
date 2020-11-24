@@ -11,6 +11,8 @@ import json
 import scipy.spatial
 import networkx as nx
 
+from database import connection
+
 #table names
 TBL_ALL_LINKS = "links"
 TBL_CENTS = "block_centroids"
@@ -47,8 +49,7 @@ IDX_GID_NODES = "gid_nodes_idx"
 IDX_OD_value = "od_value_idx"
 IDX_NODE_GID = "node_gid_post"
 
-con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-cur = con.cursor()
+cur = connection.cursor()
 
 
 class Sponge:
@@ -133,7 +134,7 @@ VALUES {1}
 """.format(TBL_GROUPS, arg_str)
 
 cur.execute(Q_InsertGrps)
-con.commit()
+connection.commit()
 del results
 
 #join strong and weak group number to master links geo
@@ -150,7 +151,7 @@ Q_JoinGroupGeo = """
         ) AS "{1}"
     );""".format(TBL_GROUPS, TBL_MASTERLINKS_GROUPS, TBL_MASTERLINKS_GEO)
 cur.execute(Q_JoinGroupGeo)
-con.commit()
+connection.commit()
 
 # Q_CREATEINDEX = """
 # CREATE INDEX montco_master_links_grp_idx

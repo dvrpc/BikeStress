@@ -1,5 +1,5 @@
 #run thru cmd
-#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\TransitAnalysis\5_ODpairs_Transit.py
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\SchoolAnalysis\5_ODpairs_school.py
 
 import psycopg2 as psql
 import csv
@@ -14,7 +14,6 @@ import networkx as nx
 #table names
 TBL_ALL_LINKS = "links"
 TBL_CENTS = "block_centroids"
-TBL_ALLCENTS = "block_centroids"
 TBL_LINKS = "tolerablelinks"
 TBL_NODES = "nodes"
 TBL_TOLNODES = "tol_nodes"
@@ -28,45 +27,41 @@ TBL_TURNS = "all_turns"
 TBL_SUBTURNS = "tolerableturns"
 TBL_BRIDGECENTS = "bridge_buffer_cents"
 
-####CHANGE FOR EACH TRANSIT MODE####
-#point shapefile with gid and geom
-TBL_TRANSIT = "bus_region"
+#update tables for each different destination type (trails, schools)
+TBL_DEST = "schools"
+TBL_DEST_NODE = "school_node"
+TBL_NODE_DEST = "node_school"
 
+TBL_NODENOS = "nodenos_school"
+TBL_NODES_GEOFF = "nodes_geoff_school"
+TBL_NODES_GID = "nodes_gid_school"
+TBL_GEOFF_NODES = "geoff_nodes_school"
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff_school"
+TBL_GEOFF_GROUP = "geoff_group_school"
+TBL_GID_NODES = "gid_nodes_school"
+TBL_NODE_GID = "node_gid_post_school"
 
-#DELETE between each transit mode run#
-TBL_TRANSIT_NODE = "transit_node"
-TBL_NODE_TRANSIT = "node_transit"
-TBL_NODENOS = "nodenos_transit"
-TBL_NODES_GEOFF = "nodes_geoff_transit"
-TBL_NODES_GID = "nodes_gid_transit"
-TBL_GEOFF_NODES = "geoff_nodes_transit"
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff_transit"
-TBL_GEOFF_GROUP = "geoff_group_transit"
-TBL_GID_NODES = "gid_nodes_transit"
-TBL_NODE_GID = "node_gid_post_transit"
-
-
-IDX_GEOFF_GROUP = "geoff_group_value_idx_transit"
-IDX_BLOCK_NODE_GEOFF = "block_node_geoff_value_idx_transit"
-IDX_NODENOS = "nodeno_idx_transit"
-IDX_NODES_GEOFF = "nodes_geoff_idx_transit"
-IDX_NODES_GID = "nodes_gid_idx_transit"
-IDX_GEOFF_NODES = "geoff_nodes_idx_transit"
-IDX_GID_NODES = "gid_nodes_idx_transit"
-IDX_OD_value = "od_value_idx_transit"
-IDX_NODE_GID = "node_gid_post_idx_transit"
-IDX_TRANSIT_NODE = "transit_node_idx_transit"
-IDX_NODE_TRANSIT = "node_transit_idx_transit"
+IDX_GEOFF_GROUP = "geoff_group_value_idx_school"
+IDX_BLOCK_NODE_GEOFF = "block_node_geoff_value_idx_school"
+IDX_NODENOS = "nodeno_idx_school"
+IDX_NODES_GEOFF = "nodes_geoff_idx_school"
+IDX_NODES_GID = "nodes_gid_idx_school"
+IDX_GEOFF_NODES = "geoff_nodes_idx_school"
+IDX_GID_NODES = "gid_nodes_idx_school"
+IDX_OD_value = "od_value_idx_school"
+IDX_NODE_GID = "node_gid_post_idx_school"
+IDX_DEST_NODE = "school_node_idx_school"
+IDX_NODE_DEST = "node_school_idx_school"
 
 #connect to DB
 con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
     
-#grab info on geoffs, blocks, and transit intersections
+#grab info on geoffs, blocks, and destination
 SQL_GetGeoffs = """SELECT geoffid, vianode, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_GEOFF_LOOKUP_GEOM)
-SQL_GetBlocks = """SELECT gid, Null AS dummy, ST_AsGeoJSON(cent) FROM "{0}";""".format(TBL_CENTS)
+SQL_GetBlocks = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_CENTS)
 
-SQL_GettransitInt = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_TRANSIT)
+SQL_GetDEST = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_DEST)
 
 def GetCoords(record):
     id, vianode, geojson = record
@@ -96,32 +91,33 @@ for i, (id, _, coord) in enumerate(data):
     nodeno = geoff_nodes[geoffid]
     results.append((id, nodeno))
     
-print time.ctime(), "Getting transits"
-transits = ExecFetchSQL(SQL_GettransitInt)
-#transit results is list of transit ids and closest nodenos
-transit_results = []
-for i, (id, _, coord) in enumerate(transits):
+print time.ctime(), "Getting Destinations"
+destinations = ExecFetchSQL(SQL_GetDEST)
+#tdest results is list of dest ids and closest nodenos
+dest_results = []
+for i, (id, _, coord) in enumerate(destinations):
     dist, index = geofftree.query(coord)
-    geoffid = world_ids[index]
+    geoffid = world_ids[numpy.ndarray.item(index)]
     nodeno = geoff_nodes[geoffid]
-    transit_results.append((id, nodeno))
+    dest_results.append((id, nodeno))
 
-#transit dict is transit results in dictionary form
-transit_dict = {}
-for tid, node in transit_results:
-    if not tid in transit_dict:
-        transit_dict[tid] = []
-    transit_dict[tid].append(node)
+#dest dict is dest results in dictionary form
+#did = destination id
+dest_dict = {}
+for did, node in dest_results:
+    if not did in dest_dict:
+        dest_dict[did] = []
+    dest_dict[did].append(node)
     
-del data, transits, world_ids
+del data, destinations, world_ids
     
 gids, nodenos = zip(*results)
 #nodenos = sorted(set(nodenos))
 # Node to GID dictionary (a 'random' GID will be selected for each node)
 nodes_gids = dict(zip(nodenos, gids))
 
-tid, node = zip(*transit_results)
-node_tid = dict(zip(node, tid))
+did, node = zip(*dest_results)
+node_did = dict(zip(node, did))
 
 #create gid_node to track which blocks use the same O and D nodes 
 #this will be used to determine how many times to count each path later
@@ -141,8 +137,8 @@ nodes_geoff_list = [(k, v) for k, v in nodes_geoff.iteritems()]
 nodes_gids_list = [(k, v) for k, v in nodes_gids.iteritems()]
 geoff_nodes_list = [(k, v) for k, v in geoff_nodes.iteritems()]
 gid_node_list = [(k, v) for k, v in gid_node.iteritems()]#added for postprocessing
-transit_node_list = [(k, v[0]) for k, v in transit_dict.iteritems()]#added for postprocessing
-node_transit_list = [(k, v) for k, v in node_tid.iteritems()]#added for postprocessing
+dest_node_list = [(k, v[0]) for k, v in dest_dict.iteritems()]#added for postprocessing
+node_dest_list = [(k, v) for k, v in node_did.iteritems()]#added for postprocessing
 
 node_gid_list = [] #added for postprocessing
 for key, value in node_gid.iteritems():
@@ -330,11 +326,11 @@ for i in xrange(0, len(node_gid_list), batch_size):
     cur.execute(Q_Insert)
 cur.execute("COMMIT;")
 
-#write transit_dict into a table in postgres to refer to later
+#write dest_dict into a table in postgres to refer to later
 Q_CreateOutputTable = """
 CREATE TABLE IF NOT EXISTS public."{0}"
 (
-    transitid integer,
+    destid integer,
     node integer
 )
 WITH (
@@ -345,29 +341,29 @@ COMMIT;
 
 CREATE INDEX IF NOT EXISTS "{1}"
     ON public."{0}" USING btree
-    (node, transitid)
+    (node, destid)
     TABLESPACE pg_default;    
-""".format(TBL_TRANSIT_NODE, IDX_TRANSIT_NODE)
+""".format(TBL_DEST_NODE, IDX_DEST_NODE)
 cur.execute(Q_CreateOutputTable)
 
-str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(transit_node_list[0]))))
+str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(dest_node_list[0]))))
 cur.execute("""BEGIN TRANSACTION;""")
 batch_size = 10000
-for i in xrange(0, len(transit_node_list), batch_size):
+for i in xrange(0, len(dest_node_list), batch_size):
     j = i + batch_size
-    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in transit_node_list[i:j])
+    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in dest_node_list[i:j])
     #print arg_str
-    Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_TRANSIT_NODE, arg_str)
+    Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_DEST_NODE, arg_str)
     cur.execute(Q_Insert)
 cur.execute("COMMIT;")
 
 
-#write node_transit into a table in postgres to refer to later
+#write node_dest into a table in postgres to refer to later
 Q_CreateOutputTable = """
 CREATE TABLE IF NOT EXISTS public."{0}"
 (
     node integer,
-    transitid integer
+    destid integer
 )
 WITH (
     OIDS = FALSE
@@ -377,42 +373,52 @@ COMMIT;
 
 CREATE INDEX IF NOT EXISTS "{1}"
     ON public."{0}" USING btree
-    (node, transitid)
+    (node, destid)
     TABLESPACE pg_default;    
-""".format(TBL_NODE_TRANSIT, IDX_NODE_TRANSIT)
+""".format(TBL_NODE_DEST, IDX_NODE_DEST)
 cur.execute(Q_CreateOutputTable)
 
-str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(node_transit_list[0]))))
+str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(node_dest_list[0]))))
 cur.execute("""BEGIN TRANSACTION;""")
 batch_size = 10000
-for i in xrange(0, len(node_transit_list), batch_size):
+for i in xrange(0, len(node_dest_list), batch_size):
     j = i + batch_size
-    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in node_transit_list[i:j])
+    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in node_dest_list[i:j])
     #print arg_str
-    Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_NODE_TRANSIT, arg_str)
+    Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_NODE_DEST, arg_str)
     cur.execute(Q_Insert)
 cur.execute("COMMIT;")
 
-print time.ctime(), "Calculating transit Distance"
-#find transit/block centroid pairs within 3 miles SLD, per FTA bike to transit manual
-#if tids share a closest node, only one tid is selected for calculating shortest paths. these are accounted for in edge counting.
-Q_transitDist = """
-WITH tblA AS(
-    SELECT DISTINCT ON(t.node) t.node, t.transitid AS tid, g.geom
-    FROM "{1}" t
-    INNER JOIN "{0}" g
-    ON t.node = g.vianode
-    )
-SELECT t.tid, c.gid
-FROM tblA t
-INNER JOIN "{2}" c
-ON ST_DWithin(t.geom, c.cent, 4828.03)
-""".format(TBL_GEOFF_LOOKUP_GEOM,TBL_TRANSIT_NODE, TBL_CENTS)
-cur.execute(Q_transitDist)
+print time.ctime(), "Calculating Distance"
+#find dest/block centroid pairs within 
+#2.5 miles SLD for trails
+#2 miles SLD for schools
+Q_DestDist = """
+    WITH tblA AS(
+        SELECT ng.nodes, ng.gid, g.geom
+        FROM "{1}" ng
+        INNER JOIN "{0}" g
+        ON ng.nodes = g.vianode
+        ),
+    tblB AS(
+        SELECT 
+            t.gid did,
+            a.gid gid, 
+            ST_DISTANCE(t.geom, a.geom) dist
+        FROM "{2}" t, tblA a
+        )
+    SELECT *
+    FROM tblB
+    --2.5 miles
+    --WHERE dist <= 4023.36
+	--2 miles
+	WHERE dist <= 3218.69
+""".format(TBL_GEOFF_LOOKUP_GEOM,TBL_NODES_GID, TBL_DEST)
+cur.execute(Q_DestDist)
 output = cur.fetchall()
-transitpairs = []
-for tid, gid in output:
-    transitpairs.append((tid, gid))
+destpairs = []
+for did, gid, dist in output:
+    destpairs.append((did, gid))
 
 
 #create gid_node to track which blocks use the same O and D nodes 
@@ -458,7 +464,7 @@ geoff_grp_list = cur.fetchall()
 geoff_grp = dict(geoff_grp_list)
 
 #grab list of block centroids states to create a lookup to be referenced later
-SQL_GetBlockState = """SELECT gid, statefp10 FROM "{0}";""".format(TBL_ALLCENTS)
+SQL_GetBlockState = """SELECT gid, statefp10 FROM "{0}";""".format(TBL_CENTS)
 cur.execute(SQL_GetBlockState)
 states = cur.fetchall()
 
@@ -468,16 +474,16 @@ for gid, state in states:
         state_lookup[gid] = []
     state_lookup[gid].append(state)
     
-#repeat to create lookup for transit states
-SQL_GetTransitState = """SELECT gid, statenum FROM "{0}";""".format(TBL_TRANSIT)
-cur.execute(SQL_GetTransitState)
-transitstates = cur.fetchall()
+#repeat to create lookup for destination states
+SQL_GetDestState = """SELECT gid, statenum FROM "{0}";""".format(TBL_DEST)
+cur.execute(SQL_GetDestState)
+deststates = cur.fetchall()
 
-transit_state_lookup = {}
-for tid, state in transitstates:
-    if not tid in transit_state_lookup:
-        transit_state_lookup[tid] = []
-    transit_state_lookup[tid].append(state)
+dest_state_lookup = {}
+for did, state in deststates:
+    if not did in dest_state_lookup:
+        dest_state_lookup[did] = []
+    dest_state_lookup[did].append(state)
 
 #grab list of block centroid gids that are within 5 miles of a delaware river bridge
 Q_BridgeList = """SELECT gid, statefp10 FROM "{0}";""".format(TBL_BRIDGECENTS)
@@ -490,18 +496,18 @@ CloseEnough = []
 OutsideBridgeBuffer = 0
 DiffGroup = 0
 NullGroup = 0
-for i, (tid, gid) in enumerate(transitpairs):
-        fromnodeno = transit_dict[tid][0]
+for i, (did, gid) in enumerate(destpairs):
+        fromnodeno = dest_dict[did][0]
         tonodeno = gid_node[gid]
         #are the nodes on the same island?
         if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
             #are the from/to nodes of the OD pair the same point?
             if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
                 #are they in the same state? if so, calculate
-                if transit_state_lookup[tid] == state_lookup[gid]:
+                if dest_state_lookup[did] == state_lookup[gid]:
                     # if geoff_grp[nodes_geoff[fromnodeno]] == int(sys.argv[1]):
                     CloseEnough.append([
-                        tid,    # FromGID
+                        did,    # FromGID
                         fromnodeno,                # FromNode
                         nodes_geoff[fromnodeno],   # FromGeoff
                         gid,      # ToGID
@@ -510,9 +516,9 @@ for i, (tid, gid) in enumerate(transitpairs):
                         geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
                         ])
                     #if not, are both ends in the bridge buffer? if so, calculate
-                elif tid and gid in cent:
+                elif did and gid in cent:
                     CloseEnough.append([
-                        tid,    # FromGID
+                        did,    # FromGID
                         fromnodeno,                # FromNode
                         nodes_geoff[fromnodeno],   # FromGeoff
                         gid,      # ToGID
@@ -536,7 +542,7 @@ Q_CreateOutputTable = """
 CREATE TABLE IF NOT EXISTS public."{0}"
 (
 
-    fromtid     integer,
+    fromdid     integer,
     fromnode    integer,
     fromgeoff   integer,
     togid       integer,
@@ -552,7 +558,7 @@ TABLESPACE pg_default;
 COMMIT;
 CREATE INDEX IF NOT EXISTS "{1}"
     ON public."{0}" USING btree
-    (fromtid, fromnode, fromgeoff, togid, tonode, togeoff, groupnumber)
+    (fromdid, fromnode, fromgeoff, togid, tonode, togeoff, groupnumber)
     TABLESPACE pg_default;    
 """.format(TBL_BLOCK_NODE_GEOFF, IDX_BLOCK_NODE_GEOFF)
 cur.execute(Q_CreateOutputTable)
@@ -568,15 +574,15 @@ for i in xrange(0, len(CloseEnough), batch_size):
     cur.execute(Q_Insert)
 cur.execute("COMMIT;")
 
-# Q_Index = """
-    # CREATE INDEX block_node_geoff_grp_idx
-      # ON public.{0}
-      # USING btree
-      # (groupnumber);
+Q_Index = """
+    CREATE INDEX block_node_geoff_grp_idx
+      ON public.{0}
+      USING btree
+      (groupnumber);
 
-    # COMMIT;
-    # """.format(TBL_BLOCK_NODE_GEOFF)
-# cur.execute(Q_Index)
+    COMMIT;
+    """.format(TBL_BLOCK_NODE_GEOFF)
+cur.execute(Q_Index)
 
 
 print time.ctime(), "Finished"

@@ -1,5 +1,5 @@
 #copy to run in cmd
-#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\Phase2\TransitAnalysis\7_CalculateShortestPaths_PARENT_transit.py
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\TransitAnalysis\7_CalculateShortestPaths_PARENT_transit.py
 
 import psycopg2 as psql
 import subprocess
@@ -38,19 +38,18 @@ b = 1438 #max island number
 c= b+1 #this number is not calcualted (this is the big island in this case)
 dumpers = []
 for i in xrange(a, c):
-	selectisland = """(SELECT * FROM {0} WHERE strong = {1})""".format(TBL_MASTERLINKS_GROUPS, i)
-    cur.execute("SELECT COUNT(*) FROM %s WHERE MIXID > 0" % (selectisland))
+    selectisland = """(SELECT * FROM {0} WHERE strong = {1})""".format(TBL_MASTERLINKS_GROUPS, i)
+    cur.execute("SELECT COUNT(*) FROM %s s WHERE MIXID > 0" % (selectisland))
     cnt, = cur.fetchone()
     if cnt > 0:
         cur.execute(Q_GeoffCount % i)
         geoffCount = cur.fetchall()
         if geoffCount > 0:
-            #cur.execute("SELECT ")
-            print TBL_TEMP_NETWORK % i
+            print i 
             p = subprocess.Popen([PYEXE, script, '%d' % i], stdout = subprocess.PIPE)#call script to calculate shortest paths
             p.communicate()
             
-            cleanup.dumpndrop(i)
+            #cleanup.dumpndrop(i)
 
 
 a = 1439 #min island number
@@ -59,18 +58,16 @@ c= b+1
 dumpers = []
 for i in xrange(a, c):
     selectisland = """(SELECT * FROM {0} WHERE strong = {1})""".format(TBL_MASTERLINKS_GROUPS, i)
-    cur.execute("SELECT COUNT(*) FROM {0} view WHERE MIXID > 0".format(selectisland))
+    cur.execute("SELECT COUNT(*) FROM %s s WHERE MIXID > 0" % (selectisland))
     cnt, = cur.fetchone()
     if cnt > 0:
         cur.execute(Q_GeoffCount % i)
         geoffCount = cur.fetchall()
         if geoffCount > 0:
-            #cur.execute("SELECT ")
-            print TBL_TEMP_NETWORK % i
-
+            print i
             p = subprocess.Popen([PYEXE, script, '%d' % i], stdout = subprocess.PIPE)#call script to calculate shortest paths
             p.communicate()
             
-            cleanup.dumpndrop(i)
+            #cleanup.dumpndrop(i)
 
 

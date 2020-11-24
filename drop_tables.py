@@ -8,30 +8,32 @@ import sys
 
 
 #connect to DB
-con = psql.connect(dbname = "BikeStress_p2", host = "localhost", port = 5432, user = "postgres", password = "sergt")
+con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
 
 
 #from 5_OD_Pairs
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
-TBL_NODE_TRANSIT = "node_transit"
 TBL_TRANSIT_NODE = "transit_node"
-TBL_NODES_GID = "nodes_gid"
-TBL_GID_NODES = "gid_nodes"
-TBL_GEOFF_NODES = "geoff_nodes"
-TBL_NODENOS = "nodenos"
-TBL_NODES_GEOFF = "nodes_geoff"
-TBL_NODE_GID = "node_gid_post"
+TBL_NODE_TRANSIT = "node_transit"
+TBL_NODENOS = "nodenos_transit"
+TBL_NODES_GEOFF = "nodes_geoff_transit"
+TBL_NODES_GID = "nodes_gid_transit"
+TBL_GEOFF_NODES = "geoff_nodes_transit"
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff_transit"
+TBL_GEOFF_GROUP = "geoff_group_transit"
+TBL_GID_NODES = "gid_nodes_transit"
+TBL_NODE_GID = "node_gid_post_transit"
 
-TablesList = [TBL_BLOCK_NODE_GEOFF,
-            TBL_NODE_TRANSIT,
-            TBL_TRANSIT_NODE,
-            TBL_NODES_GID,
-            TBL_GID_NODES,
-            TBL_GEOFF_NODES,
-            TBL_NODENOS,
-            TBL_NODES_GEOFF,
-            TBL_NODE_GID]
+TablesList = [TBL_TRANSIT_NODE,
+                TBL_NODE_TRANSIT,
+                TBL_NODENOS,
+                TBL_NODES_GEOFF,
+                TBL_NODES_GID,
+                TBL_GEOFF_NODES,
+                TBL_BLOCK_NODE_GEOFF,
+                TBL_GEOFF_GROUP,
+                TBL_GID_NODES,
+                TBL_NODE_GID]
 
 for table in TablesList:
     cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(table))
@@ -39,47 +41,51 @@ for table in TablesList:
 
 #from 6_MovingFrame
 
-TBL_NETWORK = "temp_network_332_%d_%d"
-TBL_PAIRS = "temp_pairs_332_%d_%d"
-TBL_NETWORK_big = "temp_network_332_%d"
-TB_PAIRS_big = "temp_pairs_332_%d"
+TBL_NETWORK = "temp_network_1438_%d_%d"
+TBL_PAIRS = "temp_pairs_1438_%d_%d"
+TBL_NETWORK_big = "temp_network_1438_%d"
+TB_PAIRS_big = "temp_pairs_1438_%d"
 
-TBL_GEOFF_PAIRS = "332_geoff_pairs"
-TBL_OD_LINES = "332_OD_lines"
+TBL_GEOFF_PAIRS = "1438_geoff_pairs"
+TBL_OD_LINES = "1438_OD_lines"
 
-for i in xrange(1,10):
-    for j in xrange(1, 13):
+for i in xrange(1,22):
+    for j in xrange(1, 22):
         cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(TBL_NETWORK %(i, j)))
         con.commit()
         cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(TBL_PAIRS %(i, j)))
         con.commit()
-    for j in xrange(101, 113):
+    for j in xrange(101, 122):
         cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(TBL_NETWORK %(i, j)))
         con.commit()
         cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(TBL_PAIRS %(i, j)))
         con.commit()
-    cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(TBL_NETWORK_big % i))
-    con.commit()
-    cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(TBL_PAIRS_big % i))
-    con.commit()
+
         
-for i in xrange(101,112):
-    for j in xrange(1, 13):
+for i in xrange(101,122):
+    for j in xrange(1, 22):
         cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(TBL_NETWORK %(i, j)))
         con.commit()
         cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(TBL_PAIRS %(i, j)))
         con.commit()
-    for j in xrange(101, 113):
+    for j in xrange(101, 122):
         cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(TBL_NETWORK %(i, j)))
         con.commit()
         cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(TBL_PAIRS %(i, j)))
         con.commit()
-    cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(TBL_NETWORK_big % i))
-    con.commit()
-    cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(TBL_PAIRS_big % i))
-    con.commit()
+
     
 
+for i in xrange(1,22):
+    cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(TBL_NETWORK_big %(i)))
+    con.commit()
+    cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(TB_PAIRS_big %(i)))
+    con.commit()
+for i in xrange(101, 122):
+    cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(TBL_NETWORK_big %(i)))
+    con.commit()
+    cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(TB_PAIRS_big %(i)))
+    con.commit()
 
 cur.execute("""DROP TABLE IF EXISTS public."{0}";""".format(TBL_GEOFF_PAIRS))
 con.commit()

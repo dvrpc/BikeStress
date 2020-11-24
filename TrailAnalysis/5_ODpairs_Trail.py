@@ -11,10 +11,11 @@ import json
 import scipy.spatial
 import networkx as nx
 
+from database import connection
+
 #table names
 TBL_ALL_LINKS = "links"
 TBL_CENTS = "block_centroids"
-TBL_ALLCENTS = "block_centroids"
 TBL_LINKS = "tolerablelinks"
 TBL_NODES = "nodes"
 TBL_TOLNODES = "tol_nodes"
@@ -28,9 +29,10 @@ TBL_TURNS = "all_turns"
 TBL_SUBTURNS = "tolerableturns"
 TBL_BRIDGECENTS = "bridge_buffer_cents"
 
-TBL_TRAILS = "trail_ints"
-TBL_TRAIL_NODE = "trail_node"
-TBL_NODE_TRAIL = "node_trail"
+#update tables for each different destination type (trails, schools)
+TBL_DEST = "trail_ints"
+TBL_DEST_NODE = "trail_node"
+TBL_NODE_DEST = "node_trail"
 
 TBL_NODENOS = "nodenos_trail"
 TBL_NODES_GEOFF = "nodes_geoff_trail"
@@ -54,20 +56,19 @@ IDX_TRAIL_NODE = "trail_node_idx_trail"
 IDX_NODE_TRAIL = "node_trail_idx_trail"
 
 #connect to DB
-con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-cur = con.cursor()
+cur = connection.cursor()
     
-#grab info on geoffs, blocks, and trail intersections
+#grab info on geoffs, blocks, and destination
 SQL_GetGeoffs = """SELECT geoffid, vianode, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_GEOFF_LOOKUP_GEOM)
 SQL_GetBlocks = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_CENTS)
 
-SQL_GetTrailInt = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_TRAILS)
+SQL_GetDEST = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_DEST)
 
 def GetCoords(record):
     id, vianode, geojson = record
     return id, vianode, json.loads(geojson)['coordinates']
 def ExecFetchSQL(SQL_Stmt):
-    cur = con.cursor()
+    cur = connection.cursor()
     cur.execute(SQL_Stmt)
     return map(GetCoords, cur.fetchall())
 
@@ -91,32 +92,33 @@ for i, (id, _, coord) in enumerate(data):
     nodeno = geoff_nodes[geoffid]
     results.append((id, nodeno))
     
-print time.ctime(), "Getting Trails"
-trails = ExecFetchSQL(SQL_GetTrailInt)
-#trail results is list of trail ids and closest nodenos
-trail_results = []
-for i, (id, _, coord) in enumerate(trails):
+print time.ctime(), "Getting Destinations"
+destinations = ExecFetchSQL(SQL_GetDEST)
+#tdest results is list of dest ids and closest nodenos
+dest_results = []
+for i, (id, _, coord) in enumerate(destinations):
     dist, index = geofftree.query(coord)
     geoffid = world_ids[numpy.ndarray.item(index)]
     nodeno = geoff_nodes[geoffid]
-    trail_results.append((id, nodeno))
+    dest_results.append((id, nodeno))
 
-#trail dict is trail results in dictionary form
-trail_dict = {}
-for tid, node in trail_results:
-    if not tid in trail_dict:
-        trail_dict[tid] = []
-    trail_dict[tid].append(node)
+#dest dict is dest results in dictionary form
+#did = destination id
+dest_dict = {}
+for did, node in dest_results:
+    if not did in dest_dict:
+        dest_dict[did] = []
+    dest_dict[did].append(node)
     
-del data, trails, world_ids
+del data, destinations, world_ids
     
 gids, nodenos = zip(*results)
 #nodenos = sorted(set(nodenos))
 # Node to GID dictionary (a 'random' GID will be selected for each node)
 nodes_gids = dict(zip(nodenos, gids))
 
-tid, node = zip(*trail_results)
-node_tid = dict(zip(node, tid))
+did, node = zip(*dest_results)
+node_did = dict(zip(node, did))
 
 #create gid_node to track which blocks use the same O and D nodes 
 #this will be used to determine how many times to count each path later
@@ -136,8 +138,8 @@ nodes_geoff_list = [(k, v) for k, v in nodes_geoff.iteritems()]
 nodes_gids_list = [(k, v) for k, v in nodes_gids.iteritems()]
 geoff_nodes_list = [(k, v) for k, v in geoff_nodes.iteritems()]
 gid_node_list = [(k, v) for k, v in gid_node.iteritems()]#added for postprocessing
-trail_node_list = [(k, v[0]) for k, v in trail_dict.iteritems()]#added for postprocessing
-node_trail_list = [(k, v) for k, v in node_tid.iteritems()]#added for postprocessing
+dest_node_list = [(k, v[0]) for k, v in dest_dict.iteritems()]#added for postprocessing
+node_dest_list = [(k, v) for k, v in node_did.iteritems()]#added for postprocessing
 
 node_gid_list = [] #added for postprocessing
 for key, value in node_gid.iteritems():
@@ -198,7 +200,7 @@ cur.execute(Q_CreateOutputTable)
 
 Q_Insert = """INSERT INTO public."{0}" VALUES (%s)""".format(TBL_NODENOS)
 cur.executemany(Q_Insert, map(lambda v:(v,), nodenos))
-con.commit()
+connection.commit()
             
 
 #write node_gids into a table in postgres to refer to later
@@ -325,11 +327,11 @@ for i in xrange(0, len(node_gid_list), batch_size):
     cur.execute(Q_Insert)
 cur.execute("COMMIT;")
 
-#write trail_dict into a table in postgres to refer to later
+#write dest_dict into a table in postgres to refer to later
 Q_CreateOutputTable = """
 CREATE TABLE IF NOT EXISTS public."{0}"
 (
-    trailid integer,
+    destid integer,
     node integer
 )
 WITH (
@@ -340,29 +342,29 @@ COMMIT;
 
 CREATE INDEX IF NOT EXISTS "{1}"
     ON public."{0}" USING btree
-    (node, trailid)
+    (node, destid)
     TABLESPACE pg_default;    
-""".format(TBL_TRAIL_NODE, IDX_TRAIL_NODE)
+""".format(TBL_DEST_NODE, IDX_DEST_NODE)
 cur.execute(Q_CreateOutputTable)
 
-str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(trail_node_list[0]))))
+str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(dest_node_list[0]))))
 cur.execute("""BEGIN TRANSACTION;""")
 batch_size = 10000
-for i in xrange(0, len(trail_node_list), batch_size):
+for i in xrange(0, len(dest_node_list), batch_size):
     j = i + batch_size
-    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in trail_node_list[i:j])
+    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in dest_node_list[i:j])
     #print arg_str
-    Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_TRAIL_NODE, arg_str)
+    Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_DEST_NODE, arg_str)
     cur.execute(Q_Insert)
 cur.execute("COMMIT;")
 
 
-#write node_trail into a table in postgres to refer to later
+#write node_dest into a table in postgres to refer to later
 Q_CreateOutputTable = """
 CREATE TABLE IF NOT EXISTS public."{0}"
 (
     node integer,
-    trailid integer
+    destid integer
 )
 WITH (
     OIDS = FALSE
@@ -372,25 +374,27 @@ COMMIT;
 
 CREATE INDEX IF NOT EXISTS "{1}"
     ON public."{0}" USING btree
-    (node, trailid)
+    (node, destid)
     TABLESPACE pg_default;    
-""".format(TBL_NODE_TRAIL, IDX_NODE_TRAIL)
+""".format(TBL_NODE_DEST, IDX_NODE_DEST)
 cur.execute(Q_CreateOutputTable)
 
-str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(node_trail_list[0]))))
+str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(node_dest_list[0]))))
 cur.execute("""BEGIN TRANSACTION;""")
 batch_size = 10000
-for i in xrange(0, len(node_trail_list), batch_size):
+for i in xrange(0, len(node_dest_list), batch_size):
     j = i + batch_size
-    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in node_trail_list[i:j])
+    arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in node_dest_list[i:j])
     #print arg_str
-    Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_NODE_TRAIL, arg_str)
+    Q_Insert = """INSERT INTO public."{0}" VALUES {1}""".format(TBL_NODE_DEST, arg_str)
     cur.execute(Q_Insert)
 cur.execute("COMMIT;")
 
-print time.ctime(), "Calculating Trail Distance"
-#find trail/block centroid pairs within 2.5 miles SLD
-Q_TrailDist = """
+print time.ctime(), "Calculating Distance"
+#find dest/block centroid pairs within 
+#2.5 miles SLD for trails
+#2 miles SLD for schools
+Q_DestDist = """
     WITH tblA AS(
         SELECT ng.nodes, ng.gid, g.geom
         FROM "{1}" ng
@@ -399,7 +403,7 @@ Q_TrailDist = """
         ),
     tblB AS(
         SELECT 
-            t.gid tid,
+            t.gid did,
             a.gid gid, 
             ST_DISTANCE(t.geom, a.geom) dist
         FROM "{2}" t, tblA a
@@ -408,12 +412,14 @@ Q_TrailDist = """
     FROM tblB
     --2.5 miles
     WHERE dist <= 4023.36
-""".format(TBL_GEOFF_LOOKUP_GEOM,TBL_NODES_GID, TBL_TRAILS)
-cur.execute(Q_TrailDist)
+	--2 miles
+	--WHERE dist <= 3218.69
+""".format(TBL_GEOFF_LOOKUP_GEOM,TBL_NODES_GID, TBL_DEST)
+cur.execute(Q_DestDist)
 output = cur.fetchall()
-trailpairs = []
-for tid, gid, dist in output:
-    trailpairs.append((tid, gid))
+destpairs = []
+for did, gid, dist in output:
+    destpairs.append((did, gid))
 
 
 #create gid_node to track which blocks use the same O and D nodes 
@@ -459,7 +465,7 @@ geoff_grp_list = cur.fetchall()
 geoff_grp = dict(geoff_grp_list)
 
 #grab list of block centroids states to create a lookup to be referenced later
-SQL_GetBlockState = """SELECT gid, statefp10 FROM "{0}";""".format(TBL_ALLCENTS)
+SQL_GetBlockState = """SELECT gid, statefp10 FROM "{0}";""".format(TBL_CENTS)
 cur.execute(SQL_GetBlockState)
 states = cur.fetchall()
 
@@ -469,16 +475,16 @@ for gid, state in states:
         state_lookup[gid] = []
     state_lookup[gid].append(state)
     
-#repeat to create lookup for trail states
-SQL_GetTrailState = """SELECT gid, statenum FROM "{0}";""".format(TBL_TRAILS)
-cur.execute(SQL_GetTrailState)
-trailstates = cur.fetchall()
+#repeat to create lookup for destination states
+SQL_GetDestState = """SELECT gid, statenum FROM "{0}";""".format(TBL_DEST)
+cur.execute(SQL_GetDestState)
+deststates = cur.fetchall()
 
-trail_state_lookup = {}
-for tid, state in trailstates:
-    if not tid in trail_state_lookup:
-        trail_state_lookup[tid] = []
-    trail_state_lookup[tid].append(state)
+dest_state_lookup = {}
+for did, state in deststates:
+    if not did in dest_state_lookup:
+        dest_state_lookup[did] = []
+    dest_state_lookup[did].append(state)
 
 #grab list of block centroid gids that are within 5 miles of a delaware river bridge
 Q_BridgeList = """SELECT gid, statefp10 FROM "{0}";""".format(TBL_BRIDGECENTS)
@@ -491,18 +497,18 @@ CloseEnough = []
 OutsideBridgeBuffer = 0
 DiffGroup = 0
 NullGroup = 0
-for i, (tid, gid) in enumerate(trailpairs):
-        fromnodeno = trail_dict[tid][0]
+for i, (did, gid) in enumerate(destpairs):
+        fromnodeno = dest_dict[did][0]
         tonodeno = gid_node[gid]
         #are the nodes on the same island?
         if nodes_geoff[fromnodeno] in geoff_grp and nodes_geoff[tonodeno] in geoff_grp:
             #are the from/to nodes of the OD pair the same point?
             if geoff_grp[nodes_geoff[fromnodeno]] == geoff_grp[nodes_geoff[tonodeno]]:
                 #are they in the same state? if so, calculate
-                if trail_state_lookup[tid] == state_lookup[gid]:
+                if dest_state_lookup[did] == state_lookup[gid]:
                     # if geoff_grp[nodes_geoff[fromnodeno]] == int(sys.argv[1]):
                     CloseEnough.append([
-                        tid,    # FromGID
+                        did,    # FromGID
                         fromnodeno,                # FromNode
                         nodes_geoff[fromnodeno],   # FromGeoff
                         gid,      # ToGID
@@ -511,9 +517,9 @@ for i, (tid, gid) in enumerate(trailpairs):
                         geoff_grp[nodes_geoff[fromnodeno]]  # GroupNumber
                         ])
                     #if not, are both ends in the bridge buffer? if so, calculate
-                elif tid and gid in cent:
+                elif did and gid in cent:
                     CloseEnough.append([
-                        tid,    # FromGID
+                        did,    # FromGID
                         fromnodeno,                # FromNode
                         nodes_geoff[fromnodeno],   # FromGeoff
                         gid,      # ToGID
@@ -537,7 +543,7 @@ Q_CreateOutputTable = """
 CREATE TABLE IF NOT EXISTS public."{0}"
 (
 
-    fromtid     integer,
+    fromdid     integer,
     fromnode    integer,
     fromgeoff   integer,
     togid       integer,
@@ -553,7 +559,7 @@ TABLESPACE pg_default;
 COMMIT;
 CREATE INDEX IF NOT EXISTS "{1}"
     ON public."{0}" USING btree
-    (fromtid, fromnode, fromgeoff, togid, tonode, togeoff, groupnumber)
+    (fromdid, fromnode, fromgeoff, togid, tonode, togeoff, groupnumber)
     TABLESPACE pg_default;    
 """.format(TBL_BLOCK_NODE_GEOFF, IDX_BLOCK_NODE_GEOFF)
 cur.execute(Q_CreateOutputTable)

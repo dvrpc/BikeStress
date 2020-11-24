@@ -1,5 +1,5 @@
 #copy to run in cmd
-#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\TrailAnalysis\7_CalculateShortestPaths_PARENT_trail.py
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\SchoolAnalysis\7_CalculateShortestPaths_PARENT_school.py
 
 import psycopg2 as psql
 import subprocess
@@ -9,14 +9,14 @@ import CalculateShortestPaths_CLEANUP as cleanup
 
 
 PYEXE = r"C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe "
-script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\TrailAnalysis\7_CalculateShortestPaths_CHILD_trail.py"
+script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\SchoolAnalysis\7_CalculateShortestPaths_CHILD_school.py"
 
 con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
 
 TBL_MASTERLINKS_GROUPS = "master_links_grp"
 
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff_trail"
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff_school"
 
 Q_GeoffCount = """
 SELECT 
@@ -35,7 +35,7 @@ FROM (
 
 a = 0 #min island number
 b = 1437 #max island number  
-c= b+1 #this number is not calculated (this is the big island in this case)
+c= b+1 #this number is not calcualted (this is the big island in this case)
 dumpers = []
 for i in xrange(a, c):
     selectisland = """(SELECT * FROM {0} WHERE strong = {1})""".format(TBL_MASTERLINKS_GROUPS, i)

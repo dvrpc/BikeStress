@@ -11,58 +11,43 @@ logger = mp.log_to_stderr(logging.INFO)
 
 
 #need in this script
-TBL_SPATHS = "shortestpaths_%s_%s_transit" % (str(sys.argv[1]), str(sys.argv[2]))
+#TBL_SPATHS = "shortestpaths_%s_school" % str(sys.argv[1])
 TBL_MASTERLINKS_GROUPS ="master_links_grp"
-TBL_NODENOS = "nodenos_transit"
-TBL_NODES_GEOFF = "nodes_geoff_transit"
-TBL_NODES_GID = "nodes_gid_transit"
-TBL_GEOFF_NODES = "geoff_nodes_transit"
-TBL_GEOFF_GROUP = "geoff_group_transit"
-TBL_GID_NODES = "gid_nodes_transit"
-TBL_NODE_GID = "node_gid_post_transit"
-TBL_EDGE = "edgecounts_transit"
-TBL_EDGE_IPD = "edges_ipd_transit"
-IDX_nx_SPATHS_value = "spaths_nx_value_idx_transit"
+TBL_NODENOS = "nodenos_school"
+TBL_NODES_GEOFF = "nodes_geoff_school"
+TBL_NODES_GID = "nodes_gid_school"
+TBL_GEOFF_NODES = "geoff_nodes_school"
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff_school"
+TBL_GEOFF_GROUP = "geoff_group_school"
+TBL_GID_NODES = "gid_nodes_school"
+TBL_NODE_GID = "node_gid_post_school"
+TBL_EDGE = "edgecounts_school"
+TBL_EDGE_IPD = "edges_ipd_school"
+#IDX_nx_SPATHS_value = "spaths_nx_value_idx_school"
 
-####CHANGE FOR EACH TRANSIT MODE####
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff_rail"
-TBL_TRANSIT_NODE = "transit_node"
-TBL_NODE_TRANSIT = "node_transit"
-
-TBL_TEMP_PAIRS = "temp_pairs_1438_%s_%s" % (str(sys.argv[1]), str(sys.argv[2]))
-TBL_TEMP_NETWORK = "temp_network_1438_%s_%s" % (str(sys.argv[1]), str(sys.argv[2]))
-
+TBL_DEST = "schools"
+TBL_DEST_NODE = "school_node"
+TBL_NODE_DEST = "node_school"
 
 def worker(inqueue, output):
     result = []
-    nopath = []
     count = 0
     start_time = time.time()
     for pair in iter(inqueue.get, sentinel):
         source, target = pair
-        try:
-            length, paths = nx.bidirectional_dijkstra(G, source = source, target = target, weight = 'weight')
-        except nx.NetworkXNoPath:
-            # logger.info('{t}: {m}'.format(t = time.ctime(), m = "No path for {0}, {1}".format(source, target)))
-            nopath.append(pair)
-        except nx.NetworkXError as nxe:
-            logger.info('{t}: {m}'.format(t = time.ctime(), m = "NetworkX Error: %s" % str(nxe)))
-        except Exception as e:
-            logger.info('{t}: {m}'.format(t = time.ctime(), m = "GENERAL ERROR: %s" % str(e)))
-        else:
-            result.append(paths)
+        length, paths = nx.bidirectional_dijkstra(G, source = source, target = target, weight = 'weight')
+        result.append(paths)
         count += 1
         if (count % 100) == 0:
             logger.info('{t}: {s}'.format(t = time.ctime(), s = time.time() - start_time))
             start_time = time.time()
-    output.put({'result': result, 'nopath': nopath})
+    output.put(result)
 
 def test_workers(pairs):
     logger.info('test_workers() started')
     result = []
-    nopath = []
     inqueue = mp.Queue()
-    for id, source, target, geom in pairs:
+    for source, target in pairs:
         inqueue.put((source, target))
     # Build O-D pair list
     # for source, target in IT.product(sources, targets):
@@ -79,14 +64,12 @@ def test_workers(pairs):
     for proc in procs:    
         inqueue.put(sentinel)
     for proc in procs:
-        retval = output.get()
-        result.extend(retval['result'])
-        nopath.extend(retval['nopath'])
+        result.extend(output.get())
     for proc in procs:
         proc.join()
 
     logger.info('test_workers() finished')
-    return result, nopath
+    return result
 
 '''
 def test_single_worker():
@@ -105,6 +88,9 @@ print
 
 num_cores = 64 # mp.cpu_count()
 
+#select query to create what used to be Views of each island individually
+selectisland = """(SELECT * FROM master_links_grp WHERE strong = %d)""" % int(sys.argv[1])
+
 #grab master links to make graph with networkx
 Q_SelectMasterLinks = """
     SELECT
@@ -113,7 +99,7 @@ Q_SelectMasterLinks = """
         togeoff,
         cost
     FROM public."{0}";
-    """.format(TBL_TEMP_NETWORK)
+    """.format(selectisland)
     
 con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
 cur = con.cursor()
@@ -140,36 +126,21 @@ if __name__ == '__main__':
         """.format(TBL_NODES_GID)
     cur.execute(Q_GetList)
     nodes_gids_list = cur.fetchall()
-    nodes_gids = {}
-    for nodes, gids in nodes_gids_list:
-        key = nodes
-        if not key in nodes_gids:
-            nodes_gids[key] = []
-        nodes_gids[key].append(gids)
+    nodes_gids = dict(nodes_gids_list)
     
     Q_GetList = """
         SELECT * FROM "{0}";
         """.format(TBL_GEOFF_NODES)
     cur.execute(Q_GetList)
     geoff_nodes_list = cur.fetchall()
-    geoff_nodes = {}
-    for geoff, node in geoff_nodes_list:
-        key = geoff
-        if not key in geoff_nodes:
-            geoff_nodes[key] = []
-        geoff_nodes[key].append(node)
+    geoff_nodes = dict(geoff_nodes_list)
     
     Q_GetList = """
     SELECT * FROM "{0}";
     """.format(TBL_GID_NODES)
     cur.execute(Q_GetList)
     gid_node_list = cur.fetchall()
-    gid_node = {}
-    for gid, node in gid_node_list:
-        key = gid
-        if not key in gid_node:
-            gid_node[key] = []
-        gid_node[key].append(node)
+    gid_node = dict(gid_node_list)
     
     Q_GetList = """
     SELECT * FROM "{0}";
@@ -185,49 +156,48 @@ if __name__ == '__main__':
         
     Q_GetList = """
     SELECT * FROM "{0}";
-    """.format(TBL_NODE_TRANSIT)
+    """.format(TBL_NODE_DEST)
     cur.execute(Q_GetList)
-    node_transit_list = cur.fetchall()
-    node_transit = {}
-    for node, transit in node_transit_list:
-        key = node
-        if not key in node_transit:
-            node_transit[key] = []
-        node_transit[key].append(transit)
+    node_dest_list = cur.fetchall()
+    node_dest = dict(node_dest_list)
     
     Q_GetList = """
     SELECT * FROM "{0}";
-    """.format(TBL_TRANSIT_NODE)
+    """.format(TBL_DEST_NODE)
     cur.execute(Q_GetList)
-    transit_node_list = cur.fetchall()
-    transit_dict = {}
-    for transit, node in transit_node_list:
-        key = transit
-        if not key in transit_dict:
-            transit_dict[key] = []
-        transit_dict[key].append(node)
-		
+    dest_node_list = cur.fetchall()
+    dest_dict = dict(dest_node_list)
+	
 	#grab list of block centroids ipdscores to create a lookup to be referenced later when weighting for equity
     SQL_GetBlockIPD = """SELECT gid, ipdscore FROM "{0}";""".format(TBL_CENTS)
     cur.execute(SQL_GetBlockIPD)
 
     ipd_lookup = dict(cur.fetchall())
     
-    Q_GetPairs = """
-        SELECT * FROM "{0}";
-        """.format(TBL_TEMP_PAIRS)
-    cur.execute(Q_GetPairs)
-    pairs = cur.fetchall()
-
-    paths, nopaths = test_workers(pairs)
+    Q_GetGroupPairs = """
+        SELECT
+            fromgeoff AS fgeoff,
+            togeoff AS tgeoff,
+            groupnumber AS grp
+        FROM "{0}"
+        WHERE groupnumber = {1};
+        """.format(TBL_BLOCK_NODE_GEOFF, int(sys.argv[1]))
+    cur.execute(Q_GetGroupPairs)
+    group_pairs = cur.fetchall()
         
-    with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\group_1438_MF_%s_%s_transit.cpickle" % (sys.argv[1], sys.argv[2]), "wb") as io:
+    pairs = []
+    for i, (fgeoff, tgeoff, grp) in enumerate(group_pairs):
+        source = fgeoff
+        target = tgeoff
+        pairs.append((source, target))
+        
+    paths = test_workers(pairs)
+        
+    with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\school_paths.cpickle", "wb") as io:
         cPickle.dump(paths, io)
-    with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\group1438_MF_%s_%s_nopaths_transit.cpickle" % (sys.argv[1], sys.argv[2]), "wb") as io:
-        cPickle.dump(nopaths, io)
     
-    del pairs, nopaths
-
+    del pairs
+    
     con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
     cur = con.cursor()
 
@@ -242,60 +212,60 @@ if __name__ == '__main__':
 
     edges = []
     for id, path in enumerate(paths):
-        oTID = node_transit[geoff_nodes[path[0]][0]][0]
-        dGID = nodes_gids[geoff_nodes[path[-1]][0]][0]
+        oDID = node_dest[geoff_nodes[path[0]]]
+        dGID = nodes_gids[geoff_nodes[path[-1]]]
         for seq, (o ,d) in enumerate(zip(path, path[1:])):
-            row = id, seq, oTID, dGID, node_pairs[(o,d)]
+            row = id, seq, oDID, dGID, node_pairs[(o,d)]
             edges.append(row)
     logger.info('number of records: %d' % len(edges))
     
     con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
     cur = con.cursor()
-    
+
     if (len(edges) > 0):
-        Q_CreateOutputTable = """
-            CREATE TABLE IF NOT EXISTS public."{0}"
-            (
-              id integer,
-              seq integer,
-              otid integer,
-              dgid integer,
-              edge bigint,
-              rowno BIGSERIAL PRIMARY KEY
-            )
-            WITH (
-                OIDS = FALSE
-            )
-            TABLESPACE pg_default;
+        # Q_CreateOutputTable = """
+            # CREATE TABLE IF NOT EXISTS public."{0}"
+            # (
+              # id integer,
+              # seq integer,
+              # otid integer,
+              # dgid integer,
+              # edge bigint,
+              # rowno BIGSERIAL PRIMARY KEY
+            # )
+            # WITH (
+                # OIDS = FALSE
+            # )
+            # TABLESPACE pg_default;
 
             
-            CREATE INDEX IF NOT EXISTS "{1}"
-                ON public."{0}" USING btree
-                (id, seq, otid, dgid, edge)
-                TABLESPACE pg_default;
-            COMMIT;                
-        """.format(TBL_SPATHS, IDX_nx_SPATHS_value)
-        cur.execute(Q_CreateOutputTable)
+            # CREATE INDEX IF NOT EXISTS "{1}"
+                # ON public."{0}" USING btree
+                # (id, seq, otid, dgid, edge)
+                # TABLESPACE pg_default;
+            # COMMIT;                
+        # """.format(TBL_SPATHS, IDX_nx_SPATHS_value)
+        # cur.execute(Q_CreateOutputTable)
 
-        logger.info('inserting records')
-        str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edges[0]))))
-        cur.execute("""BEGIN TRANSACTION;""")
-        batch_size = 10000
-        for i in xrange(0, len(edges), batch_size):
-            j = i + batch_size
-            arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edges[i:j])
-            #print arg_str
-            Q_Insert = """INSERT INTO public."{0}" (id, seq, otid, dgid, edge) VALUES {1}""".format(TBL_SPATHS, arg_str)
-            cur.execute(Q_Insert)
-        cur.execute("COMMIT;")
+        # logger.info('inserting paths')
+        # str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edges[0]))))
+        # cur.execute("""BEGIN TRANSACTION;""")
+        # batch_size = 10000
+        # for i in xrange(0, len(edges), batch_size):
+            # j = i + batch_size
+            # arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edges[i:j])
+            ##print arg_str
+            # Q_Insert = """INSERT INTO public."{0}" (id, seq, otid, dgid, edge) VALUES {1}""".format(TBL_SPATHS, arg_str)
+            # cur.execute(Q_Insert)
+        # cur.execute("COMMIT;")
         
         
         dict_all_paths = {}    
         #convert edges to dictionary
-        for id, seq, otid, dgid, edge in edges:
+        for id, seq, odid, dgid, edge in edges:
             #only count links, not turns
             if edge > 0:
-                key = (otid, dgid)
+                key = (odid, dgid)
                 if not key in dict_all_paths:
                     dict_all_paths[key] = []
                 dict_all_paths[key].append(edge)
@@ -304,10 +274,10 @@ if __name__ == '__main__':
 		#what is ipd weight of each path based on score of just origin census blocks for transit analysis
         weight_by_od = {}
 		ipd_od = {}
-        for oTID, dGID in dict_all_paths.iterkeys():
-            onode = transit_dict[oTID]
+        for oDID, dGID in dict_all_paths.iterkeys():
+            onode = transit_dict[oDID]
             dnode = gid_node[dGID]
-            weight_by_od[(oTID, dGID)] = len(node_gid[dnode])
+            weight_by_od[(oDID, dGID)] = len(node_gid[dnode])
 			ipd_od[(oGID, dGID)] = ipd_lookup[oGID]
 
         edge_count_dict = {}
@@ -326,10 +296,10 @@ if __name__ == '__main__':
                 except TypeError:
                     print edge_ipd_weight[edge], ipd_weight
                 
-        with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_count_dict_1438_transit.pickle", "wb") as io:
+        with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_count_dict_school.pickle", "wb") as io:
             cPickle.dump(edge_count_dict, io)
-			
-		with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_ipd_weight_1438_transit.pickle", "wb") as io:
+		
+		with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_ipd_weight_school.pickle", "wb") as io:
             cPickle.dump(edge_ipd_weight, io)
                 
         con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
@@ -366,7 +336,7 @@ if __name__ == '__main__':
         cur.execute("COMMIT;")
         con.commit()
 		
-		logger.info('inserting ipd weights')
+			logger.info('inserting ipd weights')
 
         Q_CreateOutputTable3 = """
             CREATE TABLE IF NOT EXISTS public."{0}"
@@ -398,5 +368,4 @@ if __name__ == '__main__':
     
     del edges
         
-    logger.info('end_time: %s' % time.ctime())
-
+   logger.info('end_time: %s' % time.ctime())

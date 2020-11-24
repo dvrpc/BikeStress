@@ -51,12 +51,10 @@ IDX_TOL_NODES_geom = "tolnodes_geom_idx"
 IDX_TOL_NODES_value = "tolnodes_value_idx"
 IDX_ALL_TURNS_values = "All_Turns_values_idx"
 
-#connect to SQL DB in python
 con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-#create cursor to execute querys
 cur = con.cursor()
 
-#####USE FOR INDIVIDUAL LINK LTS MODIFICATION#####
+#####USE FOR INDIVIDUAL LINK LTS MODIFICATION IF NEEDED#####
 '''
 #create copy of links table to modify links
 Q_CreateLinkCopy = """
@@ -127,7 +125,7 @@ cur.execute(Q_renamecol)
 Q_IndexExisting = """
     CREATE INDEX IF NOT EXISTS "{2}"
         ON public."{0}" USING gist
-        (geom)
+        (cent)
         TABLESPACE pg_default;
     CREATE INDEX IF NOT EXISTS "{3}"
         ON public."{0}" USING btree
@@ -150,7 +148,7 @@ cur.execute(Q_IndexExisting)
 
 Q_LinkSubset = """
     CREATE TABLE "{0}" AS
-        SELECT * FROM "{1}" WHERE linklts <= 0.6 AND linklts >= 0;
+        SELECT * FROM "{1}" WHERE linklts <= 0.6 AND linklts >= 0 AND typeno NOT IN ('11','12','13','21','22','23','81','82','83','85','86','92');
     COMMIT;
     CREATE INDEX IF NOT EXISTS "{2}"
         ON public."{0}" USING gist
@@ -335,7 +333,7 @@ cur.execute(Q_GeomGeoffTable)
 #this table will be used by djikstra for routing
 #must have ID
 #turns will have negative ID and links will have positive ID
-#AUGUST 14, 2020 - Updated to incorporate slope factor in link cost
+#AUGUST 14, 2020 - Updated to incorporate slope factor into link cost
 Q_CreateMasterLinks = """
     CREATE TABLE "{0}" AS(
     SELECT tblA.gid AS mixID, tblA.fromgeoff, tblA.togeoff, (length*(1 + linklts + slopefac)) AS cost FROM(

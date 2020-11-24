@@ -66,12 +66,37 @@ SELECT
     FROM tblA a
     INNER JOIN master_links_grp m
     ON m.mixid = a.edge)
-SELECT use.edge, use.total, links.linklts, links.length, links.totnumla_1, links.bike_fac_2, links.speedtouse, use.geom
+SELECT use.edge, use.total, links.linklts, links.length, links.totlane, links.bikefac, links.speed_lts, use.geom
 FROM tblB use
 INNER JOIN links
 ON use.edge = links.gid
     ;
 """
+#same for IPD results
+"""
+WITH tblA AS(
+    SELECT 
+        edge, 
+        SUM(ipdweight) AS total
+    FROM edges_ipd
+    GROUP BY edge
+    ),
+tblB AS(
+SELECT
+    a.*,
+    m.cost,
+    m.geom
+    FROM tblA a
+    INNER JOIN master_links_grp m
+    ON m.mixid = a.edge)
+SELECT use.edge, use.total, links.linklts, links.length, links.totlane, links.bikefac, links.speed_lts, use.geom
+FROM tblB use
+INNER JOIN links
+ON use.edge = links.gid
+    ;
+"""
+
+
 #find percentile breaks for edgecount results
 #assign values in new field (in arcmap?)
 select

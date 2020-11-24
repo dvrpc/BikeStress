@@ -7,8 +7,9 @@ import pandas as pd
 
 Visum = h.CreateVisum(18)
 # drag in version file
-#D:\BikePedTransit\BikeStress\versionfiles\Phase3\TIM23_2020_forAnalysis_072920.ver
+#D:\BikePedTransit\BikeStress\versionfiles\Phase3\TIM23_2020_forAnalysis_112420.ver
 
+#manually: 
 #create UDA "TotNumLanes" Integer type
 #Formula: [NUMLANES]+[REVERSELINK\NUMLANES]
 
@@ -96,7 +97,7 @@ for i in xrange(0, len(FromNode)):
 	y = findRowIndex(TotLanes[i], Speed[i], LinkType[i])
 	LinkStress[i] = ReducFactorTbl[y][x]
 
-#create UDA 'LinkLTS'; float, 2 decimal places
+#manually create UDA 'LinkLTS'; float, 2 decimal places
 #write into UDA field in Visum
 h.SetMulti(Visum.Net.Links, "LinkLTS", LinkStress)
 
@@ -124,4 +125,5 @@ h.SetMulti(Visum.Net.Links,"SlopeFactor", SlopeFactors)
 #Export directed links as shapefile with the following attributes:
     #No, Fromnodeno, Tonodeno, length, TotNumLanes, bike_facility, SPEED_LTS, typeno, LinkLTS, SLOPE_PERC, SlopeFactor
         #turn off all units; link length should be in miles
+#Also export NODES with >0 legs
 #Use PostGIS shapefile importer to import into DB
