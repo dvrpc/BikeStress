@@ -11,6 +11,8 @@ import json
 import scipy.spatial
 import networkx as nx
 
+from database import connection
+
 #table names
 TBL_ALL_LINKS = "links"
 TBL_CENTS = "block_centroids"
@@ -30,37 +32,45 @@ TBL_BRIDGECENTS = "bridge_buffer_cents"
 
 ####CHANGE FOR EACH TRANSIT MODE####
 #point shapefile with gid and geom
-TBL_TRANSIT = "bus_region"
+
+#bus
+#TBL_TRANSIT = "bus_region"
+#string = "transit"
+
+#rail
+#TBL_TRANSIT = "passengerrail"
+#string = "rail"
+
+#trolley
+TBL_TRANSIT = "trolley"
+string = "trolley"
+
+TBL_TRANSIT_NODE = "%s_node" %string
+TBL_NODE_TRANSIT = "node_%s" %string
+TBL_NODENOS = "nodenos_%s" %string
+TBL_NODES_GEOFF = "nodes_geoff_%s" %string
+TBL_NODES_GID = "nodes_gid_%s" %string
+TBL_GEOFF_NODES = "geoff_nodes_%s" %string
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff_%s" %string
+TBL_GEOFF_GROUP = "geoff_group_%s" %string
+TBL_GID_NODES = "gid_nodes_%s" %string
+TBL_NODE_GID = "node_gid_post_%s" %string
 
 
-#DELETE between each transit mode run#
-TBL_TRANSIT_NODE = "transit_node"
-TBL_NODE_TRANSIT = "node_transit"
-TBL_NODENOS = "nodenos_transit"
-TBL_NODES_GEOFF = "nodes_geoff_transit"
-TBL_NODES_GID = "nodes_gid_transit"
-TBL_GEOFF_NODES = "geoff_nodes_transit"
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff_transit"
-TBL_GEOFF_GROUP = "geoff_group_transit"
-TBL_GID_NODES = "gid_nodes_transit"
-TBL_NODE_GID = "node_gid_post_transit"
-
-
-IDX_GEOFF_GROUP = "geoff_group_value_idx_transit"
-IDX_BLOCK_NODE_GEOFF = "block_node_geoff_value_idx_transit"
-IDX_NODENOS = "nodeno_idx_transit"
-IDX_NODES_GEOFF = "nodes_geoff_idx_transit"
-IDX_NODES_GID = "nodes_gid_idx_transit"
-IDX_GEOFF_NODES = "geoff_nodes_idx_transit"
-IDX_GID_NODES = "gid_nodes_idx_transit"
-IDX_OD_value = "od_value_idx_transit"
-IDX_NODE_GID = "node_gid_post_idx_transit"
-IDX_TRANSIT_NODE = "transit_node_idx_transit"
-IDX_NODE_TRANSIT = "node_transit_idx_transit"
+IDX_GEOFF_GROUP = "geoff_group_value_idx_%s" %string
+IDX_BLOCK_NODE_GEOFF = "block_node_geoff_value_idx_%s" %string
+IDX_NODENOS = "nodeno_idx_%s" %string
+IDX_NODES_GEOFF = "nodes_geoff_idx_%s" %string
+IDX_NODES_GID = "nodes_gid_idx_%s" %string
+IDX_GEOFF_NODES = "geoff_nodes_idx_%s" %string
+IDX_GID_NODES = "gid_nodes_idx_%s" %string
+IDX_OD_value = "od_value_idx_%s" %string
+IDX_NODE_GID = "node_gid_post_idx_%s" %string
+IDX_TRANSIT_NODE = "transit_node_idx_%s" %string
+IDX_NODE_TRANSIT = "node_transit_idx_%s" %string
 
 #connect to DB
-con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-cur = con.cursor()
+cur = connection.cursor()
     
 #grab info on geoffs, blocks, and transit intersections
 SQL_GetGeoffs = """SELECT geoffid, vianode, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_GEOFF_LOOKUP_GEOM)
@@ -72,7 +82,7 @@ def GetCoords(record):
     id, vianode, geojson = record
     return id, vianode, json.loads(geojson)['coordinates']
 def ExecFetchSQL(SQL_Stmt):
-    cur = con.cursor()
+    cur = connection.cursor()
     cur.execute(SQL_Stmt)
     return map(GetCoords, cur.fetchall())
 
@@ -203,7 +213,7 @@ cur.execute(Q_CreateOutputTable)
 
 Q_Insert = """INSERT INTO public."{0}" VALUES (%s)""".format(TBL_NODENOS)
 cur.executemany(Q_Insert, map(lambda v:(v,), nodenos))
-con.commit()
+connection.commit()
             
 
 #write node_gids into a table in postgres to refer to later

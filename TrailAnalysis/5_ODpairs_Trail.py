@@ -30,7 +30,7 @@ TBL_SUBTURNS = "tolerableturns"
 TBL_BRIDGECENTS = "bridge_buffer_cents"
 
 #update tables for each different destination type (trails, schools)
-TBL_DEST = "trail_ints"
+TBL_DEST = "trail_int"
 TBL_DEST_NODE = "trail_node"
 TBL_NODE_DEST = "node_trail"
 
@@ -60,7 +60,7 @@ cur = connection.cursor()
     
 #grab info on geoffs, blocks, and destination
 SQL_GetGeoffs = """SELECT geoffid, vianode, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_GEOFF_LOOKUP_GEOM)
-SQL_GetBlocks = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_CENTS)
+SQL_GetBlocks = """SELECT gid, Null AS dummy, ST_AsGeoJSON(cent) FROM "{0}";""".format(TBL_CENTS)
 
 SQL_GetDEST = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_DEST)
 

@@ -5,18 +5,17 @@ import psycopg2 as psql
 import subprocess
 import time
 import sys
-import CalculateShortestPaths_CLEANUP as cleanup
 
+from database import connection
 
 PYEXE = r"C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe "
 script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\SchoolAnalysis\7_CalculateShortestPaths_CHILD_school.py"
 
-con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-cur = con.cursor()
+cur = connection.cursor()
 
 TBL_MASTERLINKS_GROUPS = "master_links_grp"
-
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff_school"
+string = "school"
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff_%s" %string
 
 Q_GeoffCount = """
 SELECT 
@@ -31,46 +30,28 @@ FROM (
     AS _q0
     """.format(TBL_BLOCK_NODE_GEOFF)
 
+Q_SelectGroups = """
+SELECT DISTINCT(groupnumber) FROM "{0}"
+""".format(TBL_BLOCK_NODE_GEOFF)
+cur.execute(Q_SelectGroups)
+groupstouse = cur.fetchall()
+print "Number of groups: ", len(groupstouse)
 
 
-a = 0 #min island number
-b = 1437 #max island number  
-c= b+1 #this number is not calcualted (this is the big island in this case)
-dumpers = []
-for i in xrange(a, c):
-    selectisland = """(SELECT * FROM {0} WHERE strong = {1})""".format(TBL_MASTERLINKS_GROUPS, i)
-    cur.execute("SELECT COUNT(*) FROM {0} view WHERE MIXID > 0".format(selectisland))
+for item in groupstouse:
+    selectisland = """(SELECT * FROM {0} WHERE strong = {1})""".format(TBL_MASTERLINKS_GROUPS, item[0])
+    cur.execute("SELECT COUNT(*) FROM %s s WHERE MIXID > 0" % (selectisland))
     cnt, = cur.fetchone()
     if cnt > 0:
-        cur.execute(Q_GeoffCount % i)
+        cur.execute(Q_GeoffCount % item[0])
         geoffCount = cur.fetchall()
-        if geoffCount > 0:
-            #cur.execute("SELECT ")
-            print TBL_TEMP_NETWORK % i
-            p = subprocess.Popen([PYEXE, script, '%d' % i], stdout = subprocess.PIPE)#call script to calculate shortest paths
+        if int(geoffCount[0][0]) > 0:
+            print item[0]
+            p = subprocess.Popen([PYEXE, script, '%d' % item[0]], stdout = subprocess.PIPE)#call script to calculate shortest paths
             p.communicate()
-            
-            cleanup.dumpndrop(i)
-
-
-a = 1439 #min island number
-b = 14216 #max island number
-c= b+1
-dumpers = []
-for i in xrange(a, c):
-    selectisland = """(SELECT * FROM {0} WHERE strong = {1})""".format(TBL_MASTERLINKS_GROUPS, i)
-    cur.execute("SELECT COUNT(*) FROM {0} view WHERE MIXID > 0".format(selectisland))
-    cnt, = cur.fetchone()
-    if cnt > 0:
-        cur.execute(Q_GeoffCount % i)
-        geoffCount = cur.fetchall()
-        if geoffCount > 0:
-            #cur.execute("SELECT ")
-            print TBL_TEMP_NETWORK % i
-
-            p = subprocess.Popen([PYEXE, script, '%d' % i], stdout = subprocess.PIPE)#call script to calculate shortest paths
-            p.communicate()
-            
-            cleanup.dumpndrop(i)
+        else:
+            print "no ", item[0]
+    else:
+        print "no ", item[0]
 
 

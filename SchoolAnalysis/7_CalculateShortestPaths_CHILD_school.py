@@ -9,25 +9,27 @@ import sys
 import cPickle
 logger = mp.log_to_stderr(logging.INFO)
 
+from database import connection
+
+string = "school"
 
 #need in this script
-#TBL_SPATHS = "shortestpaths_%s_school" % str(sys.argv[1])
 TBL_MASTERLINKS_GROUPS ="master_links_grp"
-TBL_NODENOS = "nodenos_school"
-TBL_NODES_GEOFF = "nodes_geoff_school"
-TBL_NODES_GID = "nodes_gid_school"
-TBL_GEOFF_NODES = "geoff_nodes_school"
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff_school"
-TBL_GEOFF_GROUP = "geoff_group_school"
-TBL_GID_NODES = "gid_nodes_school"
-TBL_NODE_GID = "node_gid_post_school"
-TBL_EDGE = "edgecounts_school"
-TBL_EDGE_IPD = "edges_ipd_school"
-#IDX_nx_SPATHS_value = "spaths_nx_value_idx_school"
+TBL_CENTS = "block_centroids"
+TBL_NODENOS = "nodenos_%s" %string
+TBL_NODES_GEOFF = "nodes_geoff_%s" %string
+TBL_NODES_GID = "nodes_gid_%s" %string
+TBL_GEOFF_NODES = "geoff_nodes_%s" %string
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff_%s" %string
+TBL_GEOFF_GROUP = "geoff_group_%s" %string
+TBL_GID_NODES = "gid_nodes_%s" %string
+TBL_NODE_GID = "node_gid_post_%s" %string
+TBL_EDGE = "edgecounts_%s" %string
+TBL_EDGE_IPD = "edges_ipd_%s" %string
 
-TBL_DEST = "schools"
-TBL_DEST_NODE = "school_node"
-TBL_NODE_DEST = "node_school"
+TBL_DEST = "schools_combined_region"
+TBL_DEST_NODE = "%s_node" %string
+TBL_NODE_DEST = "node_%s" %string
 
 def worker(inqueue, output):
     result = []
@@ -98,11 +100,10 @@ Q_SelectMasterLinks = """
         fromgeoff,
         togeoff,
         cost
-    FROM public."{0}";
+    FROM {0} s;
     """.format(selectisland)
     
-con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-cur = con.cursor()
+cur = connection.cursor()
 
 #create graph
 cur.execute(Q_SelectMasterLinks)
@@ -198,8 +199,7 @@ if __name__ == '__main__':
     
     del pairs
     
-    con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-    cur = con.cursor()
+    cur = connection.cursor()
 
     cur.execute(Q_SelectMasterLinks)
     MasterLinks = cur.fetchall()
@@ -219,8 +219,7 @@ if __name__ == '__main__':
             edges.append(row)
     logger.info('number of records: %d' % len(edges))
     
-    con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-    cur = con.cursor()
+    cur = connection.cursor()
 
     if (len(edges) > 0):
         # Q_CreateOutputTable = """
@@ -271,17 +270,17 @@ if __name__ == '__main__':
                 dict_all_paths[key].append(edge)
 
         #how many times each OD geoff pair should be counted if used at all
-		#what is ipd weight of each path based on score of just origin census blocks for transit analysis
+        #what is ipd weight of each path based on score of just origin census blocks for transit analysis
         weight_by_od = {}
-		ipd_od = {}
+        ipd_od = {}
         for oDID, dGID in dict_all_paths.iterkeys():
-            onode = transit_dict[oDID]
+            onode = dest_dict[oDID]
             dnode = gid_node[dGID]
             weight_by_od[(oDID, dGID)] = len(node_gid[dnode])
-			ipd_od[(oGID, dGID)] = ipd_lookup[oGID]
+            ipd_od[(oDID, dGID)] = ipd_lookup[oDID]
 
         edge_count_dict = {}
-		edge_ipd_weight = {}
+        edge_ipd_weight = {}
         for key, paths in dict_all_paths.iteritems():
             path_weight = weight_by_od[key]
             ipd_weight = ipd_od[key]
@@ -298,15 +297,14 @@ if __name__ == '__main__':
                 
         with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_count_dict_school.pickle", "wb") as io:
             cPickle.dump(edge_count_dict, io)
-		
-		with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_ipd_weight_school.pickle", "wb") as io:
+        
+        with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_ipd_weight_school.pickle", "wb") as io:
             cPickle.dump(edge_ipd_weight, io)
                 
-        con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-        cur = con.cursor()
+        cur = connection.cursor()
         
         edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]
-		edge_ipd_list = [(k, v) for k, v in edge_ipd_weight.iteritems()]
+        edge_ipd_list = [(k, v) for k, v in edge_ipd_weight.iteritems()]
         
         logger.info('inserting counts')
         
@@ -334,9 +332,9 @@ if __name__ == '__main__':
             Q_Insert = """INSERT INTO "{0}" VALUES {1};""".format(TBL_EDGE, arg_str)
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
-        con.commit()
-		
-			logger.info('inserting ipd weights')
+        connection.commit()
+        
+        logger.info('inserting ipd weights')
 
         Q_CreateOutputTable3 = """
             CREATE TABLE IF NOT EXISTS public."{0}"
@@ -362,10 +360,10 @@ if __name__ == '__main__':
             Q_Insert = """INSERT INTO "{0}" VALUES {1};""".format(TBL_EDGE_IPD, arg_str)
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
-        con.commit()
+        connection.commit()
 
     del paths, nodes_gids, geoff_nodes, node_pairs
     
     del edges
         
-   logger.info('end_time: %s' % time.ctime())
+    logger.info('end_time: %s' % time.ctime())

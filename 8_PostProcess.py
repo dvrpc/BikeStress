@@ -66,7 +66,7 @@ SELECT
     FROM tblA a
     INNER JOIN master_links_grp m
     ON m.mixid = a.edge)
-SELECT use.edge, use.total, links.linklts, links.length, links.totlane, links.bikefac, links.speed_lts, use.geom
+SELECT use.edge, use.total, links.linklts, links.length, links.totnumlane, links.bikefac, links.speed_lts, use.geom
 FROM tblB use
 INNER JOIN links
 ON use.edge = links.gid
@@ -89,7 +89,7 @@ SELECT
     FROM tblA a
     INNER JOIN master_links_grp m
     ON m.mixid = a.edge)
-SELECT use.edge, use.total, links.linklts, links.length, links.totlane, links.bikefac, links.speed_lts, use.geom
+SELECT use.edge, use.total, links.linklts, links.length, links.totnumlane, links.bikefac, links.speed_lts, use.geom
 FROM tblB use
 INNER JOIN links
 ON use.edge = links.gid

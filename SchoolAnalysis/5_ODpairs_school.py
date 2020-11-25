@@ -11,6 +11,8 @@ import json
 import scipy.spatial
 import networkx as nx
 
+from database import connection
+
 #table names
 TBL_ALL_LINKS = "links"
 TBL_CENTS = "block_centroids"
@@ -28,7 +30,7 @@ TBL_SUBTURNS = "tolerableturns"
 TBL_BRIDGECENTS = "bridge_buffer_cents"
 
 #update tables for each different destination type (trails, schools)
-TBL_DEST = "schools"
+TBL_DEST = "schools_combined_region"
 TBL_DEST_NODE = "school_node"
 TBL_NODE_DEST = "node_school"
 
@@ -54,12 +56,11 @@ IDX_DEST_NODE = "school_node_idx_school"
 IDX_NODE_DEST = "node_school_idx_school"
 
 #connect to DB
-con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-cur = con.cursor()
+cur = connection.cursor()
     
 #grab info on geoffs, blocks, and destination
 SQL_GetGeoffs = """SELECT geoffid, vianode, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_GEOFF_LOOKUP_GEOM)
-SQL_GetBlocks = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_CENTS)
+SQL_GetBlocks = """SELECT gid, Null AS dummy, ST_AsGeoJSON(cent) FROM "{0}";""".format(TBL_CENTS)
 
 SQL_GetDEST = """SELECT gid, Null AS dummy, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_DEST)
 
@@ -67,7 +68,7 @@ def GetCoords(record):
     id, vianode, geojson = record
     return id, vianode, json.loads(geojson)['coordinates']
 def ExecFetchSQL(SQL_Stmt):
-    cur = con.cursor()
+    cur = connection.cursor()
     cur.execute(SQL_Stmt)
     return map(GetCoords, cur.fetchall())
 
@@ -199,7 +200,7 @@ cur.execute(Q_CreateOutputTable)
 
 Q_Insert = """INSERT INTO public."{0}" VALUES (%s)""".format(TBL_NODENOS)
 cur.executemany(Q_Insert, map(lambda v:(v,), nodenos))
-con.commit()
+connection.commit()
             
 
 #write node_gids into a table in postgres to refer to later

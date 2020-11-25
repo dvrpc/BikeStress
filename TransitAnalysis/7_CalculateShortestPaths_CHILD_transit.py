@@ -9,26 +9,51 @@ import sys
 import cPickle
 logger = mp.log_to_stderr(logging.INFO)
 
+from database import connection
+
 
 #need in this script
-#TBL_SPATHS = "shortestpaths_%s_transit" % str(sys.argv[1])
 TBL_MASTERLINKS_GROUPS ="master_links_grp"
 TBL_CENTS = "block_centroids"
-TBL_NODENOS = "nodenos_transit"
-TBL_NODES_GEOFF = "nodes_geoff_transit"
-TBL_NODES_GID = "nodes_gid_transit"
-TBL_GEOFF_NODES = "geoff_nodes_transit"
-TBL_GEOFF_GROUP = "geoff_group_transit"
-TBL_GID_NODES = "gid_nodes_transit"
-TBL_NODE_GID = "node_gid_post_transit"
-TBL_EDGE = "edgecounts_transit"
-TBL_EDGE_IPD = "edges_ipd_transit"
-#IDX_nx_SPATHS_value = "spaths_nx_value_idx_transit"
 
 ####CHANGE FOR EACH TRANSIT MODE####
-TBL_BLOCK_NODE_GEOFF = "block_node_geoff_transit"
-TBL_TRANSIT_NODE = "transit_node"
-TBL_NODE_TRANSIT = "node_transit"
+#point shapefile with gid and geom
+
+#bus
+#string = "transit"
+
+#rail
+#string = "rail"
+
+#trolley
+string = "trolley"
+
+TBL_TRANSIT_NODE = "%s_node" %string
+TBL_NODE_TRANSIT = "node_%s" %string
+TBL_NODENOS = "nodenos_%s" %string
+TBL_NODES_GEOFF = "nodes_geoff_%s" %string
+TBL_NODES_GID = "nodes_gid_%s" %string
+TBL_GEOFF_NODES = "geoff_nodes_%s" %string
+TBL_BLOCK_NODE_GEOFF = "block_node_geoff_%s" %string
+TBL_GEOFF_GROUP = "geoff_group_%s" %string
+TBL_GID_NODES = "gid_nodes_%s" %string
+TBL_NODE_GID = "node_gid_post_%s" %string
+
+TBL_EDGE = "edgecounts_%s" %string
+TBL_EDGE_IPD = "edges_ipd_%s" %string
+
+
+IDX_GEOFF_GROUP = "geoff_group_value_idx_%s" %string
+IDX_BLOCK_NODE_GEOFF = "block_node_geoff_value_idx_%s" %string
+IDX_NODENOS = "nodeno_idx_%s" %string
+IDX_NODES_GEOFF = "nodes_geoff_idx_%s" %string
+IDX_NODES_GID = "nodes_gid_idx_%s" %string
+IDX_GEOFF_NODES = "geoff_nodes_idx_%s" %string
+IDX_GID_NODES = "gid_nodes_idx_%s" %string
+IDX_OD_value = "od_value_idx_%s" %string
+IDX_NODE_GID = "node_gid_post_idx_%s" %string
+IDX_TRANSIT_NODE = "transit_node_idx_%s" %string
+IDX_NODE_TRANSIT = "node_transit_idx_%s" %string
 
 def worker(inqueue, output):
     result = []
@@ -102,8 +127,7 @@ Q_SelectMasterLinks = """
     FROM {0} s;
     """.format(selectisland)
     
-con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-cur = con.cursor()
+cur = connection.cursor()
 
 #create graph
 cur.execute(Q_SelectMasterLinks)
@@ -199,8 +223,7 @@ if __name__ == '__main__':
     
     del pairs
     
-    con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-    cur = con.cursor()
+    cur = connection.cursor()
 
     cur.execute(Q_SelectMasterLinks)
     MasterLinks = cur.fetchall()
@@ -220,8 +243,7 @@ if __name__ == '__main__':
             edges.append(row)
     logger.info('number of records: %d' % len(edges))
     
-    con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-    cur = con.cursor()
+    cur = connection.cursor()
 
     if (len(edges) > 0):
         # Q_CreateOutputTable = """
@@ -303,8 +325,7 @@ if __name__ == '__main__':
         with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_ipd_weight_transit.pickle", "wb") as io:
             cPickle.dump(edge_ipd_weight, io)
                 
-        con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-        cur = con.cursor()
+        cur = connection.cursor()
         
         edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]
         edge_ipd_list = [(k, v) for k, v in edge_ipd_weight.iteritems()]
@@ -335,7 +356,7 @@ if __name__ == '__main__':
             Q_Insert = """INSERT INTO "{0}" VALUES {1};""".format(TBL_EDGE, arg_str)
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
-        con.commit()
+        connection.commit()
         
         logger.info('inserting ipd weights')
 
@@ -363,7 +384,7 @@ if __name__ == '__main__':
             Q_Insert = """INSERT INTO "{0}" VALUES {1};""".format(TBL_EDGE_IPD, arg_str)
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
-        con.commit()
+        connection.commit()
 
     del paths, nodes_gids, geoff_nodes, node_pairs
     
