@@ -9,9 +9,9 @@ import sys
 import cPickle
 logger = mp.log_to_stderr(logging.INFO)
 
+from database import connection
 
 #need in this script
-TBL_SPATHS = "shortestpaths_%s" % str(sys.argv[1])
 TBL_MASTERLINKS_GROUPS ="master_links_grp"
 TBL_NODENOS = "nodenos"
 TBL_NODES_GEOFF = "nodes_geoff"
@@ -23,7 +23,6 @@ TBL_NODE_GID = "node_gid_post"
 TBL_EDGE = "edgecounts"
 TBL_EDGE_IPD = "edges_ipd"
 TBL_CENTS = "block_centroids"
-IDX_nx_SPATHS_value = "spaths_nx_value_idx"
 
 TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
 
@@ -100,8 +99,7 @@ Q_SelectMasterLinks = """
     FROM {0} view;
     """.format(selectisland)
     
-con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-cur = con.cursor()
+cur = connection.cursor()
 
 #create graph
 cur.execute(Q_SelectMasterLinks)
@@ -184,8 +182,7 @@ if __name__ == '__main__':
     
     del pairs
     
-    con = psql.connect(database = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-    cur = con.cursor()
+    cur = connection.cursor()
 
     cur.execute(Q_SelectMasterLinks)
     MasterLinks = cur.fetchall()
@@ -205,8 +202,7 @@ if __name__ == '__main__':
             edges.append(row)
     logger.info('number of records: %d' % len(edges))
     
-    con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-    cur = con.cursor()
+    cur = connection.cursor()
 
     if (len(edges) > 0):
         Q_CreateOutputTable = """
@@ -289,8 +285,7 @@ if __name__ == '__main__':
         with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_ipd_weight.pickle", "wb") as io:
             cPickle.dump(edge_ipd_weight, io)
                 
-        con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-        cur = con.cursor()
+        cur = connection.cursor()
 
         edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]
         edge_ipd_list = [(k, v) for k, v in edge_ipd_weight.iteritems()]
@@ -321,7 +316,7 @@ if __name__ == '__main__':
             Q_Insert = """INSERT INTO "{0}" VALUES {1};""".format(TBL_EDGE, arg_str)
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
-        con.commit()
+        connection.commit()
 
         logger.info('inserting ipd weights')
 
@@ -349,7 +344,7 @@ if __name__ == '__main__':
             Q_Insert = """INSERT INTO "{0}" VALUES {1};""".format(TBL_EDGE_IPD, arg_str)
             cur.execute(Q_Insert)
         cur.execute("COMMIT;")
-        con.commit()
+        connection.commit()
         
 
 

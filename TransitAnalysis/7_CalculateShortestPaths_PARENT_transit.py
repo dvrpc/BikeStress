@@ -5,10 +5,8 @@ import psycopg2 as psql
 import subprocess
 import time
 import sys
-import CalculateShortestPaths_CLEANUP as cleanup
 
 from database import connection
-
 
 PYEXE = r"C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe "
 script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\TransitAnalysis\7_CalculateShortestPaths_CHILD_transit.py"
@@ -50,7 +48,7 @@ for item in groupstouse:
         geoffCount = cur.fetchall()
         if int(geoffCount[0][0]) > 0:
             print item[0] 
-            p = subprocess.Popen([PYEXE, script, '%d' % item[0], stdout = subprocess.PIPE)#call script to calculate shortest paths
+            p = subprocess.Popen([PYEXE, script, '%d' % item[0]], stdout = subprocess.PIPE)#call script to calculate shortest paths
             p.communicate()
         else:
             print "no ", item[0]

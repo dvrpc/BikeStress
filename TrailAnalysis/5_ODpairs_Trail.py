@@ -52,8 +52,8 @@ IDX_GEOFF_NODES = "geoff_nodes_idx_trail"
 IDX_GID_NODES = "gid_nodes_idx_trail"
 IDX_OD_value = "od_value_idx_trail"
 IDX_NODE_GID = "node_gid_post_idx_trail"
-IDX_TRAIL_NODE = "trail_node_idx_trail"
-IDX_NODE_TRAIL = "node_trail_idx_trail"
+IDX_DEST_NODE = "trail_node_idx_trail"
+IDX_NODE_DEST = "node_trail_idx_trail"
 
 #connect to DB
 cur = connection.cursor()
@@ -98,7 +98,7 @@ destinations = ExecFetchSQL(SQL_GetDEST)
 dest_results = []
 for i, (id, _, coord) in enumerate(destinations):
     dist, index = geofftree.query(coord)
-    geoffid = world_ids[numpy.ndarray.item(index)]
+    geoffid = world_ids[index[0]]
     nodeno = geoff_nodes[geoffid]
     dest_results.append((id, nodeno))
 

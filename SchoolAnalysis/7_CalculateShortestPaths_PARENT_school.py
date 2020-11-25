@@ -14,6 +14,7 @@ script = r"D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\SchoolAnalysis\7_
 cur = connection.cursor()
 
 TBL_MASTERLINKS_GROUPS = "master_links_grp"
+####CHANGE FOR EACH SPECIAL DEST####
 string = "school"
 TBL_BLOCK_NODE_GEOFF = "block_node_geoff_%s" %string
 
