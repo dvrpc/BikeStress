@@ -41,10 +41,10 @@ for table in TablesList:
 
 #from 6_MovingFrame
 
-TBL_NETWORK = "temp_network_1438_%d_%d"
-TBL_PAIRS = "temp_pairs_1438_%d_%d"
-TBL_NETWORK_big = "temp_network_1438_%d"
-TB_PAIRS_big = "temp_pairs_1438_%d"
+TBL_NETWORK = "temp_network_502_%d_%d"
+TBL_PAIRS = "temp_pairs_502_%d_%d"
+#TBL_NETWORK_big = "temp_network_502_%d"
+#TB_PAIRS_big = "temp_pairs_502_%d"
 
 TBL_GEOFF_PAIRS = "1438_geoff_pairs"
 TBL_OD_LINES = "1438_OD_lines"

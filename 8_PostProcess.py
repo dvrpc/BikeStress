@@ -111,12 +111,18 @@ con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, us
 cur = con.cursor()
 
 #select top 10 percent from county lts result tables to identify priority links to work with
-counties = ('Bucks', 'Chester', 'Delaware', 'Montgomery', 'Philadelphia', 'Burlington', 'Camden', 'Gloucester', 'Mercer')
-resulttables = ('results_rail', 'results_trolley')
-countsbycounty = []
+def priorities(analysis, string):
+    print string
+    
+    countsbycounty = []
+    regionaltop10percent = []
 
-for i in xrange(len(counties)):
-    for j in xrange(len(resulttables)):
+    RESULT_TBL = analysis
+
+    counties = ('Bucks', 'Chester', 'Delaware', 'Montgomery', 'Philadelphia', 'Burlington', 'Camden', 'Gloucester', 'Mercer')
+    #count how many are in the top 10 percent of LTS 3 roads in each county
+    for i in xrange(len(counties)):
+        print "Counting ", counties[i]
         Q_CountTop10Percent = """
         WITH county AS (
             SELECT *
@@ -132,15 +138,13 @@ for i in xrange(len(counties)):
             FROM tblB
             WHERE linklts > 0.3 AND linklts <= 0.6)
         SELECT COUNT(*)/10 AS top10percent
-        FROM tblC""".format(counties[i], resulttables[j])
+        FROM tblC""".format(counties[i], RESULT_TBL)
         cur.execute(Q_CountTop10Percent)
         count = cur.fetchall()
         countsbycounty.append(count)
-
-counter = 0
-regionaltop10percent = []
-for i in xrange(len(counties)):
-    for j in xrange(len(resulttables)):
+    #select that many from each county
+    for i in xrange(len(counties)):
+        print "Compiling ", counties[i], countsbycounty[i][0][0]
         Q_CompileTop10Percent = """
         WITH county AS (
             SELECT *
@@ -153,33 +157,62 @@ for i in xrange(len(counties)):
             ON st_within (r.geom, c.geom))
         SELECT *
         FROM tblB
-        WHERE linklts > 0.3 AND linklts <= 0.6)
+        WHERE linklts > 0.3 AND linklts <= 0.6
         ORDER BY total DESC LIMIT {2};
-        """.format(counties[i], resulttables[j], countsbycounty[counter])
+        """.format(counties[i], RESULT_TBL, countsbycounty[i][0][0])
         cur.execute(Q_CompileTop10Percent)
         output = cur.fetchall()
-        regionaltop10percent.append(output)
-        counter += 1
-
-
-#which lts3 segments are in the top10% in their respective County
-priority_edges = []
-edge_county = []
-
-for i in xrange(0, len(county_tbls)):
-    cur.execute("""SELECT COUNT(*)/10 AS top10percent FROM public."{0}";""".format(county_tbls[i]))
-    top = cur.fetchall()
-    topint = int(top[0][0])
-    print topint
-
-    cur.execute("""SELECT edge FROM public."{1}" ORDER BY total DESC LIMIT {0};""".format(topint, county_tbls[i]))
-    results = cur.fetchall()
-    
-    for edge in results:
-        priority_edges.append(edge[0])
-        edge_county.append(county_labels[i])
+        for item in output:
+            regionaltop10percent.append(item)
         
-priorities = zip(priority_edges, edge_county)
+    PRIORITY_RESULTS = 'priorities_'+string
+    #write priorities into a table
+    Q_CreateOutputTable = """
+    CREATE TABLE IF NOT EXISTS public."{0}"
+    (
+      edge integer,
+      total bigint,
+      linklts double precision,
+      length double precision,
+      totnumlane smallint,
+      bikefac smallint,
+      speed_lts smallint,
+      geom geometry(Geometry,26918)
+    )
+    WITH (
+        OIDS = FALSE
+    )
+    TABLESPACE pg_default;
+    COMMIT;
+    """.format(PRIORITY_RESULTS)
+    cur.execute(Q_CreateOutputTable)
+
+    str_rpl = "(%s, %s, %s, %s, %s, %s, %s, ST_GeomFromEWKT('%s'))"
+    cur.execute("""BEGIN TRANSACTION;""")
+    batch_size = 100
+    for i in xrange(0, len(regionaltop10percent), batch_size):
+        j = i + batch_size
+        arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in regionaltop10percent[i:j])
+        #print arg_str
+        Q_Insert = """INSERT INTO public."{0}" (edge, total, linklts, length, totnumlane, bikefac, speed_lts, geom) VALUES {1}""".format(PRIORITY_RESULTS, arg_str)
+        cur.execute(Q_Insert)
+    cur.execute("COMMIT;")
+    
+#running function
+priorities('results_rail', 'rail')
+priorities('results_school', 'school')
+priorities('results_trail', 'trail')
+priorities('results_transit', 'transit')
+priorities('results_trolley', 'trolley')
+priorities('results_ipd_rail', 'rail_ipd')
+priorities('results_ipd_school', 'school_ipd')
+priorities('results_ipd_trail', 'trail_ipd')
+priorities('results_ipd_transit', 'transit_ipd')
+priorities('results_ipd_trolley', 'trolley_ipd')
+
+#also run for main run
+
+
 
 
 ###which L1&2 islands would be connected by LTS 3 priority segments (top 10% only)

@@ -128,7 +128,7 @@ TBL_TEMP_NETWORK = "temp_network_502_%d"
 TBL_TEMP_PAIRS = "temp_pairs_502_%d"
 
 #INTERSECT/INTERSECT
-for c in xrange(1,50):
+for c in xrange(1,23):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
     
@@ -247,7 +247,7 @@ for c in xrange(1,50):
 
 #INTERSECT/BETWEEN
 print "Vertical Lines - Intersect/Between"
-for c in xrange(1,50):
+for c in xrange(1,23):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
 
@@ -358,7 +358,7 @@ for c in xrange(1,50):
 
 #BETWEEN/INTERSECT
 print "Vertical Lines - Between/Intersect"
-for c in xrange(101,150):
+for c in xrange(101,124):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
     
@@ -477,7 +477,7 @@ for c in xrange(101,150):
 
 #BETWEEN/BETWEEN
 print "Vertical Lines - Between/Between"
-for c in xrange(101,150):
+for c in xrange(101,124):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
 
