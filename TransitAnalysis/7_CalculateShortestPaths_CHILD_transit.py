@@ -20,13 +20,13 @@ TBL_CENTS = "block_centroids"
 #point shapefile with gid and geom
 
 #bus
-#string = "transit"
+string = "transit"
 
 #rail
 #string = "rail"
 
 #trolley
-string = "trolley"
+#string = "trolley"
 
 TBL_TRANSIT_NODE = "%s_node" %string
 TBL_NODE_TRANSIT = "node_%s" %string

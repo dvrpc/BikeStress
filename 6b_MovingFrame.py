@@ -10,8 +10,6 @@ import math
 import psycopg2 as psql
 # logger = multiprocessing.log_to_stderr(logging.INFO)
 
-TBL_GEOFF_GEOM = "geoffs_viageom"
-TBL_MASTERLINKS_GROUPS =  "master_links_grp"
 import numpy
 import time
 import sys
@@ -22,9 +20,16 @@ from collections import Counter
 import json
 import scipy.spatial
 import networkx as nx
+
+from database import connection
+
+
+TBL_GEOFF_GEOM = "geoffs_viageom"
+TBL_MASTERLINKS_GROUPS =  "master_links_grp"
+
 TBL_GROUPS = "groups"
-TBL_GEOFF_PAIRS = "1438_geoff_pairs"
-TBL_OD_LINES = "1438_OD_lines"
+TBL_GEOFF_PAIRS = "502_geoff_pairs"
+TBL_OD_LINES = "502_OD_lines"
 TBL_NODENOS = "nodenos"
 # TBL_OD = "OandD"
 TBL_GEOFF_NODES = "geoff_nodes"
@@ -34,13 +39,11 @@ TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
 TBL_GEOFF_GROUP = "geoff_group"
 
 
-con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-#create cursor to execute querys
-cur = con.cursor()
+cur = connection.cursor()
 
 
 #select query to create what used to be Views of each island individually
-selectisland = """(SELECT * FROM {0} WHERE strong = 1438)""".format(TBL_MASTERLINKS_GROUPS)
+selectisland = """(SELECT * FROM {0} WHERE strong = 502)""".format(TBL_MASTERLINKS_GROUPS)
 
 ######################## PART 2 ###########################
 ####################VERTICAL LINES#########################
@@ -121,11 +124,11 @@ Q_InsertTempNetwork = """INSERT INTO "{0}" (mixid, fromgeoff, togeoff, cost, geo
 
 print "Vertical Lines - Intersect/Intersect"
 
-TBL_TEMP_NETWORK = "temp_network_1438_%d"
-TBL_TEMP_PAIRS = "temp_pairs_1438_%d"
+TBL_TEMP_NETWORK = "temp_network_502_%d"
+TBL_TEMP_PAIRS = "temp_pairs_502_%d"
 
 #INTERSECT/INTERSECT
-for c in xrange(4,18):
+for c in xrange(1,50):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
     
@@ -139,12 +142,12 @@ for c in xrange(4,18):
     ymin = min(zip(*bbox['coordinates'][0])[1])
     ymax = max(zip(*bbox['coordinates'][0])[1])
 
-    iterations = int(math.ceil((xmax-xmin)/8046.72))
+    iterations = int(math.ceil((xmax-xmin)/4828.03))
     #OD LINES THAT INTERSECT BREAK LINES
 
     #starting y value of line
     #for intersecting OD lines, start at the second line
-    x_value = xmin + 8046.72
+    x_value = xmin + 4828.03
     #newid starting at 1 is for intersection/overlap sections
     newid = 1
     #loop over break lines selecting OD lines that intersect them
@@ -152,8 +155,8 @@ for c in xrange(4,18):
         
         print c, newid
         
-        TBL_TEMP_PAIRS_2 = "temp_pairs_1438_%d_%d" % (c, newid)
-        TBL_TEMP_NETWORK_2 = "temp_network_1438_%d_%d" % (c, newid)
+        TBL_TEMP_PAIRS_2 = "temp_pairs_502_%d_%d" % (c, newid)
+        TBL_TEMP_NETWORK_2 = "temp_network_502_%d_%d" % (c, newid)
 
         
         cur.execute(Q_IntersectLines.format(TBL_PAIRS) % (x_value, ymin, x_value, ymax))
@@ -164,9 +167,9 @@ for c in xrange(4,18):
         
         if len(intersect_pairs) > 0:
             cur.execute(Q_CreateTempODLinesTable.format(TBL_TEMP_PAIRS_2))
-            con.commit()
+            connection.commit()
             cur.execute(Q_CreateTempNetwork.format(TBL_TEMP_NETWORK_2))
-            con.commit()
+            connection.commit()
             
             str_rpl = "(%s, %s, ST_GeomFromGeoJSON('%s'))"
             cur.execute("""BEGIN TRANSACTION;""")
@@ -177,7 +180,7 @@ for c in xrange(4,18):
                 #print arg_str
                 Q_Insert = """INSERT INTO "{0}" (fromgeoff, togeoff, geom) VALUES {1};""".format(TBL_TEMP_PAIRS_2, arg_str)
                 cur.execute(Q_Insert)
-            con.commit()
+            connection.commit()
             
             print "Creating Extent"
             
@@ -224,7 +227,7 @@ for c in xrange(4,18):
                     #print arg_str
                     Q_Insert = """INSERT INTO "{0}" (mixid, fromgeoff, togeoff, cost, geom, strong) VALUES {1};""".format(TBL_TEMP_NETWORK_2, arg_str)
                     cur.execute(Q_Insert)
-                con.commit()
+                connection.commit()
                 
                 print "Updating SRID"
                 
@@ -239,12 +242,12 @@ for c in xrange(4,18):
 
         
         #update values for next iteration
-        x_value  += 8046.72
+        x_value  += 4828.03
         newid    += 1
 
 #INTERSECT/BETWEEN
 print "Vertical Lines - Intersect/Between"
-for c in xrange(4,18):
+for c in xrange(1,50):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
 
@@ -258,13 +261,13 @@ for c in xrange(4,18):
     ymin = min(zip(*bbox['coordinates'][0])[1])
     ymax = max(zip(*bbox['coordinates'][0])[1])
 
-    iterations = int(math.ceil((xmax-xmin)/8046.72))
+    iterations = int(math.ceil((xmax-xmin)/4828.03))
 
     #OD LINES IN BETWEEN BREAK LINES
 
     #starting y value of line
     x_value_left = xmin
-    x_value_right = x_value_left + 8046.72
+    x_value_right = x_value_left + 4828.03
     #newid starting at 100 is for between sections
     newid = 101
     #loop over break lines selecting OD lines that are between them
@@ -272,8 +275,8 @@ for c in xrange(4,18):
 
         print c ,newid
 
-        TBL_TEMP_PAIRS_2 = "temp_pairs_1438_%d_%d" % (c, newid)
-        TBL_TEMP_NETWORK_2 = "temp_network_1438_%d_%d" % (c, newid)
+        TBL_TEMP_PAIRS_2 = "temp_pairs_502_%d_%d" % (c, newid)
+        TBL_TEMP_NETWORK_2 = "temp_network_502_%d_%d" % (c, newid)
 
         
         cur.execute(Q_LinesBetween.format(TBL_PAIRS) % (
@@ -295,9 +298,9 @@ for c in xrange(4,18):
         if len(between_pairs) > 0:
         
             cur.execute(Q_CreateTempODLinesTable.format(TBL_TEMP_PAIRS_2))
-            con.commit()
+            connection.commit()
             cur.execute(Q_CreateTempNetwork.format(TBL_TEMP_NETWORK_2))
-            con.commit()
+            connection.commit()
 
             str_rpl = "(%s, %s, ST_GeomFromGeoJSON('%s'))"
             cur.execute("""BEGIN TRANSACTION;""")
@@ -308,7 +311,7 @@ for c in xrange(4,18):
                 #print arg_str
                 Q_Insert = """INSERT INTO "{0}" (fromgeoff, togeoff, geom) VALUES {1};""".format(TBL_TEMP_PAIRS_2, arg_str)
                 cur.execute(Q_Insert)
-            con.commit()
+            connection.commit()
             
             print "Clipping Network"    
             
@@ -338,7 +341,7 @@ for c in xrange(4,18):
                 #print arg_str
                 Q_Insert = """INSERT INTO "{0}" (mixid, fromgeoff, togeoff, cost, geom, strong) VALUES {1};""".format(TBL_TEMP_NETWORK_2, arg_str)
                 cur.execute(Q_Insert)
-            con.commit()
+            connection.commit()
             
             print "Updating SRID"
             
@@ -348,14 +351,14 @@ for c in xrange(4,18):
         else:
             print "No pairs in chunk"
 
-        x_value_left  += 8046.72
-        x_value_right     += 8046.72
+        x_value_left  += 4828.03
+        x_value_right     += 4828.03
         newid        += 1
         
 
 #BETWEEN/INTERSECT
 print "Vertical Lines - Between/Intersect"
-for c in xrange(104,119):
+for c in xrange(101,150):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
     
@@ -369,12 +372,12 @@ for c in xrange(104,119):
     ymin = min(zip(*bbox['coordinates'][0])[1])
     ymax = max(zip(*bbox['coordinates'][0])[1])
 
-    iterations = int(math.ceil((xmax-xmin)/8046.72))
+    iterations = int(math.ceil((xmax-xmin)/4828.03))
     #OD LINES THAT INTERSECT BREAK LINES
 
     #starting y value of line
     #for intersecting OD lines, start at the second line
-    x_value = xmin + 8046.72
+    x_value = xmin + 4828.03
     #newid starting at 1 is for intersection/overlap sections
     newid = 1
     #loop over break lines selecting OD lines that intersect them
@@ -382,8 +385,8 @@ for c in xrange(104,119):
         
         print c, newid
         
-        TBL_TEMP_PAIRS_2 = "temp_pairs_1438_%d_%d" % (c, newid)
-        TBL_TEMP_NETWORK_2 = "temp_network_1438_%d_%d" % (c, newid)
+        TBL_TEMP_PAIRS_2 = "temp_pairs_502_%d_%d" % (c, newid)
+        TBL_TEMP_NETWORK_2 = "temp_network_502_%d_%d" % (c, newid)
 
         
         cur.execute(Q_IntersectLines.format(TBL_PAIRS) % (x_value, ymin, x_value, ymax))
@@ -394,9 +397,9 @@ for c in xrange(104,119):
         
         if len(intersect_pairs) > 0:
             cur.execute(Q_CreateTempODLinesTable.format(TBL_TEMP_PAIRS_2))
-            con.commit()
+            connection.commit()
             cur.execute(Q_CreateTempNetwork.format(TBL_TEMP_NETWORK_2))
-            con.commit()
+            connection.commit()
             
             str_rpl = "(%s, %s, ST_GeomFromGeoJSON('%s'))"
             cur.execute("""BEGIN TRANSACTION;""")
@@ -407,7 +410,7 @@ for c in xrange(104,119):
                 #print arg_str
                 Q_Insert = """INSERT INTO "{0}" (fromgeoff, togeoff, geom) VALUES {1};""".format(TBL_TEMP_PAIRS_2, arg_str)
                 cur.execute(Q_Insert)
-            con.commit()
+            connection.commit()
             
             print "Creating Extent"
             
@@ -454,7 +457,7 @@ for c in xrange(104,119):
                     #print arg_str
                     Q_Insert = """INSERT INTO "{0}" (mixid, fromgeoff, togeoff, cost, geom, strong) VALUES {1};""".format(TBL_TEMP_NETWORK_2, arg_str)
                     cur.execute(Q_Insert)
-                con.commit()
+                connection.commit()
                 
                 print "Updating SRID"
                 
@@ -469,12 +472,12 @@ for c in xrange(104,119):
 
         
         #update values for next iteration
-        x_value  += 8046.72
+        x_value  += 4828.03
         newid    += 1
 
 #BETWEEN/BETWEEN
 print "Vertical Lines - Between/Between"
-for c in xrange(104,119):
+for c in xrange(101,150):
     TBL_NETWORK = TBL_TEMP_NETWORK % c
     TBL_PAIRS = TBL_TEMP_PAIRS % c
 
@@ -488,13 +491,13 @@ for c in xrange(104,119):
     ymin = min(zip(*bbox['coordinates'][0])[1])
     ymax = max(zip(*bbox['coordinates'][0])[1])
 
-    iterations = int(math.ceil((xmax-xmin)/8046.72))
+    iterations = int(math.ceil((xmax-xmin)/4828.03))
 
     #OD LINES IN BETWEEN BREAK LINES
 
     #starting y value of line
     x_value_left = xmin
-    x_value_right = x_value_left + 8046.72
+    x_value_right = x_value_left + 4828.03
     #newid starting at 100 is for between sections
     newid = 101
     #loop over break lines selecting OD lines that are between them
@@ -502,8 +505,8 @@ for c in xrange(104,119):
 
         print c ,newid
 
-        TBL_TEMP_PAIRS_2 = "temp_pairs_1438_%d_%d" % (c, newid)
-        TBL_TEMP_NETWORK_2 = "temp_network_1438_%d_%d" % (c, newid)
+        TBL_TEMP_PAIRS_2 = "temp_pairs_502_%d_%d" % (c, newid)
+        TBL_TEMP_NETWORK_2 = "temp_network_502_%d_%d" % (c, newid)
 
         
         cur.execute(Q_LinesBetween.format(TBL_PAIRS) % (
@@ -524,9 +527,9 @@ for c in xrange(104,119):
         
         if len(between_pairs) > 0:
             cur.execute(Q_CreateTempODLinesTable.format(TBL_TEMP_PAIRS_2))
-            con.commit()
+            connection.commit()
             cur.execute(Q_CreateTempNetwork.format(TBL_TEMP_NETWORK_2))
-            con.commit()
+            connection.commit()
 
             str_rpl = "(%s, %s, ST_GeomFromGeoJSON('%s'))"
             cur.execute("""BEGIN TRANSACTION;""")
@@ -537,7 +540,7 @@ for c in xrange(104,119):
                 #print arg_str
                 Q_Insert = """INSERT INTO "{0}" (fromgeoff, togeoff, geom) VALUES {1};""".format(TBL_TEMP_PAIRS_2, arg_str)
                 cur.execute(Q_Insert)
-            con.commit()
+            connection.commit()
             
             print "Clipping Network"    
             
@@ -567,7 +570,7 @@ for c in xrange(104,119):
                 #print arg_str
                 Q_Insert = """INSERT INTO "{0}" (mixid, fromgeoff, togeoff, cost, geom, strong) VALUES {1};""".format(TBL_TEMP_NETWORK_2, arg_str)
                 cur.execute(Q_Insert)
-            con.commit()
+            connection.commit()
             
             print "Updating SRID"
             
@@ -577,8 +580,8 @@ for c in xrange(104,119):
         else:
             print "No pairs in chunk"
         
-        x_value_left  += 8046.72
-        x_value_right     += 8046.72
+        x_value_left  += 4828.03
+        x_value_right     += 4828.03
         newid        += 1
         
 

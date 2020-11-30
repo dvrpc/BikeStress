@@ -11,6 +11,9 @@ import json
 import scipy.spatial
 import networkx as nx
 
+
+from database import connection
+
 #table names
 TBL_ALL_LINKS = "links"
 TBL_CENTS = "block_centroids"
@@ -47,8 +50,8 @@ IDX_GID_NODES = "gid_nodes_idx"
 IDX_OD_value = "od_value_idx"
 IDX_NODE_GID = "node_gid_post"
 
-con = psql.connect(dbname = "BikeStress_p3", host = "localhost", port = 5432, user = "postgres", password = "sergt")
-cur = con.cursor()
+
+cur = connection.cursor()
 
 ##FIND PAIRS TO CALCULATE PATHS FOR
 SQL_GetGeoffs = """SELECT geoffid, vianode, ST_AsGeoJSON(geom) FROM "{0}";""".format(TBL_GEOFF_LOOKUP_GEOM)
@@ -58,7 +61,7 @@ def GetCoords(record):
     id, vianode, geojson = record
     return id, vianode, json.loads(geojson)['coordinates']
 def ExecFetchSQL(SQL_Stmt):
-    cur = con.cursor()
+    cur = connection.cursor()
     cur.execute(SQL_Stmt)
     return map(GetCoords, cur.fetchall())
 
@@ -239,15 +242,15 @@ for i in xrange(0, len(CloseEnough), batch_size):
     cur.execute(Q_Insert)
 cur.execute("COMMIT;")
 
-Q_Index = """
-    CREATE INDEX block_node_geoff_grp_idx
-      ON public.{0}
-      USING btree
-      (groupnumber);
+# Q_Index = """
+    # CREATE INDEX IF NOT EXISTS block_node_geoff_grp_idx
+      # ON public.{0}
+      # USING btree
+      # (groupnumber);
 
-    COMMIT;
-    """.format(TBL_BLOCK_NODE_GEOFF)
-cur.execute(Q_Index)
+    # COMMIT;
+    # """.format(TBL_BLOCK_NODE_GEOFF)
+# cur.execute(Q_Index)
 
 print time.ctime(), "Writing Intermediate Tables"
 #convert nodes_geoff, and nodes_gids dictionaries to list and save to tables in postgres
@@ -284,7 +287,7 @@ cur.execute(Q_CreateOutputTable)
 
 Q_Insert = """INSERT INTO public."{0}" VALUES (%s)""".format(TBL_NODENOS)
 cur.executemany(Q_Insert, map(lambda v:(v,), nodenos))
-con.commit()
+connection.commit()
             
 
 #write node_geoffs into a table in postgres to refer to later

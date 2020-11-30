@@ -15,7 +15,7 @@ cur = connection.cursor()
 
 TBL_MASTERLINKS_GROUPS = "master_links_grp"
 ####CHANGE FOR EACH TRANSIT MODE####
-string = "trolley"
+string = "transit"
 TBL_BLOCK_NODE_GEOFF = "block_node_geoff_%s" %string
 
 Q_GeoffCount = """
