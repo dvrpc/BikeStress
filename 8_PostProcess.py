@@ -216,10 +216,12 @@ priorities('results_ipd_trolley', 'trolley_ipd')
 
 
 ###which L1&2 islands would be connected by LTS 3 priority segments (top 10% only)
-
+#takes a long time to run (~14 minutes on just rail priorities) - maybe save for later; not 100% sure if this is worth it and how much it's used. 
+#might be better to just look at it visually.
 ##SELECT ALL THE LINKS THAT ARE PART OF EACH ISLAND
-TBL_CON_ISLANDS = "con_islands_trails"
-TBL_LTS3 = "lts3_trails_results"
+string = rail
+TBL_CON_ISLANDS = 'con_islands_'+string
+PRIORITY_RESULTS = 'priorities_'+string
 TBL_MASTERLINKS_GROUPS = "l2_master_links_grp"
 
 Q_BUFFER_INTERSECT = """
@@ -258,7 +260,7 @@ Q_BUFFER_INTERSECT = """
 );
 """
 
-cur.execute(Q_BUFFER_INTERSECT.format(TBL_LTS3, TBL_MASTERLINKS_GROUPS, TBL_CON_ISLANDS))
+cur.execute(Q_BUFFER_INTERSECT.format(PRIORITY_RESULTS, TBL_MASTERLINKS_GROUPS, TBL_CON_ISLANDS))
 
 #do we just want to do this for the 'priorities'? it might be better to have for everything, and just leave it blank where it does not apply
 Q_JOIN = """
