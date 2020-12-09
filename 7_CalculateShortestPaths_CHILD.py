@@ -84,7 +84,7 @@ print
     return result
 '''
 
-num_cores = 64 # mp.cpu_count()
+num_cores = 32 # mp.cpu_count()
 
 #select query to create what used to be Views of each island individually
 selectisland = """(SELECT * FROM master_links_grp WHERE strong = %d)""" % int(sys.argv[1])
@@ -177,8 +177,8 @@ if __name__ == '__main__':
         
     paths = test_workers(pairs)
         
-    with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\paths.cpickle", "wb") as io:
-        cPickle.dump(paths, io)
+    # with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\paths.cpickle", "wb") as io:
+        # cPickle.dump(paths, io)
     
     del pairs
     
@@ -205,43 +205,6 @@ if __name__ == '__main__':
     cur = connection.cursor()
 
     if (len(edges) > 0):
-        Q_CreateOutputTable = """
-            CREATE TABLE IF NOT EXISTS public."{0}"
-            (
-              id integer,
-              seq integer,
-              ogid integer,
-              dgid integer,
-              edge bigint,
-              rowno BIGSERIAL PRIMARY KEY
-            )
-            WITH (
-                OIDS = FALSE
-            )
-            TABLESPACE pg_default;
-
-            
-            CREATE INDEX IF NOT EXISTS "{1}"
-                ON public."{0}" USING btree
-                (id, seq, ogid, dgid, edge)
-                TABLESPACE pg_default;
-            COMMIT;                
-        """.format(TBL_SPATHS, IDX_nx_SPATHS_value)
-        cur.execute(Q_CreateOutputTable)
-
-        logger.info('inserting records')
-        str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edges[0]))))
-        cur.execute("""BEGIN TRANSACTION;""")
-        batch_size = 10000
-        for i in xrange(0, len(edges), batch_size):
-            j = i + batch_size
-            arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edges[i:j])
-            #print arg_str
-            Q_Insert = """INSERT INTO public."{0}" (id, seq, ogid, dgid, edge) VALUES {1}""".format(TBL_SPATHS, arg_str)
-            cur.execute(Q_Insert)
-        cur.execute("COMMIT;")
-        
-        
         dict_all_paths = {}    
         #convert edges to dictionary
         for id, seq, ogid, dgid, edge in edges:
@@ -279,11 +242,11 @@ if __name__ == '__main__':
                     print edge_ipd_weight[edge], ipd_weight
                 #edge_ipd_weight[edge] += ipd_weight
                 
-        with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_count_dict.pickle", "wb") as io:
-            cPickle.dump(edge_count_dict, io)
+        # with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_count_dict.pickle", "wb") as io:
+            # cPickle.dump(edge_count_dict, io)
             
-        with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_ipd_weight.pickle", "wb") as io:
-            cPickle.dump(edge_ipd_weight, io)
+        # with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_ipd_weight.pickle", "wb") as io:
+            # cPickle.dump(edge_ipd_weight, io)
                 
         cur = connection.cursor()
 

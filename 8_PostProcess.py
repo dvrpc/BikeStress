@@ -22,12 +22,17 @@ cur = con.cursor()
 
 #string for special destination table names
 #transit, rail, trolley, trail, school, main
-string = "school"
+# string = "school"
 
-TBL_EDGE = "edgecounts_%s" %string
-TBL_EDGE_IPD = "edges_ipd_%s" %string
-TBL_RESULTS = "results_%s" %string
-TBL_RESULTS_IPD = "results_ipd_%s" %string
+# TBL_EDGE = "edgecounts_%s" %string
+# TBL_EDGE_IPD = "edges_ipd_%s" %string
+# TBL_RESULTS = "results_%s" %string
+# TBL_RESULTS_IPD = "results_ipd_%s" %string
+TBL_EDGE = "edgecounts"
+TBL_EDGE_IPD = "edges_ipd"
+TBL_RESULTS = "results"
+TBL_RESULTS_IPD = "results_ipd"
+
 TBL_MASTERLINKS_GROUPS = "master_links_grp"
 TBL_ALL_LINKS = "links"
 
@@ -164,8 +169,9 @@ def priorities(analysis, string):
         output = cur.fetchall()
         for item in output:
             regionaltop10percent.append(item)
-        
-    PRIORITY_RESULTS = 'priorities_'+string
+    #change for mail run to elminate use of "string"    
+    #PRIORITY_RESULTS = 'priorities_'+string
+    PRIORITY_RESULTS = 'priotities_main'
     #write priorities into a table
     Q_CreateOutputTable = """
     CREATE TABLE IF NOT EXISTS public."{0}"

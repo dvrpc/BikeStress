@@ -39,7 +39,7 @@ print "Number of groups: ", len(groupstouse)
 bigisland = 502
 
 for item in groupstouse:
-    if item[0] <> bigisland:
+    if item[0] != bigisland:
         selectisland = """(SELECT * FROM {0} WHERE strong = {1})""".format(TBL_MASTERLINKS_GROUPS, item[0])
         cur.execute("SELECT COUNT(*) FROM {0} view WHERE MIXID > 0".format(selectisland))
         cnt, = cur.fetchone()
