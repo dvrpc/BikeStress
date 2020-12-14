@@ -10,7 +10,7 @@ import cPickle
 from database import connection
 
 def worker(inqueue, output, G):
-    logger = mp.get_logger()
+    # logger = mp.get_logger()
     result = []
     nopath = []
     count = 0
@@ -23,22 +23,22 @@ def worker(inqueue, output, G):
         except nx.NetworkXNoPath:
             # logger.info('{t}: {m}'.format(t = time.ctime(), m = "No path for {0}, {1}".format(source, target)))
             nopath.append(pair)
-        except nx.NetworkXError as nxe:
-            logger.info('{t}: {m}'.format(t = time.ctime(), m = "NetworkX Error: %s" % str(nxe)))
-        except Exception as e:
-            logger.info('{t}: {m}'.format(t = time.ctime(), m = "GENERAL ERROR: %s" % str(e)))
+        # except nx.NetworkXError as nxe:
+            # logger.info('{t}: {m}'.format(t = time.ctime(), m = "NetworkX Error: %s" % str(nxe)))
+        # except Exception as e:
+            # logger.info('{t}: {m}'.format(t = time.ctime(), m = "GENERAL ERROR: %s" % str(e)))
         else:
-            logger.info('{t}: {m}'.format(t = time.ctime(), m = "path cnt: %d" % len(paths)))
+            # logger.info('{t}: {m}'.format(t = time.ctime(), m = "path cnt: %d" % len(paths)))
             result.append(paths)
         count += 1
         if (count % 100) == 0:
-            logger.info('{t}: {c} - {s}'.format(t = time.ctime(), c = count, s = time.time() - start_time))
+            # logger.info('{t}: {c} - {s}'.format(t = time.ctime(), c = count, s = time.time() - start_time))
             start_time = time.time()
     output.put({'result': result, 'nopath': nopath})
 
 def test_workers(pairs, G):
-    logger = mp.get_logger()
-    logger.info('test_workers() started')
+    # logger = mp.get_logger()
+    # logger.info('test_workers() started')
     result = []
     nopath = []
     inqueue = mp.Queue()
@@ -54,25 +54,25 @@ def test_workers(pairs, G):
     procs = []
     for i in xrange(num_cores):
         procs.append(mp.Process(target = worker, args = (inqueue, output, G)))
-    logger.info('test_workers() created %d workers' % len(procs))
+    # logger.info('test_workers() created %d workers' % len(procs))
     # procs = [mp.Process(target = worker, args = (inqueue, output)) for i in range(mp.cpu_count())]
 
-    logger.info('test_workers() starting workers')
+    # logger.info('test_workers() starting workers')
     for proc in procs:
         proc.daemon = True
         proc.start()
     for proc in procs:
         inqueue.put(sentinel)
-    logger.info('test_workers() result aggregation')
+    # logger.info('test_workers() result aggregation')
     for proc in procs:
         retval = output.get()
         result.extend(retval['result'])
         nopath.extend(retval['nopath'])
-    logger.info('test_workers() joining')
+    # logger.info('test_workers() joining')
     for proc in procs:
         proc.join()
 
-    logger.info('test_workers() finished')
+    # logger.info('test_workers() finished')
     return result, nopath
 
 def run_child_moving_frame(i, j, log=False):
@@ -81,7 +81,7 @@ def run_child_moving_frame(i, j, log=False):
             '7_CalculateShortestPaths_PARENT_MovingFrame.py'
     """
 
-    logger = mp.log_to_stderr(logging.INFO)
+    # logger = mp.log_to_stderr(logging.INFO)
 
     #need in this script
     TBL_MASTERLINKS_GROUPS ="master_links_grp"
@@ -97,11 +97,10 @@ def run_child_moving_frame(i, j, log=False):
     TBL_ALL_LINKS = "links"
     TBL_CENTS = "block_centroids"
 
-    ####CHANGE FOR EACH TRANSIT MODE####
     TBL_BLOCK_NODE_GEOFF = "block_node_geoff"
 
-    TBL_TEMP_PAIRS = "temp_pairs_1438_%s_%s" % (str(i), str(j))
-    TBL_TEMP_NETWORK = "temp_network_1438_%s_%s" % (str(i), str(j))
+    TBL_TEMP_PAIRS = "temp_pairs_502_%s_%s" % (str(i), str(j))
+    TBL_TEMP_NETWORK = "temp_network_502_%s_%s" % (str(i), str(j))
 
     num_cores = 64 # mp.cpu_count()
 
@@ -131,8 +130,8 @@ def run_child_moving_frame(i, j, log=False):
     sentinel = None
     output = mp.Queue()
 
-    if log:
-        logger.info('start_time: %s' % time.ctime())
+    # if log:
+        # logger.info('start_time: %s' % time.ctime())
     
     #grab necessary lists and turn them into dictionaries
     Q_GetList = """
@@ -183,10 +182,10 @@ def run_child_moving_frame(i, j, log=False):
 
     paths, nopaths = test_workers(pairs, G)
         
-    with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\group1438_MF_%s_%s.cpickle" % (i, j), "wb") as io:
-        cPickle.dump(paths, io)
-    with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\group1438_MF_%s_%s_nopaths.cpickle" % (i, j), "wb") as io:
-        cPickle.dump(nopaths, io)
+    # with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\group502_MF_%s_%s.cpickle" % (i, j), "wb") as io:
+        # cPickle.dump(paths, io)
+    # with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\group502_MF_%s_%s_nopaths.cpickle" % (i, j), "wb") as io:
+        # cPickle.dump(nopaths, io)
     
     del pairs, nopaths
     
@@ -208,8 +207,8 @@ def run_child_moving_frame(i, j, log=False):
         for seq, (o ,d) in enumerate(zip(path, path[1:])):
             row = id, seq, oGID, dGID, node_pairs[(o,d)]
             edges.append(row)
-    if log:
-        logger.info('number of records: %d' % len(edges))
+    # if log:
+        # logger.info('number of records: %d' % len(edges))
     
     cur = connection.cursor()
     
@@ -250,19 +249,19 @@ def run_child_moving_frame(i, j, log=False):
                 except TypeError:
                     print edge_ipd_weight[edge], ipd_weight
                 
-        with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_count_dict.pickle", "wb") as io:
-            cPickle.dump(edge_count_dict, io)
+        # with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_count_dict.pickle", "wb") as io:
+            # cPickle.dump(edge_count_dict, io)
             
-        with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_ipd_weight.pickle", "wb") as io:
-            cPickle.dump(edge_ipd_weight, io)
+        # with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_ipd_weight.pickle", "wb") as io:
+            # cPickle.dump(edge_ipd_weight, io)
                 
         cur = connection.cursor()
 
         edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]
         edge_ipd_list = [(k, v) for k, v in edge_ipd_weight.iteritems()]
 
-        if log:
-            logger.info('inserting counts')
+        # if log:
+            # logger.info('inserting counts')
 
         Q_CreateOutputTable2 = """
             CREATE TABLE IF NOT EXISTS public."{0}"
@@ -290,8 +289,8 @@ def run_child_moving_frame(i, j, log=False):
         cur.execute("COMMIT;")
         connection.commit()
 
-        if log:
-            logger.info('inserting ipd weights')
+        # if log:
+            # logger.info('inserting ipd weights')
 
         Q_CreateOutputTable3 = """
             CREATE TABLE IF NOT EXISTS public."{0}"
@@ -323,5 +322,5 @@ def run_child_moving_frame(i, j, log=False):
     
     del edges
         
-    if log:
-        logger.info('end_time: %s' % time.ctime())
+    # if log:
+        # logger.info('end_time: %s' % time.ctime())

@@ -6,6 +6,7 @@ import subprocess
 import time
 import sys
 import CalculateShortestPaths_CLEANUP as cleanup
+from tqdm import tqdm
 
 from child_movingframe_shortestpath import run_child_moving_frame
 from child_movingframe_shortestpath import worker
@@ -14,7 +15,7 @@ from database import connection
 
 cur = connection.cursor()
 
-TBL_WORK_NETWORK = "temp_network_1438_%d_%d"
+TBL_WORK_NETWORK = "temp_network_502_%d_%d"
 
 def run_child_script(i, j):
 
@@ -31,28 +32,20 @@ def run_child_script(i, j):
 
 #to finish from section 10-16 and above
 if __name__ == "__main__":
-    for i in xrange(11, 22):
-        for j in xrange(1, 16):
+    for i in xrange(1, 32):
+        for j in tqdm(xrange(1, 32)):
+            print i, j
             run_child_script(i, j)
 
-        # for j in xrange(101, 122):
-            # run_child_script(i, j)
-
+        for j in tqdm(xrange(101, 132)):
+            print i, j
+            run_child_script(i, j)
             
-    #finish 109 beyond the massive island (109_113; must revisit)
-    # for i in xrange(110, 111):
-        # for j in xrange (15, 22):
-            # run_child_script(i, j)
-            
-    # for i in xrange(110, 111):
-        # for j in xrange (101, 122):
-            # run_child_script(i, j)
-            
+    for i in xrange(101, 124):
+        for j in tqdm(xrange(1, 32)):
+            print i, j
+            run_child_script(i, j)
 
-    # for i in xrange(111, 122):
-        # for j in xrange(1, 22):
-            # run_child_script(i, j)
-
-                    
-        # for j in xrange(101, 122):
-            # run_child_script(i, j)
+        for j in tqdm(xrange(101, 132)):
+            print i, j
+            run_child_script(i, j)
