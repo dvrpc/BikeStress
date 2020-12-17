@@ -23,9 +23,13 @@ def worker(inqueue, output, G):
         except nx.NetworkXNoPath:
             # logger.info('{t}: {m}'.format(t = time.ctime(), m = "No path for {0}, {1}".format(source, target)))
             nopath.append(pair)
-        # except nx.NetworkXError as nxe:
+        except nx.NodeNotFound:
+            pass
+        except nx.NetworkXError as nxe:
+            pass
             # logger.info('{t}: {m}'.format(t = time.ctime(), m = "NetworkX Error: %s" % str(nxe)))
-        # except Exception as e:
+        except Exception as e:
+            pass
             # logger.info('{t}: {m}'.format(t = time.ctime(), m = "GENERAL ERROR: %s" % str(e)))
         else:
             # logger.info('{t}: {m}'.format(t = time.ctime(), m = "path cnt: %d" % len(paths)))
@@ -49,7 +53,7 @@ def test_workers(pairs, G):
     # Build O-D pair list
     # for source, target in IT.product(sources, targets):
         # inqueue.put((source, target))
-    
+
     num_cores = 32 # mp.cpu_count()
     procs = []
     for i in xrange(num_cores):
@@ -92,8 +96,8 @@ def run_child_moving_frame(i, j, log=False):
     TBL_GEOFF_GROUP = "geoff_group"
     TBL_GID_NODES = "gid_nodes"
     TBL_NODE_GID = "node_gid_post"
-    TBL_EDGE = "edgecounts"
-    TBL_EDGE_IPD = "edges_ipd"
+    TBL_EDGE = "edgecounts_bigisland"
+    TBL_EDGE_IPD = "edges_ipd_bigisland"
     TBL_ALL_LINKS = "links"
     TBL_CENTS = "block_centroids"
 
@@ -114,7 +118,7 @@ def run_child_moving_frame(i, j, log=False):
             cost
         FROM public."{0}";
         """.format(TBL_TEMP_NETWORK)
-        
+
     cur = connection.cursor()
 
     #create graph
@@ -132,7 +136,7 @@ def run_child_moving_frame(i, j, log=False):
 
     # if log:
         # logger.info('start_time: %s' % time.ctime())
-    
+
     #grab necessary lists and turn them into dictionaries
     Q_GetList = """
         SELECT * FROM "{0}";
@@ -140,28 +144,28 @@ def run_child_moving_frame(i, j, log=False):
     cur.execute(Q_GetList)
     nodes_gids_list = cur.fetchall()
     nodes_gids = dict(nodes_gids_list)
-    
+
     Q_GetList = """
         SELECT * FROM "{0}";
         """.format(TBL_GEOFF_NODES)
     cur.execute(Q_GetList)
     geoff_nodes_list = cur.fetchall()
     geoff_nodes = dict(geoff_nodes_list)
-        
+
     Q_GetList = """
     SELECT * FROM "{0}";
     """.format(TBL_GID_NODES)
     cur.execute(Q_GetList)
     gid_node_list = cur.fetchall()
     gid_node = dict(gid_node_list)
-    
+
     #grab list of block centroids ipdscores to create a lookup to be referenced later when weighting for equity
     SQL_GetBlockIPD = """SELECT gid, ipdscore FROM "{0}";""".format(TBL_CENTS)
     cur.execute(SQL_GetBlockIPD)
 
     ipd_lookup = dict(cur.fetchall())
-    
-    
+
+
     Q_GetList = """
     SELECT * FROM "{0}";
     """.format(TBL_NODE_GID)
@@ -173,7 +177,7 @@ def run_child_moving_frame(i, j, log=False):
         if not key in node_gid:
             node_gid[key] = []
         node_gid[key].append(gid)
-    
+
     Q_GetPairs = """
         SELECT * FROM "{0}";
         """.format(TBL_TEMP_PAIRS)
@@ -181,23 +185,23 @@ def run_child_moving_frame(i, j, log=False):
     pairs = cur.fetchall()
 
     paths, nopaths = test_workers(pairs, G)
-        
+
     # with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\group502_MF_%s_%s.cpickle" % (i, j), "wb") as io:
         # cPickle.dump(paths, io)
     # with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\group502_MF_%s_%s_nopaths.cpickle" % (i, j), "wb") as io:
         # cPickle.dump(nopaths, io)
-    
+
     del pairs, nopaths
-    
+
     cur = connection.cursor()
 
     cur.execute(Q_SelectMasterLinks)
     MasterLinks = cur.fetchall()
-    
-    node_pairs = {}       
+
+    node_pairs = {}
     for i, (mixid, fromgeoff, togeoff, cost) in enumerate(MasterLinks):
         node_pairs[(fromgeoff, togeoff)] = mixid
-        
+
     del MasterLinks
 
     edges = []
@@ -209,11 +213,11 @@ def run_child_moving_frame(i, j, log=False):
             edges.append(row)
     # if log:
         # logger.info('number of records: %d' % len(edges))
-    
+
     cur = connection.cursor()
-    
+
     if (len(edges) > 0):
-        dict_all_paths = {}    
+        dict_all_paths = {}
         #convert edges to dictionary
         for id, seq, ogid, dgid, edge in edges:
             #only count links, not turns
@@ -248,13 +252,13 @@ def run_child_moving_frame(i, j, log=False):
                     edge_ipd_weight[edge] += ipd_weight
                 except TypeError:
                     print edge_ipd_weight[edge], ipd_weight
-                
+
         # with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_count_dict.pickle", "wb") as io:
             # cPickle.dump(edge_count_dict, io)
-            
+
         # with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_ipd_weight.pickle", "wb") as io:
             # cPickle.dump(edge_ipd_weight, io)
-                
+
         cur = connection.cursor()
 
         edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]
@@ -274,7 +278,7 @@ def run_child_moving_frame(i, j, log=False):
             )
             TABLESPACE pg_default;
 
-            COMMIT;                
+            COMMIT;
         """.format(TBL_EDGE)
         cur.execute(Q_CreateOutputTable2)
 
@@ -303,7 +307,7 @@ def run_child_moving_frame(i, j, log=False):
             )
             TABLESPACE pg_default;
 
-            COMMIT;                
+            COMMIT;
         """.format(TBL_EDGE_IPD)
         cur.execute(Q_CreateOutputTable3)
 
@@ -319,8 +323,8 @@ def run_child_moving_frame(i, j, log=False):
         connection.commit()
 
     del paths, nodes_gids, geoff_nodes, node_pairs
-    
+
     del edges
-        
+
     # if log:
         # logger.info('end_time: %s' % time.ctime())
