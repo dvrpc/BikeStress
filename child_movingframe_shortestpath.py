@@ -204,29 +204,19 @@ def run_child_moving_frame(i, j, log=False):
 
     del MasterLinks
 
-    edges = []
-    for id, path in enumerate(paths):
+    dict_all_paths = {}
+    for path in paths:
         oGID = nodes_gids[geoff_nodes[path[0]]]
         dGID = nodes_gids[geoff_nodes[path[-1]]]
-        for seq, (o ,d) in enumerate(zip(path, path[1:])):
-            row = id, seq, oGID, dGID, node_pairs[(o,d)]
-            edges.append(row)
-    # if log:
-        # logger.info('number of records: %d' % len(edges))
-
-    cur = connection.cursor()
-
-    if (len(edges) > 0):
-        dict_all_paths = {}
-        #convert edges to dictionary
-        for id, seq, ogid, dgid, edge in edges:
-            #only count links, not turns
+        for o, d in enumerate(zip(path,path[1:])):
+            edge = node_pairs[(o,d)]
             if edge > 0:
-                key = (ogid, dgid)
+                key = (oGID, dGID)
                 if not key in dict_all_paths:
                     dict_all_paths[key] = []
                 dict_all_paths[key].append(edge)
 
+    if(len(dict_all_paths) > 0):
         #how many times each OD geoff pair should be counted if used at all
         #what is ipd weight of each path based on score of O and D census blocks
         weight_by_od = {}

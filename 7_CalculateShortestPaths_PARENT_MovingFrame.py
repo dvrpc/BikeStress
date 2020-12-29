@@ -30,10 +30,9 @@ def run_child_script(i, j):
             run_child_moving_frame(i, j, log=True)
             #cleanup.dumpndrop_MF(i, j)
 
-#to finish from section 10-16 and above
 if __name__ == "__main__":
-    for i in xrange(1, 32):
-        for j in tqdm(xrange(1, 32)):
+    for i in xrange(8, 32):
+        for j in tqdm(xrange(18, 32)):
             print i, j
             run_child_script(i, j)
 
