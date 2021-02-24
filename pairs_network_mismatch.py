@@ -84,3 +84,20 @@ for i in xrange(101, 132):
         table_exists = cur.fetchone()[0]
         if table_exists:
             missingdatafinder(i, j)
+
+
+
+def missingdatafinder(i, j):
+    cur.execute(countpairs.format(TBL_P, TBL_N))
+    numpairs = int(cur.fetchone()[0])
+    print "numpairs", numpairs
+    cur.execute(countfromgeoff.format(TBL_P, TBL_N))
+    countfrom = int(cur.fetchone()[0])
+    print "countfrom", countfrom
+    cur.execute(counttogeoff.format(TBL_P, TBL_N))
+    countto = int(cur.fetchone()[0])
+    print "countto", counto
+    if numpairs == countfrom == countto:
+        pass
+    else:
+        print i, j, "has missing data"

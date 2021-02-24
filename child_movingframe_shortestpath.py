@@ -305,7 +305,5 @@ def run_child_moving_frame(i, j, log=False):
 
     del paths, nodes_gids, geoff_nodes, node_pairs
 
-    del edges
-
     # if log:
         # logger.info('end_time: %s' % time.ctime())

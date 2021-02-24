@@ -11,7 +11,7 @@ logger = mp.log_to_stderr(logging.INFO)
 
 from database import connection
 
-string = "school"
+string = "transit"
 
 #need in this script
 TBL_MASTERLINKS_GROUPS ="master_links_grp"
@@ -27,22 +27,19 @@ TBL_NODE_GID = "node_gid_post_%s" %string
 TBL_EDGE = "edgecounts_%s" %string
 TBL_EDGE_IPD = "edges_ipd_%s" %string
 
-TBL_DEST = "schools_combined_region"
+TBL_DEST = "bus_region"
 TBL_DEST_NODE = "%s_node" %string
 TBL_NODE_DEST = "node_%s" %string
 
 def worker(inqueue, output):
     result = []
     count = 0
-    start_time = time.time()
+    #start_time = time.time()
     for pair in iter(inqueue.get, sentinel):
         source, target = pair
         length, paths = nx.bidirectional_dijkstra(G, source = source, target = target, weight = 'weight')
         result.append(paths)
         count += 1
-        if (count % 100) == 0:
-            logger.info('{t}: {s}'.format(t = time.ctime(), s = time.time() - start_time))
-            start_time = time.time()
     output.put(result)
 
 def test_workers(pairs):
@@ -70,7 +67,7 @@ def test_workers(pairs):
     for proc in procs:
         proc.join()
 
-    logger.info('test_workers() finished')
+    #logger.info('test_workers() finished')
     return result
 
 '''
@@ -119,7 +116,7 @@ sentinel = None
 output = mp.Queue()
 
 if __name__ == '__main__':
-    logger.info('start_time: %s' % time.ctime())
+    #logger.info('start_time: %s' % time.ctime())
     
     #grab necessary lists and turn them into dictionaries
     Q_GetList = """
@@ -194,8 +191,8 @@ if __name__ == '__main__':
         
     paths = test_workers(pairs)
         
-    with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\school_paths.cpickle", "wb") as io:
-        cPickle.dump(paths, io)
+    #with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\school_paths.cpickle", "wb") as io:
+    #    cPickle.dump(paths, io)
     
     del pairs
     
@@ -295,18 +292,18 @@ if __name__ == '__main__':
                 except TypeError:
                     print edge_ipd_weight[edge], ipd_weight
                 
-        with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_count_dict_school.pickle", "wb") as io:
-            cPickle.dump(edge_count_dict, io)
+        #with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_count_dict_school.pickle", "wb") as io:
+        #    cPickle.dump(edge_count_dict, io)
         
-        with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_ipd_weight_school.pickle", "wb") as io:
-            cPickle.dump(edge_ipd_weight, io)
+        #with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_ipd_weight_school.pickle", "wb") as io:
+        #    cPickle.dump(edge_ipd_weight, io)
                 
         cur = connection.cursor()
         
         edge_count_list = [(k, v) for k, v in edge_count_dict.iteritems()]
         edge_ipd_list = [(k, v) for k, v in edge_ipd_weight.iteritems()]
         
-        logger.info('inserting counts')
+        #logger.info('inserting counts')
         
         Q_CreateOutputTable2 = """
             CREATE TABLE IF NOT EXISTS public."{0}"
@@ -334,7 +331,7 @@ if __name__ == '__main__':
         cur.execute("COMMIT;")
         connection.commit()
         
-        logger.info('inserting ipd weights')
+        #logger.info('inserting ipd weights')
 
         Q_CreateOutputTable3 = """
             CREATE TABLE IF NOT EXISTS public."{0}"
@@ -366,4 +363,4 @@ if __name__ == '__main__':
     
     del edges
         
-    logger.info('end_time: %s' % time.ctime())
+    #logger.info('end_time: %s' % time.ctime())

@@ -1,11 +1,12 @@
 #copy to run in cmd
-#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\TransitAnalysis\7_CalculateShortestPaths_PARENT_MovingFrame_transit.py
+#C:\Users\model-ws\AppData\Local\Continuum\Anaconda2\python.exe D:\BikePedTransit\BikeStress\scripts\GIT\BikeStress\7_CalculateShortestPaths_PARENT_MovingFrame.py
 
 import psycopg2 as psql
 import subprocess
 import time
 import sys
 import CalculateShortestPaths_CLEANUP as cleanup
+from tqdm import tqdm
 
 from child_movingframe_shortestpath import run_child_moving_frame
 from child_movingframe_shortestpath import worker
@@ -14,7 +15,7 @@ from database import connection
 
 cur = connection.cursor()
 
-TBL_WORK_NETWORK = "temp_network_1438_%d_%d"
+TBL_WORK_NETWORK = "temp_network_502_%d_%d"
 
 def run_child_script(i, j):
 
@@ -27,19 +28,23 @@ def run_child_script(i, j):
         cnt, = cur.fetchone()
         if cnt > 0:
             run_child_moving_frame(i, j, log=True)
-			
+            #cleanup.dumpndrop_MF(i, j)
 
 if __name__ == "__main__":
-    for i in xrange(1, 22):
-        for j in xrange(1, 22):
+    for i in xrange(9, 32):
+        for j in tqdm(xrange(1, 32)):
+            print i, j
             run_child_script(i, j)
 
-        for j in xrange(101, 122):
-			run_child_script(i, j)
-			
-    for i in xrange(101, 122):
-        for j in xrange(1, 22):
+        for j in tqdm(xrange(101, 132)):
+            print i, j
+            run_child_script(i, j)
+            
+    for i in xrange(101, 124):
+        for j in tqdm(xrange(1, 32)):
+            print i, j
             run_child_script(i, j)
 
-        for j in xrange(101, 122):
-			run_child_script(i, j)
+        for j in tqdm(xrange(101, 132)):
+            print i, j
+            run_child_script(i, j)

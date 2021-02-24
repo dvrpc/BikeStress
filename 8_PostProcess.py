@@ -28,10 +28,10 @@ cur = con.cursor()
 # TBL_EDGE_IPD = "edges_ipd_%s" %string
 # TBL_RESULTS = "results_%s" %string
 # TBL_RESULTS_IPD = "results_ipd_%s" %string
-TBL_EDGE = "edgecounts"
-TBL_EDGE_IPD = "edges_ipd"
-TBL_RESULTS = "results"
-TBL_RESULTS_IPD = "results_ipd"
+TBL_EDGE = "edgecounts_bigisland"
+TBL_EDGE_IPD = "edges_ipd_bigisland"
+TBL_RESULTS = "results_bigisland"
+TBL_RESULTS_IPD = "results_ipd_bigisland"
 
 TBL_MASTERLINKS_GROUPS = "master_links_grp"
 TBL_ALL_LINKS = "links"
@@ -92,22 +92,33 @@ cur.execute(Q_Summarize_IPD)
 con.commit()
 
 #pull just LTS 3 links for visualization later
-Q_Level3Links = """
-    CREATE TABLE "{0}" AS
-        SELECT *
-        FROM "{1}"
-        WHERE linklts > 0.3 AND linklts <= 0.6;
-    COMMIT;
-""".format(TBL_LTS3, TBL_COUNTLTS)
-cur.execute(Q_Level3Links)
-
+#Q_Level3Links = """
+#    CREATE TABLE "{0}" AS
+#        SELECT *
+#        FROM "{1}"
+#        WHERE linklts > 0.3 AND linklts <= 0.6;
+#    COMMIT;
+#""".format(TBL_LTS3, TBL_COUNTLTS)
+#cur.execute(Q_Level3Links)
 
 #################################################
-TBL_USE = "linkuse"
-TBL_USE_IPD = "linkuse_ipd"
-TBL_COUNTLTS = "linkuse_lts"
-TBL_LTS3 = "LTS3only_linkuse"
-TBL_CON_ISLANDS = "connected_islands"
+#combine small and bigisland results into a single results table (repeat for IPD)
+'''CREATE TABLE results_all AS(
+SELECT *
+FROM results
+UNION ALL
+SELECT *
+FROM results_bigisland);
+COMMIT;'''
+
+'''CREATE TABLE results_ipd_all AS(
+SELECT *
+FROM results_ipd
+UNION ALL
+SELECT *
+FROM results_ipd_bigisland);
+COMMIT;'''
+#################################################
 
 
 #connect to SQL DB in python
@@ -120,12 +131,12 @@ def priorities(analysis, string):
     print string
     
     countsbycounty = []
-    regionaltop10percent = []
+    regionaltop50percent = []
 
     RESULT_TBL = analysis
 
     counties = ('Bucks', 'Chester', 'Delaware', 'Montgomery', 'Philadelphia', 'Burlington', 'Camden', 'Gloucester', 'Mercer')
-    #count how many are in the top 10 percent of LTS 3 roads in each county
+    #count how many are in the top 50 percent of LTS 3 roads in each county
     for i in xrange(len(counties)):
         print "Counting ", counties[i]
         Q_CountTop10Percent = """
@@ -164,14 +175,32 @@ def priorities(analysis, string):
         FROM tblB
         WHERE linklts > 0.3 AND linklts <= 0.6
         ORDER BY total DESC LIMIT {2};
-        """.format(counties[i], RESULT_TBL, countsbycounty[i][0][0])
+        """.format(counties[i], RESULT_TBL, (countsbycounty[i][0][0]*5))
         cur.execute(Q_CompileTop10Percent)
         output = cur.fetchall()
+        
+        print "Sorting"
+        stop = countsbycounty[i][0][0]
+        counter = 0
         for item in output:
-            regionaltop10percent.append(item)
-    #change for mail run to elminate use of "string"    
-    #PRIORITY_RESULTS = 'priorities_'+string
-    PRIORITY_RESULTS = 'priotities_main'
+            row = []
+            for thing in item:
+                row.append(thing)
+            counter += 1
+            if counter <= stop:
+                row.append(10)
+            elif counter > stop  and counter <= (stop*2):
+                row.append(20)
+            elif counter > (stop*2) and counter <= (stop*3):
+                row.append(30)
+            elif counter > (stop*3) and counter <= (stop*4):
+                row.append(40)
+            elif counter > (stop*4):
+                row.append(50)
+            regionaltop50percent.append(row)
+    
+    print "Writing"    
+    PRIORITY_RESULTS = 'priorities_'+string
     #write priorities into a table
     Q_CreateOutputTable = """
     CREATE TABLE IF NOT EXISTS public."{0}"
@@ -183,7 +212,8 @@ def priorities(analysis, string):
       totnumlane smallint,
       bikefac smallint,
       speed_lts smallint,
-      geom geometry(Geometry,26918)
+      geom geometry(Geometry,26918),
+      priority integer
     )
     WITH (
         OIDS = FALSE
@@ -193,14 +223,14 @@ def priorities(analysis, string):
     """.format(PRIORITY_RESULTS)
     cur.execute(Q_CreateOutputTable)
 
-    str_rpl = "(%s, %s, %s, %s, %s, %s, %s, ST_GeomFromEWKT('%s'))"
+    str_rpl = "(%s, %s, %s, %s, %s, %s, %s, ST_GeomFromEWKT('%s'), %s)"
     cur.execute("""BEGIN TRANSACTION;""")
     batch_size = 100
-    for i in xrange(0, len(regionaltop10percent), batch_size):
+    for i in xrange(0, len(regionaltop50percent), batch_size):
         j = i + batch_size
-        arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in regionaltop10percent[i:j])
+        arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in regionaltop50percent[i:j])
         #print arg_str
-        Q_Insert = """INSERT INTO public."{0}" (edge, total, linklts, length, totnumlane, bikefac, speed_lts, geom) VALUES {1}""".format(PRIORITY_RESULTS, arg_str)
+        Q_Insert = """INSERT INTO public."{0}" (edge, total, linklts, length, totnumlane, bikefac, speed_lts, geom, priority) VALUES {1}""".format(PRIORITY_RESULTS, arg_str)
         cur.execute(Q_Insert)
     cur.execute("COMMIT;")
     
@@ -217,64 +247,148 @@ priorities('results_ipd_transit', 'transit_ipd')
 priorities('results_ipd_trolley', 'trolley_ipd')
 
 #also run for main run
+priorities('results_all', 'all')
+priorities('results_ipd_all', 'all_ipd')
 
 
+###################combine transit priorities results into a single table###############################
+Q_addcol = """
+ALTER TABLE %s
+ADD COLUMN transitmode character varying;
+COMMIT;"""
+
+Q_updatecol = """
+UPDATE %s
+SET transitmode = '%s';
+COMMIT;
+"""
+
+TBL = 'priorities_rail'
+TBL = 'priorities_rail_ipd'
+string = "rail"
+TBL = 'priorities_transit'
+TBL = 'priorities_transit_ipd'
+string = "bus"
+TBL = 'priorities_trolley'
+TBL = 'priorities_trolley_ipd'
+string = "trolley"
+cur.execute(Q_addcol % (TBL))
+cur.execute(Q_updatecol % (TBL, string))
 
 
-###which L1&2 islands would be connected by LTS 3 priority segments (top 10% only)
-#takes a long time to run (~14 minutes on just rail priorities) - maybe save for later; not 100% sure if this is worth it and how much it's used. 
-#might be better to just look at it visually.
-##SELECT ALL THE LINKS THAT ARE PART OF EACH ISLAND
-string = rail
-TBL_CON_ISLANDS = 'con_islands_'+string
-PRIORITY_RESULTS = 'priorities_'+string
-TBL_MASTERLINKS_GROUPS = "l2_master_links_grp"
-
-Q_BUFFER_INTERSECT = """
-    CREATE TABLE {2} AS(
-        WITH buf AS(
-            SELECT edge, st_buffer(geom, 10) buffer
-            FROM "{0}"),
-
-        tblA AS(
-            SELECT 
-                DISTINCT(strong),
-                goo.edge
-            FROM(
-                SELECT 
-                    L.mixid, 
-                    L.strong, 
-                    L.geom, 
-                    B.edge, 
-                    B.buffer
-                FROM {1} L
-            INNER JOIN (
-                SELECT 
-                edge,
-                buffer
-                FROM buf) B
-            ON ST_Intersects(L.geom, B.buffer)) goo)
-
+Q_CombineTransit = """
+CREATE TABLE priotities_alltransit AS(
+    WITH rail_bus AS(
         SELECT 
-            tblA.edge,
-            string_agg(strong::text, ', ') AS islands,
-            g.geom
-        FROM tblA
-        INNER JOIN "{0}" g
-        ON tblA.edge = g.link
-        GROUP BY tblA.edge, g.geom
-);
-"""
+            r.edge,
+            (r.total + t.total) AS total, 
+            r.linklts,
+            r.length,
+            r.totnumlane,
+            r.bikefac,
+            r.speed_lts,
+            CONCAT(r.transitmode, ', ', t.transitmode) AS mode,
+            r.geom
+        FROM priorities_rail r
+        INNER JOIN priorities_transit t
+        ON r.edge = t.edge),
+    rail_trolley AS(
+        SELECT 
+            r.edge,
+            (r.total + t.total) AS total, 
+            r.linklts,
+            r.length,
+            r.totnumlane,
+            r.bikefac,
+            r.speed_lts,
+            CONCAT(r.transitmode, ', ', t.transitmode) AS mode,
+            r.geom
+        FROM priorities_rail r
+        INNER JOIN priorities_trolley t
+        ON r.edge = t.edge),
+    trolley_bus AS(
+        SELECT 
+            r.edge,
+            (r.total + t.total) AS total, 
+            r.linklts,
+            r.length,
+            r.totnumlane,
+            r.bikefac,
+            r.speed_lts,
+            CONCAT(r.transitmode, ', ', t.transitmode) AS mode,
+            r.geom
+        FROM priorities_tolley r
+        INNER JOIN priorities_transit t
+        ON r.edge = t.edge),
+    rail_only AS(
+        SELECT r.edge, 
+            r.total, 
+            r.linklts,
+            r.length,
+            r.totnumlane,
+            r.bikefac,
+            r.speed_lts,
+            r.transitmode,
+            r.geom
+        FROM priorities_rail r
+        WHERE r.edge NOT IN(
+            SELECT t.edge
+            FROM priorities_trolley t)
+        AND r.edge NOT IN(
+            SELECT edge
+            FROM priorities_transit)
+        ),
+    trolley_only AS(
+        SELECT r.edge, 
+            r.total, 
+            r.linklts,
+            r.length,
+            r.totnumlane,
+            r.bikefac,
+            r.speed_lts,
+            r.transitmode,
+            r.geom
+        FROM priorities_trolley r
+        WHERE r.edge NOT IN(
+            SELECT t.edge
+            FROM priorities_rail t)
+        AND r.edge NOT IN(
+            SELECT edge
+            FROM priorities_transit)
+        ),
+    bus_only AS(
+        SELECT r.edge, 
+            r.total, 
+            r.linklts,
+            r.length,
+            r.totnumlane,
+            r.bikefac,
+            r.speed_lts,
+            r.transitmode,
+            r.geom
+        FROM priorities_transit r
+        WHERE r.edge NOT IN(
+            SELECT t.edge
+            FROM priorities_rail t)
+        AND r.edge NOT IN(
+            SELECT edge
+            FROM priorities_trolley)
+        ),  
 
-cur.execute(Q_BUFFER_INTERSECT.format(PRIORITY_RESULTS, TBL_MASTERLINKS_GROUPS, TBL_CON_ISLANDS))
-
-#do we just want to do this for the 'priorities'? it might be better to have for everything, and just leave it blank where it does not apply
-Q_JOIN = """
-CREATE TABLE {0}
-    SELECT l.*, c.islands
-    FROM "{1}" l
-    FULL JOIN {2} c
-    ON l.edge = c.edge
+    SELECT * FROM rail_bus
+    UNION ALL
+    SELECT * FROM rail_trolley
+    UNION ALL
+    SELECT * FROM trolley_bus
+    UNION ALL
+    SELECT * FROM rail_only
+    UNION ALL
+    SELECT * FROM trolley_only
+    UNION ALL
+    SELECT * FROM bus_only
     );
+COMMIT;
 """
-cur.execute(Q_JOIN.format(TBL_RESULTS, TBL_LTS3, TBL_CON_ISLANDS))
+#regular results
+cur.execute(Q_CombineTransit)
+#repeat for ipd results....

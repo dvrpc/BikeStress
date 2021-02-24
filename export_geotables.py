@@ -29,14 +29,20 @@ URI = f"postgresql://{UN}:{PW}@{HOST}:{PORT}/{DB_NAME}"
 
 # Step 2: Define where you want to save the resulting shapefiles.
 # ---------------------------------------------------------------
-SHP_FOLDER = Path("//smoran01/dvrpc_shared/BikeLTS/Phase3/ResultShapes")
+SHP_FOLDER = Path("//smoran01/dvrpc_shared/BikeLTS/Phase3/CleanShapefiles")
 
 
 # Step 3A: Manually define a list of tables you want to export
 #          To do so, update the "table_list" variable.
 # ------------------------------------------------------------
 
-table_list_template = ["first_table", "second_table"]
+#table_list_template = ["first_table", "second_table"]
+table_list_template = ["priorities_all",
+    "priorities_all_ipd",
+    "priorities_school",
+    "priorities_school_ipd",
+    "priorities_trail",
+    "priorities_trail_ipd"]
 
 table_list = table_list_template
 

@@ -31,8 +31,8 @@ def run_child_script(i, j):
             #cleanup.dumpndrop_MF(i, j)
 
 if __name__ == "__main__":
-    for i in xrange(8, 32):
-        for j in tqdm(xrange(18, 32)):
+    for i in xrange(9, 32):
+        for j in tqdm(xrange(1, 32)):
             print i, j
             run_child_script(i, j)
 
