@@ -43,7 +43,7 @@ def worker(inqueue, output):
     output.put(result)
 
 def test_workers(pairs):
-    logger.info('test_workers() started')
+    #logger.info('test_workers() started')
     result = []
     inqueue = mp.Queue()
     for source, target in pairs:
@@ -207,64 +207,21 @@ if __name__ == '__main__':
         
     del MasterLinks
 
-    edges = []
-    for id, path in enumerate(paths):
-        oDID = node_dest[geoff_nodes[path[0]]]
+    dict_all_paths = {}
+    for path in paths:
+        oGID = nodes_gids[geoff_nodes[path[0]]]
         dGID = nodes_gids[geoff_nodes[path[-1]]]
-        for seq, (o ,d) in enumerate(zip(path, path[1:])):
-            row = id, seq, oDID, dGID, node_pairs[(o,d)]
-            edges.append(row)
-    logger.info('number of records: %d' % len(edges))
-    
-    cur = connection.cursor()
-
-    if (len(edges) > 0):
-        # Q_CreateOutputTable = """
-            # CREATE TABLE IF NOT EXISTS public."{0}"
-            # (
-              # id integer,
-              # seq integer,
-              # otid integer,
-              # dgid integer,
-              # edge bigint,
-              # rowno BIGSERIAL PRIMARY KEY
-            # )
-            # WITH (
-                # OIDS = FALSE
-            # )
-            # TABLESPACE pg_default;
-
-            
-            # CREATE INDEX IF NOT EXISTS "{1}"
-                # ON public."{0}" USING btree
-                # (id, seq, otid, dgid, edge)
-                # TABLESPACE pg_default;
-            # COMMIT;                
-        # """.format(TBL_SPATHS, IDX_nx_SPATHS_value)
-        # cur.execute(Q_CreateOutputTable)
-
-        # logger.info('inserting paths')
-        # str_rpl = "(%s)" % (",".join("%s" for _ in xrange(len(edges[0]))))
-        # cur.execute("""BEGIN TRANSACTION;""")
-        # batch_size = 10000
-        # for i in xrange(0, len(edges), batch_size):
-            # j = i + batch_size
-            # arg_str = ','.join(str_rpl % tuple(map(str, x)) for x in edges[i:j])
-            ##print arg_str
-            # Q_Insert = """INSERT INTO public."{0}" (id, seq, otid, dgid, edge) VALUES {1}""".format(TBL_SPATHS, arg_str)
-            # cur.execute(Q_Insert)
-        # cur.execute("COMMIT;")
-        
-        
-        dict_all_paths = {}    
-        #convert edges to dictionary
-        for id, seq, odid, dgid, edge in edges:
-            #only count links, not turns
+        for o, d in enumerate(zip(path, path[1:])):
+            edge = node_pairs[(o, d)]
             if edge > 0:
-                key = (odid, dgid)
+                key = (oGID, dGID)
                 if not key in dict_all_paths:
                     dict_all_paths[key] = []
                 dict_all_paths[key].append(edge)
+    
+    cur = connection.cursor()
+
+    if (len(dict_all_paths) > 0):
 
         #how many times each OD geoff pair should be counted if used at all
         #what is ipd weight of each path based on score of just origin census blocks for transit analysis
@@ -292,11 +249,7 @@ if __name__ == '__main__':
                 except TypeError:
                     print edge_ipd_weight[edge], ipd_weight
                 
-        #with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_count_dict_school.pickle", "wb") as io:
-        #    cPickle.dump(edge_count_dict, io)
-        
-        #with open(r"D:\BikePedTransit\BikeStress\phase3\phase3_pickles\edge_ipd_weight_school.pickle", "wb") as io:
-        #    cPickle.dump(edge_ipd_weight, io)
+
                 
         cur = connection.cursor()
         
@@ -360,7 +313,5 @@ if __name__ == '__main__':
         connection.commit()
 
     del paths, nodes_gids, geoff_nodes, node_pairs
-    
-    del edges
         
     #logger.info('end_time: %s' % time.ctime())
