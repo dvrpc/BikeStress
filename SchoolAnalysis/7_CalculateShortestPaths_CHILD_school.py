@@ -198,26 +198,32 @@ if __name__ == '__main__':
     
     cur = connection.cursor()
 
-    cur.execute(Q_SelectMasterLinks)
-    MasterLinks = cur.fetchall()
+    #cur.execute(Q_SelectMasterLinks)
+    #MasterLinks = cur.fetchall()
     
-    node_pairs = {}       
-    for i, (mixid, fromgeoff, togeoff, cost) in enumerate(MasterLinks):
-        node_pairs[(fromgeoff, togeoff)] = mixid
+    #node_pairs = {}       
+    #for i, (mixid, fromgeoff, togeoff, cost) in enumerate(MasterLinks):
+    #    node_pairs[(fromgeoff, togeoff)] = mixid
         
-    del MasterLinks
+    #del MasterLinks
 
     dict_all_paths = {}
+    error_counter = 0
     for path in paths:
-        oGID = nodes_gids[geoff_nodes[path[0]]]
-        dGID = nodes_gids[geoff_nodes[path[-1]]]
-        for o, d in enumerate(zip(path, path[1:])):
-            edge = node_pairs[(o, d)]
-            if edge > 0:
-                key = (oGID, dGID)
-                if not key in dict_all_paths:
-                    dict_all_paths[key] = []
-                dict_all_paths[key].append(edge)
+        try:
+            oGID = nodes_gids[geoff_nodes[path[0]]]
+            dGID = nodes_gids[geoff_nodes[path[-1]]]
+            for o, d in zip(path, path[1:]):
+                edge = node_pairs[(o, d)]
+                if edge > 0:
+                    key = (oGID, dGID)
+                    if not key in dict_all_paths:
+                        dict_all_paths[key] = []
+                    dict_all_paths[key].append(edge)
+        except KeyError:
+            error_counter +=1
+            pass
+    print "Number of Key Errors = ", error_counter
     
     cur = connection.cursor()
 
